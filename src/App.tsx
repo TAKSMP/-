@@ -4,14 +4,16 @@ import { addToZukan, loadZukan, removeFromZukan } from './lib/storage'
 import { CapturePage } from './pages/CapturePage'
 import { ZukanPage } from './pages/ZukanPage'
 import { SearchPage } from './pages/SearchPage'
+import { QuizPage } from './pages/QuizPage'
 import { sfx } from './lib/sound'
 
-type Tab = 'capture' | 'zukan' | 'search'
+type Tab = 'capture' | 'zukan' | 'search' | 'quiz'
 
 const TABS: { id: Tab; label: string; emoji: string }[] = [
   { id: 'capture', label: 'しらべる', emoji: '🔎' },
   { id: 'zukan', label: 'ずかん', emoji: '📖' },
   { id: 'search', label: 'けんさく', emoji: '🔍' },
+  { id: 'quiz', label: 'クイズ', emoji: '🧠' },
 ]
 
 export default function App() {
@@ -45,6 +47,7 @@ export default function App() {
           />
         )}
         {tab === 'search' && <SearchPage bugs={bugs} />}
+        {tab === 'quiz' && <QuizPage />}
       </main>
 
       {/* した の ナビゲーション */}

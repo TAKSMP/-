@@ -162,6 +162,159 @@ body {
   }
 }
 
+.capture-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 280px;
+  margin: 0 auto;
+}
+.btn-camera {
+  background: var(--sky-deep);
+  box-shadow: 0 4px 0 #2f7fb0;
+}
+.btn-camera:active {
+  box-shadow: 0 1px 0 #2f7fb0;
+}
+
+/* =========================================================
+   カメラさつえい モーダル
+   ========================================================= */
+.camera-modal {
+  position: fixed;
+  inset: 0;
+  background: #12160e;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: fade 0.2s ease;
+}
+.camera-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+  z-index: 2;
+}
+.camera-view {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  aspect-ratio: 3 / 4;
+  max-height: 74vh;
+  background: #000;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.camera-view video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.camera-frame {
+  position: absolute;
+  inset: 12%;
+  border: 3px dashed rgba(255, 255, 255, 0.7);
+  border-radius: 24px;
+  pointer-events: none;
+}
+.camera-loading {
+  position: absolute;
+  color: #fff;
+  font-weight: 800;
+}
+.camera-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  padding: 22px 0 8px;
+}
+.camera-shutter {
+  width: 76px;
+  height: 76px;
+  border-radius: 999px;
+  border: 5px solid #fff;
+  background: transparent;
+  cursor: pointer;
+  padding: 5px;
+  transition: transform 0.08s ease;
+}
+.camera-shutter:active {
+  transform: scale(0.9);
+}
+.camera-shutter:disabled {
+  opacity: 0.4;
+}
+.camera-shutter-inner {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  background: #fff;
+}
+.camera-switch {
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 22px;
+  cursor: pointer;
+}
+.camera-spacer {
+  width: 52px;
+}
+.camera-hint {
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  margin: 0 0 20px;
+}
+.camera-flash {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  z-index: 3;
+  animation: flash 0.2s ease;
+}
+@keyframes flash {
+  from {
+    opacity: 0.9;
+  }
+  to {
+    opacity: 0;
+  }
+}
+.camera-error {
+  text-align: center;
+  color: #fff;
+  padding: 30px;
+  max-width: 340px;
+}
+.camera-error-emoji {
+  font-size: 56px;
+  margin-bottom: 10px;
+}
+.camera-error p {
+  font-weight: 700;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
 /* かいせき中 */
 .analyzing {
   position: relative;
@@ -618,6 +771,168 @@ input:focus {
   color: #6b7a5a;
   font-size: 14px;
   margin: 8px 4px 12px;
+}
+
+/* =========================================================
+   クイズページ
+   ========================================================= */
+.quiz-start,
+.quiz-done {
+  text-align: center;
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 36px 24px;
+  box-shadow: var(--shadow);
+}
+.quiz-start-emoji {
+  font-size: 66px;
+  animation: bob 2s ease-in-out infinite;
+}
+.quiz-start p {
+  font-weight: 700;
+  color: #6b7a5a;
+  line-height: 1.7;
+  margin: 14px 0 22px;
+}
+
+.quiz-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-weight: 800;
+  color: var(--green-deep);
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+.quiz-score {
+  margin-left: auto;
+  color: #d9a800;
+}
+.quiz-streak {
+  background: #ffefe0;
+  color: #e0662b;
+  padding: 2px 10px;
+  border-radius: 999px;
+  animation: pop 0.4s ease;
+}
+
+.quiz-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 24px 20px;
+  box-shadow: var(--shadow);
+  text-align: center;
+  margin-bottom: 14px;
+}
+.quiz-emoji {
+  font-size: 80px;
+  animation: bob 2.5s ease-in-out infinite;
+}
+.quiz-prompt {
+  font-size: 20px;
+  color: var(--green-deep);
+  margin: 10px 0 4px;
+}
+.quiz-hint {
+  font-size: 13px;
+  color: #8a9a7a;
+  font-weight: 700;
+  margin: 0;
+}
+
+.quiz-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.quiz-option {
+  background: #fff;
+  border: 3px solid #d5e3c9;
+  border-radius: 18px;
+  padding: 18px 10px;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: 0 4px 0 #dfe9d5;
+  transition: transform 0.08s ease;
+}
+.quiz-option:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #dfe9d5;
+}
+.quiz-option.correct {
+  background: #d8f5cf;
+  border-color: var(--green);
+  box-shadow: 0 4px 0 var(--green-dark);
+}
+.quiz-option.wrong {
+  background: #ffe0dc;
+  border-color: var(--danger);
+  box-shadow: 0 4px 0 #c9584b;
+}
+.quiz-option.dim {
+  opacity: 0.5;
+}
+.quiz-option:disabled {
+  cursor: default;
+}
+
+.quiz-feedback {
+  margin-top: 16px;
+  border-radius: var(--radius);
+  padding: 18px;
+  text-align: center;
+  box-shadow: var(--shadow);
+  animation: rise 0.25s ease;
+}
+.quiz-feedback.ok {
+  background: #eafbe3;
+  border: 3px solid var(--green);
+}
+.quiz-feedback.ng {
+  background: #fff0ee;
+  border: 3px solid var(--danger);
+}
+.quiz-feedback-title {
+  font-size: 22px;
+  font-weight: 900;
+  margin-bottom: 6px;
+}
+.quiz-feedback p {
+  margin: 4px 0;
+  font-weight: 700;
+}
+.quiz-fact {
+  font-size: 13px;
+  color: #6b7a5a;
+  line-height: 1.6;
+}
+.quiz-feedback .btn {
+  margin-top: 12px;
+}
+
+.quiz-done-emoji {
+  font-size: 80px;
+  animation: pop 0.6s ease;
+}
+.quiz-done h2 {
+  color: var(--green-deep);
+  margin: 8px 0;
+}
+.quiz-final-score {
+  font-size: 52px;
+  font-weight: 900;
+  color: var(--yellow);
+  text-shadow: 0 2px 0 #d9a800;
+  margin: 10px 0 20px;
+}
+.quiz-final-score span {
+  font-size: 22px;
+  color: #8a9a7a;
+  text-shadow: none;
 }
 
 /* =========================================================

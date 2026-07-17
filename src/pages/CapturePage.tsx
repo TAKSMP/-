@@ -4,6 +4,7 @@ import { analyzePhoto, hasRealAi } from '../lib/ai'
 import { ALL_HABITATS, ALL_ORDERS } from '../data/bugs'
 import { StarRating } from '../components/StarRating'
 import { Confetti } from '../components/Confetti'
+import { CameraCapture } from '../components/CameraCapture'
 import { sfx } from '../lib/sound'
 
 type Phase = 'empty' | 'analyzing' | 'result'
@@ -20,6 +21,7 @@ export function CapturePage({ onSaved }: Props) {
   const [editing, setEditing] = useState(false)
   const [confetti, setConfetti] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [cameraOpen, setCameraOpen] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   // へんしゅう中の4項目
@@ -36,7 +38,24 @@ export function CapturePage({ onSaved }: Props) {
     setSaved(false)
   }
 
-  async function handleFile(file: File) {
+  // 写真（dataURL）をうけとってAIにしらべてもらう。
+  // ファイル読み込みでもカメラ撮影でも、ここにながれてくる。
+  async function analyzeDataUrl(dataUrl: string) {
+    setPhoto(dataUrl)
+    setPhase('analyzing')
+    const r = await analyzePhoto(dataUrl)
+    setResult(r)
+    setName(r.name)
+    setOrder(r.order)
+    setRarity(r.rarity)
+    setHabitat(r.habitat)
+    setPhase('result')
+    sfx.discover()
+    setConfetti(true)
+    setTimeout(() => setConfetti(false), 200)
+  }
+
+  function handleFile(file: File) {
     if (!file.type.startsWith('image/')) {
       sfx.error()
       alert('虫の写真をえらんでね📷')
@@ -44,22 +63,13 @@ export function CapturePage({ onSaved }: Props) {
     }
     sfx.shutter()
     const reader = new FileReader()
-    reader.onload = async () => {
-      const dataUrl = String(reader.result)
-      setPhoto(dataUrl)
-      setPhase('analyzing')
-      const r = await analyzePhoto(dataUrl)
-      setResult(r)
-      setName(r.name)
-      setOrder(r.order)
-      setRarity(r.rarity)
-      setHabitat(r.habitat)
-      setPhase('result')
-      sfx.discover()
-      setConfetti(true)
-      setTimeout(() => setConfetti(false), 200)
-    }
+    reader.onload = () => analyzeDataUrl(String(reader.result))
     reader.readAsDataURL(file)
+  }
+
+  function handleCameraCapture(dataUrl: string) {
+    setCameraOpen(false)
+    analyzeDataUrl(dataUrl)
   }
 
   function handleSave() {
@@ -97,16 +107,27 @@ export function CapturePage({ onSaved }: Props) {
       {phase === 'empty' && (
         <div className="dropzone">
           <div className="dropzone-emoji">📷</div>
-          <p>ここに虫の写真を よみこんでね</p>
-          <button
-            className="btn btn-big"
-            onClick={() => {
-              sfx.tap()
-              fileRef.current?.click()
-            }}
-          >
-            写真をえらぶ 🐛
-          </button>
+          <p>カメラでとるか、写真をよみこんでね</p>
+          <div className="capture-buttons">
+            <button
+              className="btn btn-big btn-camera"
+              onClick={() => {
+                sfx.tap()
+                setCameraOpen(true)
+              }}
+            >
+              📸 カメラでとる
+            </button>
+            <button
+              className="btn btn-big btn-ghost"
+              onClick={() => {
+                sfx.tap()
+                fileRef.current?.click()
+              }}
+            >
+              🖼️ 写真をえらぶ
+            </button>
+          </div>
           <p className="hint">
             {hasRealAi()
               ? '本物AIモードで判定するよ ✨'
@@ -256,7 +277,6 @@ export function CapturePage({ onSaved }: Props) {
         ref={fileRef}
         type="file"
         accept="image/*"
-        capture="environment"
         hidden
         onChange={(e) => {
           const f = e.target.files?.[0]
@@ -264,6 +284,13 @@ export function CapturePage({ onSaved }: Props) {
           e.target.value = ''
         }}
       />
+
+      {cameraOpen && (
+        <CameraCapture
+          onCapture={handleCameraCapture}
+          onClose={() => setCameraOpen(false)}
+        />
+      )}
     </div>
   )
 }
