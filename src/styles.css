@@ -604,6 +604,30 @@ input:focus {
   border-color: var(--yellow);
   box-shadow: 0 0 0 3px #ffd23f55;
 }
+/* 目のプルダウン選択 */
+.order-select {
+  width: 100%;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  border: 2px solid var(--green);
+  border-radius: 12px;
+  padding: 9px 12px;
+  background: #fbfffa;
+  color: var(--ink);
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'><path d='M4 6l4 4 4-4' fill='none' stroke='%235a9e49' stroke-width='2' stroke-linecap='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 34px;
+}
+.order-select:focus {
+  outline: none;
+  border-color: var(--yellow);
+  box-shadow: 0 0 0 3px #ffd23f55;
+}
+
 /* 訂正中の各項目（入力＋AIボタン） */
 .field-edit {
   display: flex;

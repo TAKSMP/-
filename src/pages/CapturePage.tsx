@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import type { AiResult, CaptureInput } from '../types'
-import { analyzePhoto, describeBug, hasRealAi } from '../lib/ai'
+import { analyzePhoto, describeBug, hasRealAi, suggestHabitat } from '../lib/ai'
 import {
   buildPrompt,
   countParsed,
@@ -51,6 +51,9 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
   const [fact, setFact] = useState('')
   const [describing, setDescribing] = useState(false) // AIで説明づくり中
   const [describeMiss, setDescribeMiss] = useState(false)
+  // 生息地のAI提案
+  const [suggestingHab, setSuggestingHab] = useState(false)
+  const [habMiss, setHabMiss] = useState(false)
 
   function reset() {
     setPhase('empty')
@@ -67,6 +70,8 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
     setFact('')
     setDescribing(false)
     setDescribeMiss(false)
+    setSuggestingHab(false)
+    setHabMiss(false)
   }
 
   // 写真（dataURL）をうけとってAIにしらべてもらう。
@@ -208,6 +213,27 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
     }
   }
 
+  // なまえに あわせて、生息地をAIに提案させる
+  async function handleSuggestHabitat() {
+    if (!name.trim()) {
+      sfx.error()
+      alert('さきに「なまえ」を入れてね🐛')
+      return
+    }
+    sfx.tap()
+    setHabMiss(false)
+    setSuggestingHab(true)
+    const h = await suggestHabitat(name)
+    setSuggestingHab(false)
+    if (h) {
+      setHabitat(h)
+      sfx.discover()
+    } else {
+      setHabMiss(true)
+      sfx.error()
+    }
+  }
+
   return (
     <div className="page capture">
       <Confetti show={confetti} />
@@ -332,11 +358,20 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
                 <dt>目（もく）</dt>
                 <dd>
                   {editing ? (
-                    <input
-                      list="orders"
-                      value={order}
+                    <select
+                      className="order-select"
+                      value={INSECT_ORDERS.includes(order) ? order : ''}
                       onChange={(e) => setOrder(e.target.value)}
-                    />
+                    >
+                      <option value="" disabled>
+                        えらんでね
+                      </option>
+                      {INSECT_ORDERS.map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                    </select>
                   ) : (
                     order
                   )}
@@ -359,11 +394,32 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
                 <dt>生息地</dt>
                 <dd>
                   {editing ? (
-                    <input
-                      list="habitats"
-                      value={habitat}
-                      onChange={(e) => setHabitat(e.target.value)}
-                    />
+                    <div className="field-edit">
+                      <input
+                        list="habitats"
+                        value={habitat}
+                        onChange={(e) => setHabitat(e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="lookup-btn"
+                        onClick={handleSuggestHabitat}
+                        disabled={suggestingHab}
+                      >
+                        {suggestingHab ? (
+                          <>
+                            <span className="spinner">🔎</span> しらべ中…
+                          </>
+                        ) : (
+                          <>🤖 AIがかく</>
+                        )}
+                      </button>
+                      {habMiss && (
+                        <span className="lookup-miss">
+                          わからなかった…なまえを見なおしてね
+                        </span>
+                      )}
+                    </div>
                   ) : (
                     habitat
                   )}
@@ -371,11 +427,6 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
               </div>
             </dl>
 
-            <datalist id="orders">
-              {INSECT_ORDERS.map((o) => (
-                <option key={o} value={o} />
-              ))}
-            </datalist>
             <datalist id="habitats">
               {ALL_HABITATS.map((h) => (
                 <option key={h} value={h} />

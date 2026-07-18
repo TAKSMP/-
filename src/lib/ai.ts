@@ -290,6 +290,53 @@ async function describeWithClaude(name: string): Promise<string | null> {
   return text.replace(/^[「『]|[」』]$/g, '').trim() || null
 }
 
+async function suggestHabitatWithClaude(name: string): Promise<string | null> {
+  const apiKey = getApiKey()
+  if (!apiKey) return null
+  const question = `日本の昆虫「${name}」が主に見られる生息地を、10文字ていどの短い言葉だけで答えてください。
+漢字はつかわず、ひらがなとカタカナだけで書くこと（例: ぞうきばやし、いけや かわの ほとり）。
+生息地の言葉だけを返し、見出しやほかの文字は書かないでください。`
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-opus-4-8',
+      max_tokens: 40,
+      messages: [{ role: 'user', content: question }],
+    }),
+  })
+  if (!res.ok) throw new Error('AIのつうしんにしっぱいしました')
+  const json = await res.json()
+  const text: string = (json?.content?.[0]?.text ?? '').trim()
+  return text.replace(/[。「」\n]/g, '').trim() || null
+}
+
+// 名前から生息地を提案する。わからなければ null。
+export async function suggestHabitat(name: string): Promise<string | null> {
+  const trimmed = name.trim()
+  if (!trimmed) return null
+  const thinking = new Promise((r) => setTimeout(r, 700))
+  let result: string | null = null
+  if (hasRealAi()) {
+    try {
+      result = await suggestHabitatWithClaude(trimmed)
+    } catch (e) {
+      console.warn('AIの生息地しらべにしっぱいしました', e)
+      result = null
+    }
+  }
+  if (!result) {
+    result = findSpeciesByName(trimmed)?.habitat ?? null
+  }
+  await thinking
+  return result
+}
+
 // 名前から説明文をつくる。かけなければ null。
 export async function describeBug(name: string): Promise<string | null> {
   const trimmed = name.trim()
