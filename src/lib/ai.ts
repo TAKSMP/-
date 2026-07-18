@@ -225,3 +225,126 @@ export async function analyzePhoto(dataUrl: string): Promise<AiResult> {
   await thinking
   return result
 }
+
+// =============================================================
+//  項目ごとの「AIに調べさせる」機能
+// -------------------------------------------------------------
+//  名前を訂正したあと、「目・レア度・生息地」のわからない所を
+//  AIに調べさせて自動入力するためのもの。
+//  まず図鑑データから名前で照合し、見つからなければ（本物AIモードなら）
+//  Claudeに問い合わせます。
+// =============================================================
+
+export type LookupField = 'order' | 'rarity' | 'habitat'
+
+export interface LookupResult {
+  value: string | number
+  // どうやって分かったか（表示用）
+  source: 'zukan' | 'ai'
+}
+
+// ひらがな→カタカナに変換して、名前を照合しやすくする
+function toKatakana(s: string): string {
+  return s.replace(/[ぁ-ゖ]/g, (ch) =>
+    String.fromCharCode(ch.charCodeAt(0) + 0x60),
+  )
+}
+function normalizeName(s: string): string {
+  return toKatakana(s.trim().replace(/\s+/g, ''))
+}
+
+// 名前から図鑑データをさがす（完全一致→部分一致）
+function findSpeciesByName(name: string): BugSpecies | undefined {
+  const q = normalizeName(name)
+  if (!q) return undefined
+  const exact = BUG_SPECIES.find((b) => normalizeName(b.name) === q)
+  if (exact) return exact
+  return BUG_SPECIES.find((b) => {
+    const n = normalizeName(b.name)
+    return n.includes(q) || q.includes(n)
+  })
+}
+
+async function lookupFieldWithClaude(
+  name: string,
+  field: LookupField,
+): Promise<LookupResult | null> {
+  const apiKey = getApiKey()
+  if (!apiKey) return null
+
+  const orderList = Array.from(new Set(BUG_SPECIES.map((b) => b.order)))
+  const habitatList = Array.from(new Set(BUG_SPECIES.map((b) => b.habitat)))
+
+  const question =
+    field === 'order'
+      ? `「${name}」という虫は なに目（もく）ですか。次のどれかから1つだけ選んで、目の名前だけを答えてください: ${orderList.join('、')}`
+      : field === 'habitat'
+        ? `「${name}」という虫は おもにどこにいますか。次のどれかから1つだけ選んで、生息地の名前だけを答えてください: ${habitatList.join('、')}`
+        : `「${name}」という虫の めずらしさ（レア度）を1〜5の整数であらわすと いくつですか。数字だけを答えてください。`
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-opus-4-8',
+      max_tokens: 30,
+      messages: [{ role: 'user', content: question }],
+    }),
+  })
+  if (!res.ok) throw new Error('AIのつうしんにしっぱいしました')
+  const json = await res.json()
+  const text: string = (json?.content?.[0]?.text ?? '').trim()
+  if (!text) return null
+
+  if (field === 'rarity') {
+    const m = text.match(/[1-5]/)
+    if (!m) return null
+    return { value: Number(m[0]), source: 'ai' }
+  }
+  // order / habitat: 候補リストに近いものへ寄せる
+  const list = field === 'order' ? orderList : habitatList
+  const hit = list.find((x) => text.includes(x)) ?? text
+  return { value: hit, source: 'ai' }
+}
+
+// 名前をもとに、1つの項目（目 / レア度 / 生息地）を調べる。
+// 見つからなければ null をかえす。
+export async function lookupField(
+  name: string,
+  field: LookupField,
+): Promise<LookupResult | null> {
+  const trimmed = name.trim()
+  if (!trimmed) return null
+
+  // 演出用のちょっとした「かんがえてる」間
+  const thinking = new Promise((r) => setTimeout(r, 700))
+
+  // 1) まず図鑑データから照合
+  const sp = findSpeciesByName(trimmed)
+  let result: LookupResult | null = null
+  if (sp) {
+    const value =
+      field === 'order'
+        ? sp.order
+        : field === 'habitat'
+          ? sp.habitat
+          : sp.rarity
+    result = { value, source: 'zukan' }
+  } else if (hasRealAi()) {
+    // 2) 図鑑になければ、本物AIモードのときだけ問い合わせる
+    try {
+      result = await lookupFieldWithClaude(trimmed, field)
+    } catch (e) {
+      console.warn('AIの項目しらべにしっぱいしました', e)
+      result = null
+    }
+  }
+
+  await thinking
+  return result
+}

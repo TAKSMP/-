@@ -450,6 +450,47 @@ input:focus {
   border-color: var(--yellow);
   box-shadow: 0 0 0 3px #ffd23f55;
 }
+/* 訂正中の各項目（入力＋AIボタン） */
+.field-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.field-edit input {
+  flex: 1;
+  min-width: 120px;
+}
+.lookup-btn {
+  border: none;
+  background: var(--sky-deep);
+  color: #fff;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 3px 0 #2f7fb0;
+  transition: transform 0.08s ease;
+}
+.lookup-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #2f7fb0;
+}
+.lookup-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.lookup-miss {
+  flex-basis: 100%;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--danger);
+}
+
 .result-actions {
   display: flex;
   gap: 10px;

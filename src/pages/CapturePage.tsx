@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import type { AiResult, CaughtBug } from '../types'
-import { analyzePhoto, hasRealAi } from '../lib/ai'
+import type { LookupField } from '../lib/ai'
+import { analyzePhoto, hasRealAi, lookupField } from '../lib/ai'
 import { ALL_HABITATS, ALL_ORDERS } from '../data/bugs'
 import { StarRating } from '../components/StarRating'
 import { Confetti } from '../components/Confetti'
@@ -29,6 +30,9 @@ export function CapturePage({ onSaved }: Props) {
   const [order, setOrder] = useState('')
   const [rarity, setRarity] = useState(3)
   const [habitat, setHabitat] = useState('')
+  // 「AIに調べさせる」中の項目と、みつからなかった項目
+  const [lookingUp, setLookingUp] = useState<LookupField | null>(null)
+  const [notFound, setNotFound] = useState<LookupField | null>(null)
 
   function reset() {
     setPhase('empty')
@@ -36,6 +40,8 @@ export function CapturePage({ onSaved }: Props) {
     setResult(null)
     setEditing(false)
     setSaved(false)
+    setLookingUp(null)
+    setNotFound(null)
   }
 
   // 写真（dataURL）をうけとってAIにしらべてもらう。
@@ -90,6 +96,51 @@ export function CapturePage({ onSaved }: Props) {
     setConfetti(true)
     setSaved(true)
     setTimeout(() => setConfetti(false), 200)
+  }
+
+  // なまえをもとに、1つの項目（目 / レア度 / 生息地）をAIに調べさせて自動入力する
+  async function handleLookup(field: LookupField) {
+    if (!name.trim()) {
+      sfx.error()
+      alert('さきに「なまえ」を入れてね🐛')
+      return
+    }
+    sfx.tap()
+    setNotFound(null)
+    setLookingUp(field)
+    const res = await lookupField(name, field)
+    setLookingUp(null)
+    if (!res) {
+      setNotFound(field)
+      sfx.error()
+      return
+    }
+    if (field === 'order') setOrder(String(res.value))
+    else if (field === 'habitat') setHabitat(String(res.value))
+    else setRarity(Number(res.value))
+    sfx.discover()
+  }
+
+  // 各項目についている「AIに調べさせる」ボタン
+  function lookupButton(field: LookupField) {
+    const busy = lookingUp === field
+    return (
+      <button
+        type="button"
+        className="lookup-btn"
+        disabled={lookingUp !== null}
+        onClick={() => handleLookup(field)}
+        title="なまえをもとにAIが調べて自動で入れるよ"
+      >
+        {busy ? (
+          <>
+            <span className="spinner">🔎</span> しらべ中…
+          </>
+        ) : (
+          <>🤖 AIに調べさせる</>
+        )}
+      </button>
+    )
   }
 
   return (
@@ -193,11 +244,19 @@ export function CapturePage({ onSaved }: Props) {
                 <dt>目（もく）</dt>
                 <dd>
                   {editing ? (
-                    <input
-                      list="orders"
-                      value={order}
-                      onChange={(e) => setOrder(e.target.value)}
-                    />
+                    <div className="field-edit">
+                      <input
+                        list="orders"
+                        value={order}
+                        onChange={(e) => setOrder(e.target.value)}
+                      />
+                      {lookupButton('order')}
+                      {notFound === 'order' && (
+                        <span className="lookup-miss">
+                          わからなかった…なまえを見なおしてね
+                        </span>
+                      )}
+                    </div>
                   ) : (
                     order
                   )}
@@ -207,12 +266,24 @@ export function CapturePage({ onSaved }: Props) {
               <div className="field">
                 <dt>レア度</dt>
                 <dd>
-                  <StarRating
-                    value={rarity}
-                    editable={editing}
-                    onChange={setRarity}
-                    size={24}
-                  />
+                  {editing ? (
+                    <div className="field-edit">
+                      <StarRating
+                        value={rarity}
+                        editable={editing}
+                        onChange={setRarity}
+                        size={24}
+                      />
+                      {lookupButton('rarity')}
+                      {notFound === 'rarity' && (
+                        <span className="lookup-miss">
+                          わからなかった…なまえを見なおしてね
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <StarRating value={rarity} size={24} />
+                  )}
                 </dd>
               </div>
 
@@ -220,11 +291,19 @@ export function CapturePage({ onSaved }: Props) {
                 <dt>生息地</dt>
                 <dd>
                   {editing ? (
-                    <input
-                      list="habitats"
-                      value={habitat}
-                      onChange={(e) => setHabitat(e.target.value)}
-                    />
+                    <div className="field-edit">
+                      <input
+                        list="habitats"
+                        value={habitat}
+                        onChange={(e) => setHabitat(e.target.value)}
+                      />
+                      {lookupButton('habitat')}
+                      {notFound === 'habitat' && (
+                        <span className="lookup-miss">
+                          わからなかった…なまえを見なおしてね
+                        </span>
+                      )}
+                    </div>
                   ) : (
                     habitat
                   )}
@@ -249,6 +328,7 @@ export function CapturePage({ onSaved }: Props) {
                   className="btn btn-ghost"
                   onClick={() => {
                     sfx.tap()
+                    setNotFound(null)
                     setEditing((e) => !e)
                   }}
                 >
