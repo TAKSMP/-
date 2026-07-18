@@ -172,12 +172,14 @@ export function CapturePage({ onSaved, onOpenSettings }: Props) {
     }
     const shared = photo ? await shareToChatGPT(photo, prompt) : false
     if (shared) {
-      setAskMsg('📤 ChatGPTに写真をおくったよ。答えをコピーして下に貼り付けてね。')
+      setAskMsg(
+        '📤 AIチャットに写真をおくったよ。答えは黒いわく（コードブロック）で出るので、右上のコピーボタンでコピーして、下に貼り付けてね。',
+      )
     } else {
-      // スマホのシェアが使えないとき：ChatGPTを開く（質問文はコピー済み）
+      // シェアが使えないとき：質問文はコピー済み。ChatGPTを開く。
       window.open('https://chatgpt.com/', '_blank', 'noopener')
       setAskMsg(
-        '📋 質問文をコピーしたよ。ひらいたChatGPTに貼り付けて、この虫の写真もつけて送ってね。',
+        '📋 質問文をコピーしたよ。すきなAIチャット（ChatGPT / Claude など）に貼り付けて、この虫の写真もつけて送ってね。答えのコピーボタンでコピーして、下に貼り付け。',
       )
     }
   }
@@ -436,19 +438,20 @@ export function CapturePage({ onSaved, onOpenSettings }: Props) {
               ))}
             </datalist>
 
-            {/* ChatGPTで正確にしらべて取り込む */}
+            {/* AIチャットで正確にしらべて取り込む */}
             {!saved && (
               <details className="chatgpt-box">
-                <summary>🤖 ChatGPTでもっと正確にしらべる</summary>
+                <summary>🤖 AIチャットでもっと正確にしらべる</summary>
                 <p className="chatgpt-lead">
-                  お手もちのChatGPT（有料版）でこの虫を同定して、答えをここに取り込めます。
+                  お手もちのAIチャット（ChatGPT / Claude など）でこの虫を同定して、
+                  答えをここに取り込めます。答えはコピーボタン付きで出るようにしてあります。
                 </p>
                 <button className="btn btn-camera chatgpt-ask" onClick={handleAskChatGPT}>
-                  ① 写真と質問をChatGPTへ 📤
+                  ① 写真と質問をAIチャットへ 📤
                 </button>
                 {askMsg && <p className="chatgpt-note">{askMsg}</p>}
                 <p className="chatgpt-step">
-                  ② ChatGPTの答えを、まるごとコピーして下に貼り付け👇
+                  ② 答えの黒いわくのコピーボタンでコピーして、下に貼り付け👇
                 </p>
                 <textarea
                   className="chatgpt-textarea"
