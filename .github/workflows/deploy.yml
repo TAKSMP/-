@@ -1,11 +1,12 @@
 name: Deploy to GitHub Pages
 
-# 作業ブランチにpushされるたびに、自動でビルドしてGitHub Pagesに公開します。
+# main にpushされるたびに、自動でビルドしてGitHub Pagesに公開します。
+# （GitHub Pagesはデフォルトブランチ main からの公開のみ許可されるため）
 # 手動実行（Actionsタブの "Run workflow"）もできます。
 on:
   push:
     branches:
-      - claude/chomushi-app-dev-nq41df
+      - main
   workflow_dispatch:
 
 # GitHub Pagesへの公開に必要な権限
