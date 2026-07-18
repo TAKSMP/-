@@ -7,6 +7,7 @@
 //  ・parseBugAnswer(): ChatGPTの答え(テキスト)を4項目に読み取る
 //  ・shareToChatGPT(): 写真＋質問文をChatGPTに共有（スマホ）
 // =============================================================
+import { INSECT_ORDERS, canonicalOrder } from '../data/orders'
 
 // AIチャットにおくる質問文。決まった形式で答えさせて、取り込みやすくする。
 export function buildPrompt(): string {
@@ -17,7 +18,11 @@ export function buildPrompt(): string {
 
 「生息地」と「説明」は、小さな子どもが読めるように、漢字をつかわず
 ひらがなとカタカナだけで書いてください。よみやすいように、文節のくぎりに
-半角スペースを入れてください。（「名前」はカタカナ、「目」は◯◯目でOKです）
+半角スペースを入れてください。（「名前」はカタカナでOKです）
+
+「目」は、かならず次の30分類のどれか1つで答えてください（この言葉をそのまま使う）:
+${INSECT_ORDERS.join('、')}
+（昆虫でない場合は 内顎類・甲殻類・多足類・クモガタ綱 のいずれか）
 
 答えは、下の5行だけを ` +
     '```' +
@@ -70,7 +75,8 @@ export function parseBugAnswer(text: string): ParsedAnswer {
   const rawOrder = pickLine(text, ['目', 'もく', '分類'])
   if (rawOrder) {
     const m = rawOrder.match(/[ぁ-んァ-ヶ一-龠ー]+目/)
-    result.order = m ? m[0] : rawOrder.trim()
+    const raw = m ? m[0] : rawOrder.trim()
+    result.order = canonicalOrder(raw) ?? raw
   }
 
   const rawRarity = pickLine(text, ['レア度', 'レアド', 'めずらしさ', '珍しさ'])

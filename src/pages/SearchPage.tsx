@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { BugSpecies, CaughtBug } from '../types'
-import { ALL_HABITATS, ALL_ORDERS, BUG_SPECIES } from '../data/bugs'
+import { ALL_HABITATS, BUG_SPECIES } from '../data/bugs'
+import { INSECT_ORDERS } from '../data/orders'
 import { StarRating } from '../components/StarRating'
 import { sfx } from '../lib/sound'
 
@@ -68,7 +69,7 @@ export function SearchPage({ bugs }: Props) {
       <div className="filter-group">
         <div className="filter-label">🐾 目（もく）</div>
         <div className="chips-row">
-          {ALL_ORDERS.map((o) => (
+          {INSECT_ORDERS.map((o) => (
             <button
               key={o}
               className={'filter-chip' + (orderFilter === o ? ' active' : '')}

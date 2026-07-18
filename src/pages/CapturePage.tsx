@@ -8,7 +8,8 @@ import {
   shareToChatGPT,
 } from '../lib/chatgpt'
 import { compressImage } from '../lib/image'
-import { ALL_HABITATS, ALL_ORDERS, findSpeciesByName } from '../data/bugs'
+import { ALL_HABITATS, findSpeciesByName } from '../data/bugs'
+import { INSECT_ORDERS } from '../data/orders'
 import { StarRating } from '../components/StarRating'
 import { Confetti } from '../components/Confetti'
 import { CameraCapture } from '../components/CameraCapture'
@@ -353,7 +354,7 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
             </dl>
 
             <datalist id="orders">
-              {ALL_ORDERS.map((o) => (
+              {INSECT_ORDERS.map((o) => (
                 <option key={o} value={o} />
               ))}
             </datalist>

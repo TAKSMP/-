@@ -1,5 +1,6 @@
 import type { AiResult } from '../types'
 import { BUG_SPECIES, findSpeciesByName } from '../data/bugs'
+import { INSECT_ORDERS, canonicalOrder } from '../data/orders'
 
 // =============================================================
 //  ちょうむしAI
@@ -148,8 +149,9 @@ async function analyzeWithClaude(dataUrl: string): Promise<AiResult> {
   「オオカマキリ」「チョウセンカマキリ」「ギンヤンマ」「アキアカネ」のような
   具体的な和名（種名）で答えること。近縁で区別がむずかしい場合は、
   最も可能性が高い種名を答え、confidenceを下げること。
-- 目（もく）は正式な和名で（例: カマキリ目、トンボ目、コウチュウ目、チョウ目、
-  バッタ目、カメムシ目、ハチ目 など）。
+- 目（もく）は、かならず次の30分類のどれか1つで答えること（この中の言葉をそのまま使う）:
+  ${INSECT_ORDERS.join('、')}
+  （昆虫でない場合は、内顎類・甲殻類・多足類・クモガタ綱 のいずれかを使う）
 - rarity は日本での見つけやすさを1(ふつう)〜5(とてもめずらしい)で。
 - habitat と fact は、小さな子どもが読めるように「ひらがな」と「カタカナ」だけで書くこと。
   漢字は絶対につかわない。よみやすいように、文節の くぎりに 半角スペースを いれること。
@@ -207,7 +209,8 @@ async function analyzeWithClaude(dataUrl: string): Promise<AiResult> {
 
   return {
     name: String(parsed.name ?? '不明'),
-    order: String(parsed.order ?? 'ふめい'),
+    // 30分類のどれかに寄せる（余計な文字がついていても正規化）
+    order: canonicalOrder(String(parsed.order ?? '')) ?? String(parsed.order ?? 'ふめい'),
     rarity: Math.max(1, Math.min(5, Math.round(Number(parsed.rarity)) || 1)),
     habitat: String(parsed.habitat ?? 'ふめい'),
     fact: parsed.fact ? String(parsed.fact) : undefined,
