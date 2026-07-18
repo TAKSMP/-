@@ -22,6 +22,19 @@ function formatDate(ms: number): string {
   return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`
 }
 
+// ミリ秒 →「YYYY-MM-DD」（<input type=date> 用）
+function msToDateInput(ms: number): string {
+  const d = new Date(ms)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+// 「YYYY-MM-DD」→ ミリ秒（そのひのお昼にして時差のズレをふせぐ）
+function dateInputToMs(s: string): number | null {
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!m) return null
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12).getTime()
+}
+
 export function BugDetailModal({
   bug,
   onClose,
@@ -38,6 +51,7 @@ export function BugDetailModal({
   const [habitat, setHabitat] = useState('')
   const [fact, setFact] = useState('')
   const [place, setPlace] = useState('')
+  const [foundDate, setFoundDate] = useState('') // YYYY-MM-DD
   const [describing, setDescribing] = useState(false)
   const [describeMiss, setDescribeMiss] = useState(false)
   const [suggestingHab, setSuggestingHab] = useState(false)
@@ -67,6 +81,7 @@ export function BugDetailModal({
     setHabitat(bug.habitat)
     setFact(bug.fact ?? '')
     setPlace(mainCapture?.place ?? '')
+    setFoundDate(msToDateInput(firstDate))
     setDescribeMiss(false)
     setHabMiss(false)
     setEditing(true)
@@ -74,6 +89,7 @@ export function BugDetailModal({
 
   function saveEdit() {
     if (!bug || !onUpdate) return
+    const firstCaughtAt = dateInputToMs(foundDate)
     onUpdate(bug.id, {
       name,
       order,
@@ -81,6 +97,7 @@ export function BugDetailModal({
       habitat,
       fact,
       mainPlace: place,
+      ...(firstCaughtAt !== null ? { firstCaughtAt } : {}),
     })
     sfx.discover()
     setEditing(false)
@@ -222,6 +239,17 @@ export function BugDetailModal({
                       <option key={p} value={p} />
                     ))}
                   </datalist>
+                </dd>
+              </div>
+              <div className="field">
+                <dt>はじめて みつけた日</dt>
+                <dd>
+                  <input
+                    type="date"
+                    className="date-input"
+                    value={foundDate}
+                    onChange={(e) => setFoundDate(e.target.value)}
+                  />
                 </dd>
               </div>
             </dl>

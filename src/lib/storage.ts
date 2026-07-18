@@ -9,6 +9,7 @@ export interface BugPatch {
   habitat?: string
   fact?: string
   mainPlace?: string // メイン写真の「みつけたばしょ」
+  firstCaughtAt?: number // 「はじめて みつけた日」（いちばん古い撮影の日付）
 }
 
 // 図鑑（つかまえた虫の記録）はブラウザの localStorage に保存します。
@@ -155,12 +156,31 @@ export function updateBug(bugId: string, patch: BugPatch): CaughtBug[] {
     if (patch.habitat !== undefined)
       next.habitat = patch.habitat.trim() || 'ふめい'
     if (patch.fact !== undefined) next.fact = patch.fact.trim() || undefined
+
+    // 写真（captures）にかかわる変更をまとめて反映
+    let captures = b.captures
     if (patch.mainPlace !== undefined) {
       const place = patch.mainPlace.trim() || undefined
-      next.captures = b.captures.map((c) =>
+      captures = captures.map((c) =>
         c.id === b.mainCaptureId ? { ...c, place } : c,
       )
     }
+    if (patch.firstCaughtAt !== undefined && captures.length > 0) {
+      // いちばん古い撮影の日付をなおす
+      let minId = captures[0].id
+      let minAt = captures[0].caughtAt
+      for (const c of captures) {
+        if (c.caughtAt < minAt) {
+          minAt = c.caughtAt
+          minId = c.id
+        }
+      }
+      captures = captures.map((c) =>
+        c.id === minId ? { ...c, caughtAt: patch.firstCaughtAt! } : c,
+      )
+    }
+    next.captures = captures
+
     next.corrected = true
     return next
   })

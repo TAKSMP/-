@@ -1593,6 +1593,11 @@ input:focus {
 .modal-edit .field dt {
   color: #8a9a7a;
 }
+.date-input {
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+}
 .modal-edit-btn {
   width: 100%;
   margin: 4px 0 4px;
