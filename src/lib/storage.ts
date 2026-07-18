@@ -69,8 +69,8 @@ export function saveZukan(bugs: CaughtBug[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(bugs))
   } catch (e) {
+    // 容量オーバーなどで保存できなくても、ポップアップは出さない（静かにログだけ）
     console.warn('図鑑の保存に失敗しました', e)
-    alert('図鑑がいっぱいかもしれません。ふるい虫をへらしてみてね。')
   }
 }
 

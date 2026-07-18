@@ -7,6 +7,7 @@ import {
   parseBugAnswer,
   shareToChatGPT,
 } from '../lib/chatgpt'
+import { compressImage } from '../lib/image'
 import { ALL_HABITATS, ALL_ORDERS, findSpeciesByName } from '../data/bugs'
 import { StarRating } from '../components/StarRating'
 import { Confetti } from '../components/Confetti'
@@ -65,10 +66,12 @@ export function CapturePage({ onSaved, onOpenSettings }: Props) {
   // 写真（dataURL）をうけとってAIにしらべてもらう。
   // ファイル読み込みでもカメラ撮影でも、ここにながれてくる。
   async function analyzeDataUrl(dataUrl: string) {
-    setPhoto(dataUrl)
+    // 保存・送信まえに小さく圧縮（容量オーバー防止）
+    const small = await compressImage(dataUrl)
+    setPhoto(small)
     setPhase('analyzing')
     try {
-      const r = await analyzePhoto(dataUrl)
+      const r = await analyzePhoto(small)
       setResult(r)
       setName(r.name)
       setOrder(r.order)
