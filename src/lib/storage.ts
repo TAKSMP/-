@@ -87,6 +87,7 @@ export function recordCapture(input: CaptureInput): {
     id: uid('cap'),
     photo: input.photo,
     caughtAt: input.caughtAt,
+    place: input.place?.trim() || undefined,
   }
   const key = normalizeBugName(input.name)
   const idx = key
@@ -171,6 +172,21 @@ export function removeFromZukan(id: string): CaughtBug[] {
 export function clearZukan(): CaughtBug[] {
   saveZukan([])
   return []
+}
+
+// これまでに入力した「みつけたばしょ」のいちらん（よくつかう順）。
+// 検索ボックスの候補（datalist）に使う。
+export function collectPlaces(bugs: CaughtBug[]): string[] {
+  const counts = new Map<string, number>()
+  for (const bug of bugs) {
+    for (const c of bug.captures) {
+      const p = c.place?.trim()
+      if (p) counts.set(p, (counts.get(p) ?? 0) + 1)
+    }
+  }
+  return Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([p]) => p)
 }
 
 // メイン画像／最新の撮影日をとりだすヘルパ

@@ -28,6 +28,8 @@ export function BugDetailModal({ bug, onClose, onDelete, onSetMain }: Props) {
 
   // 撮影履歴（あたらしい順）
   const captures = [...bug.captures].sort((a, b) => b.caughtAt - a.caughtAt)
+  const mainCapture =
+    bug.captures.find((c) => c.id === bug.mainCaptureId) ?? bug.captures[0]
   const firstDate = bug.captures.reduce(
     (m, c) => Math.min(m, c.caughtAt),
     Infinity,
@@ -62,6 +64,12 @@ export function BugDetailModal({ bug, onClose, onDelete, onSetMain }: Props) {
             <dt>生息地</dt>
             <dd>{bug.habitat}</dd>
           </div>
+          {mainCapture?.place && (
+            <div>
+              <dt>みつけたばしょ</dt>
+              <dd>📍 {mainCapture.place}</dd>
+            </div>
+          )}
           <div>
             <dt>はじめて みつけた日</dt>
             <dd>{formatDate(firstDate)}</dd>
@@ -104,7 +112,10 @@ export function BugDetailModal({ bug, onClose, onDelete, onSetMain }: Props) {
                   }}
                 >
                   <img src={c.photo} alt={bug.name} loading="lazy" />
-                  <span className="history-date">{formatDate(c.caughtAt)}</span>
+                  <span className="history-date">
+                    {formatDate(c.caughtAt)}
+                    {c.place ? ` ・${c.place}` : ''}
+                  </span>
                   {isMain && <span className="history-badge">メイン</span>}
                 </button>
               )

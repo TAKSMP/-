@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CaptureInput, CaughtBug } from './types'
 import {
+  collectPlaces,
   loadZukan,
   recordCapture,
   removeFromZukan,
@@ -65,7 +66,12 @@ export default function App() {
 
       <main className="app-main">
         {tab === 'capture' && (
-          <CapturePage key={aiVersion} onSaved={handleSaved} onOpenSettings={() => setSettingsOpen(true)} />
+          <CapturePage
+            key={aiVersion}
+            onSaved={handleSaved}
+            pastPlaces={collectPlaces(bugs)}
+            onOpenSettings={() => setSettingsOpen(true)}
+          />
         )}
         {tab === 'zukan' && (
           <ZukanPage

@@ -19,11 +19,12 @@ type Phase = 'empty' | 'analyzing' | 'result' | 'error'
 interface Props {
   // 保存して、すでにいる虫なら true（履歴に足した）をかえす
   onSaved: (input: CaptureInput) => boolean
+  pastPlaces: string[] // これまで入力した「みつけたばしょ」の候補
   onOpenSettings: () => void
 }
 
 // 写真をよみこんで、AIが虫を判定するメインのページ。
-export function CapturePage({ onSaved, onOpenSettings }: Props) {
+export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
   const [phase, setPhase] = useState<Phase>('empty')
   const [photo, setPhoto] = useState<string>('')
   const [result, setResult] = useState<AiResult | null>(null)
@@ -40,6 +41,7 @@ export function CapturePage({ onSaved, onOpenSettings }: Props) {
   const [order, setOrder] = useState('')
   const [rarity, setRarity] = useState(3)
   const [habitat, setHabitat] = useState('')
+  const [place, setPlace] = useState('') // みつけたばしょ
   // ChatGPT取り込み用
   const [importText, setImportText] = useState('')
   const [importMsg, setImportMsg] = useState('')
@@ -55,6 +57,7 @@ export function CapturePage({ onSaved, onOpenSettings }: Props) {
     setEditing(false)
     setSaved(false)
     setMerged(false)
+    setPlace('')
     setErrorMsg('')
     setImportText('')
     setImportMsg('')
@@ -127,6 +130,7 @@ export function CapturePage({ onSaved, onOpenSettings }: Props) {
       fact: aiFact && aiFactName === name.trim() ? aiFact : undefined,
       photo,
       caughtAt: Date.now(),
+      place: place.trim() || undefined,
       corrected: editing,
     }
     const wasMerged = onSaved(input)
@@ -358,6 +362,25 @@ export function CapturePage({ onSaved, onOpenSettings }: Props) {
                 <option key={h} value={h} />
               ))}
             </datalist>
+
+            {/* みつけたばしょ（手入力＋過去に入れた場所からえらべる） */}
+            {!saved && (
+              <div className="place-field">
+                <label htmlFor="place-input">📍 みつけたばしょ</label>
+                <input
+                  id="place-input"
+                  list="places"
+                  value={place}
+                  onChange={(e) => setPlace(e.target.value)}
+                  placeholder="れい: こうえん、にわ、がっこう"
+                />
+                <datalist id="places">
+                  {pastPlaces.map((p) => (
+                    <option key={p} value={p} />
+                  ))}
+                </datalist>
+              </div>
+            )}
 
             {/* AIチャットで正確にしらべて取り込む */}
             {!saved && (

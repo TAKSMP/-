@@ -22,11 +22,13 @@ export interface AiResult {
   demo?: boolean // デモモード（色から推理しただけ）の結果かどうか
 }
 
-// 1回ぶんの撮影（写真＋とった日）。同じ虫を何回もとると、これがふえていく。
+// 1回ぶんの撮影（写真＋とった日＋みつけたばしょ）。
+// 同じ虫を何回もとると、これがふえていく。
 export interface Capture {
   id: string
   photo: string // 写真（dataURL）
   caughtAt: number // 記録した日時（ミリ秒）
+  place?: string // みつけたばしょ（子どもが入力する、じっさいの場所）
 }
 
 // 図鑑に記録された1しゅるいの虫。撮影の履歴（captures）をもつ。
@@ -53,5 +55,6 @@ export interface CaptureInput {
   fact?: string
   photo: string
   caughtAt: number
+  place?: string // みつけたばしょ
   corrected: boolean
 }
