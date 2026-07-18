@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react'
 import type { AiResult, CaptureInput } from '../types'
-import type { LookupField } from '../lib/ai'
-import { analyzePhoto, hasRealAi, lookupField } from '../lib/ai'
+import { analyzePhoto, hasRealAi } from '../lib/ai'
 import {
   buildPrompt,
   countParsed,
@@ -40,9 +39,6 @@ export function CapturePage({ onSaved, onOpenSettings }: Props) {
   const [order, setOrder] = useState('')
   const [rarity, setRarity] = useState(3)
   const [habitat, setHabitat] = useState('')
-  // 「AIに調べさせる」中の項目と、みつからなかった項目
-  const [lookingUp, setLookingUp] = useState<LookupField | null>(null)
-  const [notFound, setNotFound] = useState<LookupField | null>(null)
   // ChatGPT取り込み用
   const [importText, setImportText] = useState('')
   const [importMsg, setImportMsg] = useState('')
@@ -58,8 +54,6 @@ export function CapturePage({ onSaved, onOpenSettings }: Props) {
     setEditing(false)
     setSaved(false)
     setMerged(false)
-    setLookingUp(null)
-    setNotFound(null)
     setErrorMsg('')
     setImportText('')
     setImportMsg('')
@@ -141,28 +135,6 @@ export function CapturePage({ onSaved, onOpenSettings }: Props) {
   }
 
   // なまえをもとに、1つの項目（目 / レア度 / 生息地）をAIに調べさせて自動入力する
-  async function handleLookup(field: LookupField) {
-    if (!name.trim()) {
-      sfx.error()
-      alert('さきに「なまえ」を入れてね🐛')
-      return
-    }
-    sfx.tap()
-    setNotFound(null)
-    setLookingUp(field)
-    const res = await lookupField(name, field)
-    setLookingUp(null)
-    if (!res) {
-      setNotFound(field)
-      sfx.error()
-      return
-    }
-    if (field === 'order') setOrder(String(res.value))
-    else if (field === 'habitat') setHabitat(String(res.value))
-    else setRarity(Number(res.value))
-    sfx.discover()
-  }
-
   // ① 写真＋質問文をChatGPTにおくる（できなければコピーして開く）
   async function handleAskChatGPT() {
     sfx.tap()
@@ -208,29 +180,6 @@ export function CapturePage({ onSaved, onOpenSettings }: Props) {
     }
     sfx.discover()
     setImportMsg(`✅ ${n}こうもくを取り込んだよ！ないようをたしかめて記録してね。`)
-    setNotFound(null)
-  }
-
-  // 各項目についている「AIに調べさせる」ボタン
-  function lookupButton(field: LookupField) {
-    const busy = lookingUp === field
-    return (
-      <button
-        type="button"
-        className="lookup-btn"
-        disabled={lookingUp !== null}
-        onClick={() => handleLookup(field)}
-        title="なまえをもとにAIが調べて自動で入れるよ"
-      >
-        {busy ? (
-          <>
-            <span className="spinner">🔎</span> しらべ中…
-          </>
-        ) : (
-          <>🤖 AIに調べさせる</>
-        )}
-      </button>
-    )
   }
 
   return (
@@ -357,19 +306,11 @@ export function CapturePage({ onSaved, onOpenSettings }: Props) {
                 <dt>目（もく）</dt>
                 <dd>
                   {editing ? (
-                    <div className="field-edit">
-                      <input
-                        list="orders"
-                        value={order}
-                        onChange={(e) => setOrder(e.target.value)}
-                      />
-                      {lookupButton('order')}
-                      {notFound === 'order' && (
-                        <span className="lookup-miss">
-                          わからなかった…なまえを見なおしてね
-                        </span>
-                      )}
-                    </div>
+                    <input
+                      list="orders"
+                      value={order}
+                      onChange={(e) => setOrder(e.target.value)}
+                    />
                   ) : (
                     order
                   )}
@@ -379,24 +320,12 @@ export function CapturePage({ onSaved, onOpenSettings }: Props) {
               <div className="field">
                 <dt>レア度</dt>
                 <dd>
-                  {editing ? (
-                    <div className="field-edit">
-                      <StarRating
-                        value={rarity}
-                        editable={editing}
-                        onChange={setRarity}
-                        size={24}
-                      />
-                      {lookupButton('rarity')}
-                      {notFound === 'rarity' && (
-                        <span className="lookup-miss">
-                          わからなかった…なまえを見なおしてね
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <StarRating value={rarity} size={24} />
-                  )}
+                  <StarRating
+                    value={rarity}
+                    editable={editing}
+                    onChange={setRarity}
+                    size={24}
+                  />
                 </dd>
               </div>
 
@@ -404,19 +333,11 @@ export function CapturePage({ onSaved, onOpenSettings }: Props) {
                 <dt>生息地</dt>
                 <dd>
                   {editing ? (
-                    <div className="field-edit">
-                      <input
-                        list="habitats"
-                        value={habitat}
-                        onChange={(e) => setHabitat(e.target.value)}
-                      />
-                      {lookupButton('habitat')}
-                      {notFound === 'habitat' && (
-                        <span className="lookup-miss">
-                          わからなかった…なまえを見なおしてね
-                        </span>
-                      )}
-                    </div>
+                    <input
+                      list="habitats"
+                      value={habitat}
+                      onChange={(e) => setHabitat(e.target.value)}
+                    />
                   ) : (
                     habitat
                   )}
@@ -474,7 +395,6 @@ export function CapturePage({ onSaved, onOpenSettings }: Props) {
                   className="btn btn-ghost"
                   onClick={() => {
                     sfx.tap()
-                    setNotFound(null)
                     setEditing((e) => !e)
                   }}
                 >
