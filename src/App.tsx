@@ -82,7 +82,9 @@ export default function App() {
           />
         )}
         {tab === 'search' && <SearchPage bugs={bugs} />}
-        {tab === 'quiz' && <QuizPage />}
+        {tab === 'quiz' && (
+          <QuizPage bugs={bugs} onGoCapture={() => setTab('capture')} />
+        )}
       </main>
 
       {/* した の ナビゲーション */}

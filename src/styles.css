@@ -1257,6 +1257,16 @@ input:focus {
   font-size: 80px;
   animation: bob 2.5s ease-in-out infinite;
 }
+.quiz-photo {
+  width: 100%;
+  max-width: 260px;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 16px;
+  margin: 0 auto 4px;
+  display: block;
+  background: #eef3e8;
+}
 .quiz-prompt {
   font-size: 20px;
   color: var(--green-deep);

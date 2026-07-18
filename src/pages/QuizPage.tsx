@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
-import type { BugSpecies } from '../types'
-import { ALL_HABITATS, ALL_ORDERS, BUG_SPECIES } from '../data/bugs'
+import type { CaughtBug } from '../types'
 import { Confetti } from '../components/Confetti'
+import { mainPhoto } from '../lib/storage'
 import { sfx } from '../lib/sound'
 
 const QUESTION_COUNT = 10
@@ -10,7 +10,11 @@ type QKind = 'name' | 'habitat' | 'order'
 
 interface Question {
   kind: QKind
-  species: BugSpecies
+  photo: string
+  bugName: string
+  order: string
+  habitat: string
+  fact?: string
   prompt: string
   options: string[]
   answer: string
@@ -25,65 +29,75 @@ function shuffle<T>(arr: T[]): T[] {
   return a
 }
 
-// まちがいの選択肢（distractor）を、正解いがいから3つえらぶ
-function pickDistractors(all: string[], answer: string, n: number): string[] {
-  const pool = shuffle(all.filter((x) => x !== answer))
-  return pool.slice(0, n)
+function uniq(arr: string[]): string[] {
+  return Array.from(new Set(arr.filter((x) => x && x !== 'ふめい')))
 }
 
-function makeQuestion(): Question {
-  const species = BUG_SPECIES[Math.floor(Math.random() * BUG_SPECIES.length)]
-  const kinds: QKind[] = ['name', 'habitat', 'order']
-  const kind = kinds[Math.floor(Math.random() * kinds.length)]
-
-  if (kind === 'name') {
-    const answer = species.name
-    const options = shuffle([
-      answer,
-      ...pickDistractors(
-        BUG_SPECIES.map((b) => b.name),
-        answer,
-        3,
-      ),
-    ])
-    return {
-      kind,
-      species,
-      prompt: 'この虫のなまえは、なあに？',
-      options,
-      answer,
-    }
-  }
-
-  if (kind === 'habitat') {
-    const answer = species.habitat
-    const options = shuffle([
-      answer,
-      ...pickDistractors(ALL_HABITATS, answer, 3),
-    ])
-    return {
-      kind,
-      species,
-      prompt: `「${species.name}」は どこにいるかな？`,
-      options,
-      answer,
-    }
-  }
-
-  // order
-  const answer = species.order
-  const options = shuffle([answer, ...pickDistractors(ALL_ORDERS, answer, 3)])
-  return {
-    kind,
-    species,
-    prompt: `「${species.name}」は なに目（もく）？`,
-    options,
-    answer,
-  }
+// 正解＋まちがい選択肢（最大4つ）をつくる
+function makeOptions(answer: string, pool: string[]): string[] {
+  const distractors = shuffle(pool.filter((x) => x !== answer)).slice(0, 3)
+  return shuffle([answer, ...distractors])
 }
 
-function makeQuiz(): Question[] {
-  return Array.from({ length: QUESTION_COUNT }, () => makeQuestion())
+// 発見ずみの虫だけからクイズをつくる
+function buildQuiz(bugs: CaughtBug[]): Question[] {
+  const names = uniq(bugs.map((b) => b.name))
+  const orders = uniq(bugs.map((b) => b.order))
+  const habitats = uniq(bugs.map((b) => b.habitat))
+
+  // つかえる問題タイプ（選択肢が2つ以上つくれるもの）
+  const usable: QKind[] = []
+  if (names.length >= 2) usable.push('name')
+  if (orders.length >= 2) usable.push('order')
+  if (habitats.length >= 2) usable.push('habitat')
+  if (usable.length === 0) return []
+
+  const questions: Question[] = []
+  let guard = 0
+  while (questions.length < QUESTION_COUNT && guard < 500) {
+    guard++
+    const bug = bugs[Math.floor(Math.random() * bugs.length)]
+    // この虫でつかえるタイプ（値がちゃんとあるもの）にしぼる
+    const kinds = usable.filter((k) => {
+      if (k === 'name') return true
+      if (k === 'order') return bug.order && bug.order !== 'ふめい'
+      return bug.habitat && bug.habitat !== 'ふめい'
+    })
+    if (kinds.length === 0) continue
+    const kind = kinds[Math.floor(Math.random() * kinds.length)]
+    const photo = mainPhoto(bug)
+
+    let prompt: string
+    let options: string[]
+    let answer: string
+    if (kind === 'name') {
+      answer = bug.name
+      options = makeOptions(answer, names)
+      prompt = 'この虫の なまえは？'
+    } else if (kind === 'order') {
+      answer = bug.order
+      options = makeOptions(answer, orders)
+      prompt = `「${bug.name}」は なに目（もく）？`
+    } else {
+      answer = bug.habitat
+      options = makeOptions(answer, habitats)
+      prompt = `「${bug.name}」は どこにいる？`
+    }
+    if (options.length < 2) continue
+
+    questions.push({
+      kind,
+      photo,
+      bugName: bug.name,
+      order: bug.order,
+      habitat: bug.habitat,
+      fact: bug.fact,
+      prompt,
+      options,
+      answer,
+    })
+  }
+  return questions
 }
 
 function rankOf(score: number): { emoji: string; title: string } {
@@ -97,7 +111,12 @@ function rankOf(score: number): { emoji: string; title: string } {
 
 type Phase = 'start' | 'playing' | 'done'
 
-export function QuizPage() {
+interface Props {
+  bugs: CaughtBug[]
+  onGoCapture: () => void
+}
+
+export function QuizPage({ bugs, onGoCapture }: Props) {
   const [phase, setPhase] = useState<Phase>('start')
   const [questions, setQuestions] = useState<Question[]>([])
   const [index, setIndex] = useState(0)
@@ -106,12 +125,17 @@ export function QuizPage() {
   const [picked, setPicked] = useState<string | null>(null)
   const [confetti, setConfetti] = useState(false)
 
+  // クイズをつくれるか（虫が2しゅるい以上あるか）
+  const canQuiz = useMemo(() => buildQuiz(bugs).length > 0, [bugs])
+
   const current = questions[index]
   const isCorrect = picked !== null && picked === current?.answer
 
   function start() {
+    const q = buildQuiz(bugs)
+    if (q.length === 0) return
     sfx.tap()
-    setQuestions(makeQuiz())
+    setQuestions(q)
     setIndex(0)
     setScore(0)
     setStreak(0)
@@ -155,21 +179,42 @@ export function QuizPage() {
 
       <header className="page-head">
         <h1>🧠 むしクイズ</h1>
-        <p className="sub">虫はかせを めざそう！</p>
+        <p className="sub">あつめた虫から しゅつだい！</p>
       </header>
 
       {/* --- スタート画面 --- */}
       {phase === 'start' && (
         <div className="quiz-start">
           <div className="quiz-start-emoji">🐞❓</div>
-          <p>
-            虫のなまえ・目（もく）・生息地の
-            <br />
-            ぜんぶで{QUESTION_COUNT}もんのクイズだよ！
-          </p>
-          <button className="btn btn-big btn-primary" onClick={start}>
-            スタート ▶
-          </button>
+          {canQuiz ? (
+            <>
+              <p>
+                きみが 図鑑に あつめた虫から、
+                <br />
+                ぜんぶで{QUESTION_COUNT}もんの クイズだよ！
+              </p>
+              <button className="btn btn-big btn-primary" onClick={start}>
+                スタート ▶
+              </button>
+            </>
+          ) : (
+            <>
+              <p>
+                クイズを するには、虫を
+                <br />
+                <b>2しゅるい いじょう</b> あつめてね！
+              </p>
+              <button
+                className="btn btn-big"
+                onClick={() => {
+                  sfx.tap()
+                  onGoCapture()
+                }}
+              >
+                むしをしらべる 🔎
+              </button>
+            </>
+          )}
         </div>
       )}
 
@@ -187,11 +232,15 @@ export function QuizPage() {
           </div>
 
           <div className="quiz-card">
-            <div className="quiz-emoji">{current.species.emoji}</div>
+            {current.photo ? (
+              <img className="quiz-photo" src={current.photo} alt="クイズの虫" />
+            ) : (
+              <div className="quiz-emoji">🐛</div>
+            )}
             <h2 className="quiz-prompt">{current.prompt}</h2>
             {current.kind === 'name' && (
               <p className="quiz-hint">
-                ヒント: {current.species.order}・{current.species.habitat}にいるよ
+                ヒント: {current.order}・{current.habitat}
               </p>
             )}
           </div>
@@ -213,7 +262,10 @@ export function QuizPage() {
                 >
                   {opt}
                   {picked !== null && opt === current.answer && ' ⭕'}
-                  {picked !== null && opt === picked && opt !== current.answer && ' ❌'}
+                  {picked !== null &&
+                    opt === picked &&
+                    opt !== current.answer &&
+                    ' ❌'}
                 </button>
               )
             })}
@@ -225,9 +277,9 @@ export function QuizPage() {
                 {isCorrect ? '🎉 せいかい！' : '😢 ざんねん…'}
               </div>
               <p>
-                こたえは <b>{current.answer}</b>（{current.species.name}）
+                こたえは <b>{current.answer}</b>
               </p>
-              <p className="quiz-fact">💡 {current.species.fact}</p>
+              {current.fact && <p className="quiz-fact">💡 {current.fact}</p>}
               <button className="btn btn-big" onClick={next}>
                 {index + 1 >= questions.length ? 'けっかを見る 🏁' : 'つぎへ ▶'}
               </button>
