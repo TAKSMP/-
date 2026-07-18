@@ -24,7 +24,6 @@ export function BugDetailModal({ bug, onClose, onDelete, onSetMain }: Props) {
     findSpeciesByName(bug.name) ??
     (bug.speciesId ? getSpeciesById(bug.speciesId) : undefined)
   const factText = bug.fact ?? species?.fact
-  const factEmoji = species?.emoji ?? '🔎'
 
   // 撮影履歴（あたらしい順）
   const captures = [...bug.captures].sort((a, b) => b.caughtAt - a.caughtAt)
@@ -74,17 +73,10 @@ export function BugDetailModal({ bug, onClose, onDelete, onSetMain }: Props) {
             <dt>はじめて みつけた日</dt>
             <dd>{formatDate(firstDate)}</dd>
           </div>
-          {bug.corrected && (
-            <div>
-              <dt>メモ</dt>
-              <dd>✏️ じぶんでなおしたよ</dd>
-            </div>
-          )}
         </dl>
 
         {factText && (
           <div className="modal-fact">
-            <span className="fact-emoji">{factEmoji}</span>
             <p>{factText}</p>
           </div>
         )}
