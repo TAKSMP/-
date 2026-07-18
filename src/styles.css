@@ -1200,6 +1200,12 @@ input:focus {
   font-size: 14px;
   margin: 8px 4px 12px;
 }
+.filter-none {
+  font-size: 13px;
+  color: #8a9a7a;
+  font-weight: 700;
+  margin: 2px 0;
+}
 
 /* =========================================================
    クイズページ

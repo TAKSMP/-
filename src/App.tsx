@@ -81,7 +81,13 @@ export default function App() {
             onGoCapture={() => setTab('capture')}
           />
         )}
-        {tab === 'search' && <SearchPage bugs={bugs} />}
+        {tab === 'search' && (
+          <SearchPage
+            bugs={bugs}
+            onDelete={handleDelete}
+            onSetMain={handleSetMain}
+          />
+        )}
         {tab === 'quiz' && (
           <QuizPage bugs={bugs} onGoCapture={() => setTab('capture')} />
         )}
