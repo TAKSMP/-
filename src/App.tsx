@@ -6,7 +6,9 @@ import {
   recordCapture,
   removeFromZukan,
   setMainCapture,
+  updateBug,
 } from './lib/storage'
+import type { BugPatch } from './lib/storage'
 import { CapturePage } from './pages/CapturePage'
 import { ZukanPage } from './pages/ZukanPage'
 import { SearchPage } from './pages/SearchPage'
@@ -50,6 +52,10 @@ export default function App() {
     setBugs(setMainCapture(bugId, captureId))
   }
 
+  function handleUpdate(bugId: string, patch: BugPatch) {
+    setBugs(updateBug(bugId, patch))
+  }
+
   return (
     <div className="app">
       <button
@@ -78,6 +84,8 @@ export default function App() {
             bugs={bugs}
             onDelete={handleDelete}
             onSetMain={handleSetMain}
+            onUpdate={handleUpdate}
+            pastPlaces={collectPlaces(bugs)}
             onGoCapture={() => setTab('capture')}
           />
         )}
@@ -86,6 +94,8 @@ export default function App() {
             bugs={bugs}
             onDelete={handleDelete}
             onSetMain={handleSetMain}
+            onUpdate={handleUpdate}
+            pastPlaces={collectPlaces(bugs)}
           />
         )}
         {tab === 'quiz' && (

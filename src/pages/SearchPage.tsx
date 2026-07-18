@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { CaughtBug } from '../types'
 import { INSECT_ORDERS, canonicalOrder } from '../data/orders'
-import { collectPlaces } from '../lib/storage'
+import type { BugPatch } from '../lib/storage'
 import { BugCard } from '../components/BugCard'
 import { BugDetailModal } from '../components/BugDetailModal'
 import { sfx } from '../lib/sound'
@@ -10,10 +10,18 @@ interface Props {
   bugs: CaughtBug[]
   onDelete: (id: string) => void
   onSetMain: (bugId: string, captureId: string) => void
+  onUpdate: (bugId: string, patch: BugPatch) => void
+  pastPlaces: string[]
 }
 
 // あつめた虫を、なまえ・目・みつけたばしょ・レア度でさがすページ。
-export function SearchPage({ bugs, onDelete, onSetMain }: Props) {
+export function SearchPage({
+  bugs,
+  onDelete,
+  onSetMain,
+  onUpdate,
+  pastPlaces,
+}: Props) {
   const [q, setQ] = useState('')
   const [orderFilter, setOrderFilter] = useState<string | null>(null)
   const [placeFilter, setPlaceFilter] = useState<string | null>(null)
@@ -24,7 +32,7 @@ export function SearchPage({ bugs, onDelete, onSetMain }: Props) {
     : null
 
   // みつけた場所のタグ（記録がふえるたびに ここも ふえる）
-  const places = useMemo(() => collectPlaces(bugs), [bugs])
+  const places = pastPlaces
   // 目のタグは、あつめた虫にある目だけを本の順にならべる
   const orders = useMemo(() => {
     const present = new Set(
@@ -181,6 +189,8 @@ export function SearchPage({ bugs, onDelete, onSetMain }: Props) {
         onClose={() => setSelectedId(null)}
         onDelete={onDelete}
         onSetMain={onSetMain}
+        onUpdate={onUpdate}
+        pastPlaces={pastPlaces}
       />
     </div>
   )

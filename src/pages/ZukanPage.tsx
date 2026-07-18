@@ -4,6 +4,7 @@ import { BugCard } from '../components/BugCard'
 import { BugDetailModal } from '../components/BugDetailModal'
 import { INSECT_ORDERS, canonicalOrder, orderEmoji } from '../data/orders'
 import { latestCaughtAt } from '../lib/storage'
+import type { BugPatch } from '../lib/storage'
 import { countHiki } from '../lib/format'
 import { sfx } from '../lib/sound'
 
@@ -11,13 +12,22 @@ interface Props {
   bugs: CaughtBug[]
   onDelete: (id: string) => void
   onSetMain: (bugId: string, captureId: string) => void
+  onUpdate: (bugId: string, patch: BugPatch) => void
+  pastPlaces: string[]
   onGoCapture: () => void
 }
 
 const OTHER = '__other__' // 30分類に入らない虫のまとめ
 
 // あつめた虫を、目（もく）の「もくじ」からたどる図鑑ページ。
-export function ZukanPage({ bugs, onDelete, onSetMain, onGoCapture }: Props) {
+export function ZukanPage({
+  bugs,
+  onDelete,
+  onSetMain,
+  onUpdate,
+  pastPlaces,
+  onGoCapture,
+}: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const selected = selectedId
     ? (bugs.find((b) => b.id === selectedId) ?? null)
@@ -102,6 +112,8 @@ export function ZukanPage({ bugs, onDelete, onSetMain, onGoCapture }: Props) {
           onClose={() => setSelectedId(null)}
           onDelete={onDelete}
           onSetMain={onSetMain}
+          onUpdate={onUpdate}
+          pastPlaces={pastPlaces}
         />
       </div>
     )

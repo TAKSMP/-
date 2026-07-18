@@ -1,5 +1,15 @@
 import type { CaptureInput, CaughtBug } from '../types'
-import { normalizeBugName } from '../data/bugs'
+import { findSpeciesByName, normalizeBugName } from '../data/bugs'
+
+// 図鑑登録後に、各項目をなおすためのパッチ
+export interface BugPatch {
+  name?: string
+  order?: string
+  rarity?: number
+  habitat?: string
+  fact?: string
+  mainPlace?: string // メイン写真の「みつけたばしょ」
+}
 
 // 図鑑（つかまえた虫の記録）はブラウザの localStorage に保存します。
 // これでページをとじても、あつめた虫がきえません。
@@ -128,6 +138,34 @@ export function recordCapture(input: CaptureInput): {
   const bugs = [bug, ...list]
   saveZukan(bugs)
   return { bugs, merged: false, bugId: bug.id }
+}
+
+// 図鑑登録後に、虫の各項目をなおす。
+export function updateBug(bugId: string, patch: BugPatch): CaughtBug[] {
+  const bugs = loadZukan().map((b) => {
+    if (b.id !== bugId) return b
+    const next: CaughtBug = { ...b }
+    if (patch.name !== undefined) {
+      next.name = patch.name.trim() || 'なぞの虫'
+      next.speciesId = findSpeciesByName(next.name)?.id
+    }
+    if (patch.order !== undefined) next.order = patch.order.trim() || 'ふめい'
+    if (patch.rarity !== undefined)
+      next.rarity = Math.max(1, Math.min(5, patch.rarity))
+    if (patch.habitat !== undefined)
+      next.habitat = patch.habitat.trim() || 'ふめい'
+    if (patch.fact !== undefined) next.fact = patch.fact.trim() || undefined
+    if (patch.mainPlace !== undefined) {
+      const place = patch.mainPlace.trim() || undefined
+      next.captures = b.captures.map((c) =>
+        c.id === b.mainCaptureId ? { ...c, place } : c,
+      )
+    }
+    next.corrected = true
+    return next
+  })
+  saveZukan(bugs)
+  return bugs
 }
 
 // メイン画像につかう撮影をえらぶ

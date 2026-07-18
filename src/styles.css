@@ -1590,6 +1590,22 @@ input:focus {
   font-weight: 800;
   font-size: 16px;
 }
+.modal-edit .field dt {
+  color: #8a9a7a;
+}
+.modal-edit-btn {
+  width: 100%;
+  margin: 4px 0 4px;
+}
+.modal-edit-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+.modal-edit-actions .btn {
+  flex: 1;
+}
+
 .modal-fact {
   background: #fffbe6;
   border: 2px solid var(--yellow);
