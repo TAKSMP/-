@@ -315,6 +315,160 @@ body {
   margin-bottom: 20px;
 }
 
+.hint.mode-on {
+  color: var(--green-deep);
+  font-weight: 800;
+}
+.mode-warn {
+  display: block;
+  width: 100%;
+  margin-top: 16px;
+  border: 2px solid var(--danger);
+  background: #fff3f1;
+  color: #b3453a;
+  border-radius: 14px;
+  padding: 12px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.6;
+  cursor: pointer;
+  text-align: center;
+}
+.mode-warn b {
+  color: var(--danger);
+}
+
+/* AIせってい ボタン（右上に浮かべる） */
+.settings-fab {
+  position: fixed;
+  top: 10px;
+  right: calc(50% - 280px + 10px);
+  z-index: 60;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: none;
+  background: #fff;
+  box-shadow: var(--shadow);
+  font-size: 22px;
+  cursor: pointer;
+}
+@media (max-width: 580px) {
+  .settings-fab {
+    right: 12px;
+  }
+}
+
+/* 判定エラー */
+.error-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 30px 22px;
+  text-align: center;
+  box-shadow: var(--shadow);
+  border: 3px solid var(--danger);
+}
+.error-emoji {
+  font-size: 56px;
+}
+.error-card h2 {
+  color: var(--danger);
+  margin: 8px 0;
+}
+.error-detail {
+  font-size: 12px;
+  color: #8a7a7a;
+  word-break: break-all;
+  background: #faf0ef;
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.error-hint {
+  font-weight: 700;
+  color: #6b7a5a;
+  font-size: 14px;
+}
+.error-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+.error-actions .btn {
+  flex: 1;
+}
+
+/* デモ判定バッジ（タップで設定へ） */
+.confidence.demo {
+  background: var(--danger);
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* AIせってい モーダル */
+.ai-status {
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 14px;
+}
+.ai-status.on {
+  background: #eafbe3;
+  border: 2px solid var(--green);
+  color: var(--green-deep);
+}
+.ai-status.off {
+  background: #fff3f1;
+  border: 2px solid var(--danger);
+  color: #b3453a;
+}
+.ai-status-key {
+  margin-top: 6px;
+  font-size: 12px;
+  font-family: monospace;
+  color: #6b7a5a;
+}
+.settings-help {
+  font-size: 13px;
+  color: #4a5540;
+  line-height: 1.7;
+}
+.settings-help ul {
+  margin: 8px 0;
+  padding-left: 18px;
+}
+.settings-help a {
+  color: var(--sky-deep);
+  font-weight: 800;
+}
+.settings-help code {
+  background: #eef3e8;
+  padding: 1px 5px;
+  border-radius: 5px;
+  font-size: 12px;
+}
+.apikey-input {
+  margin: 12px 0;
+  font-family: monospace;
+}
+.settings-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.settings-remove {
+  margin-top: 0 !important;
+}
+.settings-saved {
+  text-align: center;
+  color: var(--green-deep);
+  font-weight: 800;
+  margin: 10px 0 0;
+}
+
 /* かいせき中 */
 .analyzing {
   position: relative;

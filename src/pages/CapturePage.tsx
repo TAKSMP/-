@@ -8,14 +8,15 @@ import { Confetti } from '../components/Confetti'
 import { CameraCapture } from '../components/CameraCapture'
 import { sfx } from '../lib/sound'
 
-type Phase = 'empty' | 'analyzing' | 'result'
+type Phase = 'empty' | 'analyzing' | 'result' | 'error'
 
 interface Props {
   onSaved: (bug: CaughtBug) => void
+  onOpenSettings: () => void
 }
 
 // 写真をよみこんで、AIが虫を判定するメインのページ。
-export function CapturePage({ onSaved }: Props) {
+export function CapturePage({ onSaved, onOpenSettings }: Props) {
   const [phase, setPhase] = useState<Phase>('empty')
   const [photo, setPhoto] = useState<string>('')
   const [result, setResult] = useState<AiResult | null>(null)
@@ -23,6 +24,7 @@ export function CapturePage({ onSaved }: Props) {
   const [confetti, setConfetti] = useState(false)
   const [saved, setSaved] = useState(false)
   const [cameraOpen, setCameraOpen] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
   // へんしゅう中の4項目
@@ -42,6 +44,7 @@ export function CapturePage({ onSaved }: Props) {
     setSaved(false)
     setLookingUp(null)
     setNotFound(null)
+    setErrorMsg('')
   }
 
   // 写真（dataURL）をうけとってAIにしらべてもらう。
@@ -49,16 +52,25 @@ export function CapturePage({ onSaved }: Props) {
   async function analyzeDataUrl(dataUrl: string) {
     setPhoto(dataUrl)
     setPhase('analyzing')
-    const r = await analyzePhoto(dataUrl)
-    setResult(r)
-    setName(r.name)
-    setOrder(r.order)
-    setRarity(r.rarity)
-    setHabitat(r.habitat)
-    setPhase('result')
-    sfx.discover()
-    setConfetti(true)
-    setTimeout(() => setConfetti(false), 200)
+    try {
+      const r = await analyzePhoto(dataUrl)
+      setResult(r)
+      setName(r.name)
+      setOrder(r.order)
+      setRarity(r.rarity)
+      setHabitat(r.habitat)
+      setPhase('result')
+      sfx.discover()
+      setConfetti(true)
+      setTimeout(() => setConfetti(false), 200)
+    } catch (e) {
+      // 本物AIモードで失敗したとき（キーちがい・通信エラーなど）は
+      // 当てずっぽうを見せずに、エラーとして知らせる。
+      console.warn('AI判定にしっぱい', e)
+      setErrorMsg(e instanceof Error ? e.message : String(e))
+      setPhase('error')
+      sfx.error()
+    }
   }
 
   function handleFile(file: File) {
@@ -92,6 +104,11 @@ export function CapturePage({ onSaved }: Props) {
       order: order.trim() || 'ふめい',
       rarity,
       habitat: habitat.trim() || 'ふめい',
+      // AIが名前を変えずに判定した種の説明があれば、それを保存して優先表示する
+      fact:
+        result && !editing && result.name === name.trim()
+          ? result.fact
+          : undefined,
       photo,
       caughtAt: Date.now(),
       corrected: editing,
@@ -184,11 +201,17 @@ export function CapturePage({ onSaved }: Props) {
               🖼️ 写真をえらぶ
             </button>
           </div>
-          <p className="hint">
-            {hasRealAi()
-              ? '本物AIモードで判定するよ ✨'
-              : 'デモAIモード（色から虫を推理するよ）'}
-          </p>
+          {hasRealAi() ? (
+            <p className="hint mode-on">
+              ✨ 本物AIモード：Claudeが種名まで判定するよ
+            </p>
+          ) : (
+            <button className="mode-warn" onClick={onOpenSettings}>
+              ⚠️ いまはデモモード（色から推理するだけ）です。
+              <br />
+              <b>正確に判定するには、ここをタップしてAIキーを設定 ⚙️</b>
+            </button>
+          )}
         </div>
       )}
 
@@ -203,17 +226,40 @@ export function CapturePage({ onSaved }: Props) {
         </div>
       )}
 
+      {/* --- エラー（本物AIモードで失敗） --- */}
+      {phase === 'error' && (
+        <div className="error-card">
+          <div className="error-emoji">😵</div>
+          <h2>AIがしらべられませんでした</h2>
+          <p className="error-detail">{errorMsg}</p>
+          <p className="error-hint">
+            APIキーがまちがっているか、通信のちょうしがわるいのかも。
+          </p>
+          <div className="error-actions">
+            <button className="btn btn-ghost" onClick={onOpenSettings}>
+              ⚙️ AIせっていをひらく
+            </button>
+            <button className="btn btn-primary" onClick={reset}>
+              もういちど
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* --- けっか --- */}
       {phase === 'result' && result && (
         <div className="result">
           <div className="result-photo">
             <img src={photo} alt={name} />
-            <div
-              className="confidence"
-              title="AIの自信度"
-            >
-              じしん {Math.round(result.confidence * 100)}%
-            </div>
+            {result.demo ? (
+              <button className="confidence demo" onClick={onOpenSettings}>
+                デモ判定（色から推理）⚙️
+              </button>
+            ) : (
+              <div className="confidence" title="AIの自信度">
+                じしん {Math.round(result.confidence * 100)}%
+              </div>
+            )}
           </div>
 
           <div className="result-card">

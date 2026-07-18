@@ -5,6 +5,7 @@ import { CapturePage } from './pages/CapturePage'
 import { ZukanPage } from './pages/ZukanPage'
 import { SearchPage } from './pages/SearchPage'
 import { QuizPage } from './pages/QuizPage'
+import { SettingsModal } from './components/SettingsModal'
 import { sfx } from './lib/sound'
 
 type Tab = 'capture' | 'zukan' | 'search' | 'quiz'
@@ -19,6 +20,9 @@ const TABS: { id: Tab; label: string; emoji: string }[] = [
 export default function App() {
   const [tab, setTab] = useState<Tab>('capture')
   const [bugs, setBugs] = useState<CaughtBug[]>([])
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  // AIせっていが変わったら子を再描画してモード表示を更新するためのカウンタ
+  const [aiVersion, setAiVersion] = useState(0)
 
   // さいしょに図鑑データをよみこむ
   useEffect(() => {
@@ -35,9 +39,21 @@ export default function App() {
 
   return (
     <div className="app">
+      <button
+        className="settings-fab"
+        onClick={() => {
+          sfx.tap()
+          setSettingsOpen(true)
+        }}
+        aria-label="AIせってい"
+        title="AIせってい"
+      >
+        ⚙️
+      </button>
+
       <main className="app-main">
         {tab === 'capture' && (
-          <CapturePage onSaved={handleSaved} />
+          <CapturePage key={aiVersion} onSaved={handleSaved} onOpenSettings={() => setSettingsOpen(true)} />
         )}
         {tab === 'zukan' && (
           <ZukanPage
@@ -69,6 +85,13 @@ export default function App() {
           </button>
         ))}
       </nav>
+
+      {settingsOpen && (
+        <SettingsModal
+          onClose={() => setSettingsOpen(false)}
+          onChanged={() => setAiVersion((v) => v + 1)}
+        />
+      )}
     </div>
   )
 }

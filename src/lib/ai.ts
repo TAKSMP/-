@@ -1,4 +1,4 @@
-import type { AiResult, BugSpecies } from '../types'
+import type { AiResult } from '../types'
 import { BUG_SPECIES, findSpeciesByName } from '../data/bugs'
 
 // =============================================================
@@ -97,19 +97,16 @@ async function analyzeWithDemo(dataUrl: string): Promise<AiResult> {
   const pick = topN[Math.floor(Math.random() * topN.length)]
   const best = pick.sp
 
-  // 自信度は色の近さから（近いほど高い）ざっくり計算
-  const confidence = Math.max(
-    0.55,
-    Math.min(0.98, 1 - pick.dist / 300),
-  )
-
+  // デモは「色からの当てずっぽう」なので自信度は低めに固定する
   return {
     name: best.name,
     order: best.order,
     rarity: best.rarity,
     habitat: best.habitat,
+    fact: best.fact,
     matchedSpeciesId: best.id,
-    confidence,
+    confidence: 0.3,
+    demo: true,
   }
 }
 
@@ -142,16 +139,25 @@ async function analyzeWithClaude(dataUrl: string): Promise<AiResult> {
   const mediaType = match[1]
   const base64 = match[2]
 
-  const orderList = Array.from(new Set(BUG_SPECIES.map((b) => b.order)))
-  const habitatList = Array.from(
-    new Set(BUG_SPECIES.map((b) => b.habitat)),
-  )
+  const prompt = `あなたは日本の昆虫学にくわしい、プロの昆虫同定AIです。
+この写真にうつっている虫を、できるだけ「種」レベルまで正確に同定してください。
+このアプリのユーザーは昆虫にとてもくわしい子どもなので、こどもだましは禁物です。
 
-  const prompt = `あなたは子ども向けの昆虫図鑑AIです。写真の虫を判定して、次のJSONだけを返してください。
-{"name": "虫の名前(カタカナ)", "order": "目", "rarity": 1から5の整数, "habitat": "生息地", "confidence": 0から1の小数}
-目は次から選ぶ: ${orderList.join(', ')}
-生息地は次から選ぶ: ${habitatList.join(', ')}
-JSON以外は書かないこと。`
+大事なルール:
+- 名前は「カマキリ」「トンボ」のような大きな総称ではなく、
+  「オオカマキリ」「チョウセンカマキリ」「ギンヤンマ」「アキアカネ」のような
+  具体的な和名（種名）で答えること。近縁で区別がむずかしい場合は、
+  最も可能性が高い種名を答え、confidenceを下げること。
+- 目（もく）は正式な和名で（例: カマキリ目、トンボ目、コウチュウ目、チョウ目、
+  バッタ目、カメムシ目、ハチ目 など）。
+- rarity は日本での見つけやすさを1(ふつう)〜5(とてもめずらしい)で。
+- habitat は具体的に（例: 草はら、雑木林、池や川のほとり、朽ち木、樹液 など）。
+- fact は、その「種」に合った正確で楽しい説明を、子ども向けに40〜80字で。
+  一般論ではなく、その種ならではの特徴を書くこと。
+- わからない場合は name を "不明" にし、confidence を低くすること。推測ででっちあげない。
+
+次のJSONだけを返す。JSON以外の文字は一切書かない:
+{"name":"種名(和名)","order":"◯◯目","rarity":1,"habitat":"生息地","fact":"説明","confidence":0.0}`
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -163,7 +169,7 @@ JSON以外は書かないこと。`
     },
     body: JSON.stringify({
       model: 'claude-opus-4-8',
-      max_tokens: 300,
+      max_tokens: 500,
       messages: [
         {
           role: 'user',
@@ -183,23 +189,25 @@ JSON以外は書かないこと。`
     }),
   })
 
-  if (!res.ok) throw new Error('AIのつうしんにしっぱいしました')
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '')
+    throw new Error(`AIのつうしんにしっぱいしました (${res.status}) ${detail}`)
+  }
   const json = await res.json()
   const text: string = json?.content?.[0]?.text ?? ''
   const jsonMatch = text.match(/\{[\s\S]*\}/)
   if (!jsonMatch) throw new Error('AIのこたえがよめませんでした')
   const parsed = JSON.parse(jsonMatch[0])
 
-  // 名前が図鑑にあれば ID をむすびつける
-  const matched: BugSpecies | undefined = BUG_SPECIES.find(
-    (b) => b.name === parsed.name,
-  )
+  // AIの種名が図鑑データにあれば ID をむすびつける（説明や生息地の参考に）
+  const matched = findSpeciesByName(String(parsed.name ?? ''))
 
   return {
-    name: String(parsed.name ?? 'なぞの虫'),
+    name: String(parsed.name ?? '不明'),
     order: String(parsed.order ?? 'ふめい'),
-    rarity: Math.max(1, Math.min(5, Number(parsed.rarity) || 1)),
+    rarity: Math.max(1, Math.min(5, Math.round(Number(parsed.rarity)) || 1)),
     habitat: String(parsed.habitat ?? 'ふめい'),
+    fact: parsed.fact ? String(parsed.fact) : undefined,
     matchedSpeciesId: matched?.id,
     confidence: Math.max(0, Math.min(1, Number(parsed.confidence) || 0.7)),
   }
@@ -208,22 +216,37 @@ JSON以外は書かないこと。`
 // --- メインの入口 ---------------------------------------------
 export async function analyzePhoto(dataUrl: string): Promise<AiResult> {
   // 「かんがえてるフリ」の間（子どもがワクワクする演出用）
-  const thinking = new Promise((r) => setTimeout(r, 1400))
+  const thinking = new Promise((r) => setTimeout(r, 1000))
 
-  let result: AiResult
+  // 本物AIモードのときは、失敗してもデモに「すりかえ」ない。
+  // まちがった当てずっぽうを正解のように見せないため、エラーはそのまま投げる。
   if (hasRealAi()) {
-    try {
-      result = await analyzeWithClaude(dataUrl)
-    } catch (e) {
-      console.warn('本物AIがつかえないのでデモモードにきりかえます', e)
-      result = await analyzeWithDemo(dataUrl)
-    }
-  } else {
-    result = await analyzeWithDemo(dataUrl)
+    const result = await analyzeWithClaude(dataUrl)
+    await thinking
+    return result
   }
 
+  const result = await analyzeWithDemo(dataUrl)
   await thinking
   return result
+}
+
+// --- APIキーの管理（設定画面からつかう） ----------------------
+export function getApiKeyMasked(): string | null {
+  const key = getApiKey()
+  if (!key) return null
+  if (key.length <= 12) return '••••'
+  return key.slice(0, 8) + '••••' + key.slice(-4)
+}
+
+export function setApiKey(key: string): void {
+  const trimmed = key.trim()
+  if (trimmed) localStorage.setItem('chomushi.apikey', trimmed)
+  else localStorage.removeItem('chomushi.apikey')
+}
+
+export function clearApiKey(): void {
+  localStorage.removeItem('chomushi.apikey')
 }
 
 // =============================================================
@@ -250,15 +273,13 @@ async function lookupFieldWithClaude(
   const apiKey = getApiKey()
   if (!apiKey) return null
 
-  const orderList = Array.from(new Set(BUG_SPECIES.map((b) => b.order)))
-  const habitatList = Array.from(new Set(BUG_SPECIES.map((b) => b.habitat)))
-
+  // 種レベルで正確に。デモ図鑑の候補には縛らない。
   const question =
     field === 'order'
-      ? `「${name}」という虫は なに目（もく）ですか。次のどれかから1つだけ選んで、目の名前だけを答えてください: ${orderList.join('、')}`
+      ? `日本の昆虫「${name}」は分類学上なに目ですか。「◯◯目」という正式な和名の目名だけを答えてください。ほかの文字は書かないこと。`
       : field === 'habitat'
-        ? `「${name}」という虫は おもにどこにいますか。次のどれかから1つだけ選んで、生息地の名前だけを答えてください: ${habitatList.join('、')}`
-        : `「${name}」という虫の めずらしさ（レア度）を1〜5の整数であらわすと いくつですか。数字だけを答えてください。`
+        ? `日本の昆虫「${name}」が主に見られる生息地を、10文字程度の短い言葉だけで答えてください（例: 雑木林、池や川のほとり）。ほかの文字は書かないこと。`
+        : `日本の昆虫「${name}」の、日本での見つけにくさ（レア度）を1（ふつう）〜5（とてもめずらしい）の整数1つで答えてください。数字だけを書くこと。`
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -270,7 +291,7 @@ async function lookupFieldWithClaude(
     },
     body: JSON.stringify({
       model: 'claude-opus-4-8',
-      max_tokens: 30,
+      max_tokens: 40,
       messages: [{ role: 'user', content: question }],
     }),
   })
@@ -284,10 +305,12 @@ async function lookupFieldWithClaude(
     if (!m) return null
     return { value: Number(m[0]), source: 'ai' }
   }
-  // order / habitat: 候補リストに近いものへ寄せる
-  const list = field === 'order' ? orderList : habitatList
-  const hit = list.find((x) => text.includes(x)) ?? text
-  return { value: hit, source: 'ai' }
+  // order は「◯◯目」の部分だけを取り出す
+  if (field === 'order') {
+    const m = text.match(/[ぁ-んァ-ヶ一-龠ー]+目/)
+    return { value: m ? m[0] : text, source: 'ai' }
+  }
+  return { value: text.replace(/[。\n]/g, '').trim(), source: 'ai' }
 }
 
 // 名前をもとに、1つの項目（目 / レア度 / 生息地）を調べる。
@@ -302,24 +325,29 @@ export async function lookupField(
   // 演出用のちょっとした「かんがえてる」間
   const thinking = new Promise((r) => setTimeout(r, 700))
 
-  // 1) まず図鑑データから照合
-  const sp = findSpeciesByName(trimmed)
   let result: LookupResult | null = null
-  if (sp) {
-    const value =
-      field === 'order'
-        ? sp.order
-        : field === 'habitat'
-          ? sp.habitat
-          : sp.rarity
-    result = { value, source: 'zukan' }
-  } else if (hasRealAi()) {
-    // 2) 図鑑になければ、本物AIモードのときだけ問い合わせる
+
+  // 1) 本物AIモードなら、まずAIに正確に答えさせる（種名にあった答え）
+  if (hasRealAi()) {
     try {
       result = await lookupFieldWithClaude(trimmed, field)
     } catch (e) {
       console.warn('AIの項目しらべにしっぱいしました', e)
       result = null
+    }
+  }
+
+  // 2) AIがつかえない/答えられないときは、図鑑データから照合
+  if (!result) {
+    const sp = findSpeciesByName(trimmed)
+    if (sp) {
+      const value =
+        field === 'order'
+          ? sp.order
+          : field === 'habitat'
+            ? sp.habitat
+            : sp.rarity
+      result = { value, source: 'zukan' }
     }
   }
 

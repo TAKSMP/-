@@ -17,6 +17,9 @@ export function BugDetailModal({ bug, onClose, onDelete }: Props) {
   const species =
     findSpeciesByName(bug.name) ??
     (bug.speciesId ? getSpeciesById(bug.speciesId) : undefined)
+  // 説明文はAIが書いたもの（bug.fact）を優先。なければ図鑑データのもの。
+  const factText = bug.fact ?? species?.fact
+  const factEmoji = species?.emoji ?? '🔎'
   const date = new Date(bug.caughtAt)
   const dateStr = `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`
 
@@ -61,10 +64,10 @@ export function BugDetailModal({ bug, onClose, onDelete }: Props) {
           )}
         </dl>
 
-        {species && (
+        {factText && (
           <div className="modal-fact">
-            <span className="fact-emoji">{species.emoji}</span>
-            <p>{species.fact}</p>
+            <span className="fact-emoji">{factEmoji}</span>
+            <p>{factText}</p>
           </div>
         )}
 
