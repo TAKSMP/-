@@ -41,6 +41,33 @@ ${INSECT_ORDERS.join('、')}
     '```'
 }
 
+// 生息地だけをきく質問文（コピー＆貼り付け用）
+export function buildHabitatPrompt(name: string): string {
+  return `日本の昆虫「${name}」が おもに 見られる 生息地を、10文字ていどの みじかい ことばで おしえてください。
+漢字はつかわず、ひらがなと カタカナだけで書いてください（れい: ぞうきばやし、いけや かわの ほとり）。
+生息地の ことばだけを 返し、ほかの文は 書かないでください。`
+}
+
+// 説明文だけをきく質問文（コピー＆貼り付け用）
+export function buildDescribePrompt(name: string): string {
+  return `日本の昆虫「${name}」の、その虫ならではの とくちょうを、子ども向けに 40〜80字で せつめいしてください。
+漢字はつかわず、ひらがなと カタカナだけで書き、よみやすいように 文節の くぎりに 半角スペースを 入れてください。
+せつめいの 文だけを 返し、名前や 見出しは 書かないでください。`
+}
+
+// 質問文をクリップボードにコピーして、AIチャット（ChatGPT）をひらく。
+export async function askChatGPTText(prompt: string): Promise<boolean> {
+  let copied = false
+  try {
+    await navigator.clipboard.writeText(prompt)
+    copied = true
+  } catch {
+    /* コピーできなくても続行 */
+  }
+  window.open('https://chatgpt.com/', '_blank', 'noopener')
+  return copied
+}
+
 export interface ParsedAnswer {
   name?: string
   order?: string

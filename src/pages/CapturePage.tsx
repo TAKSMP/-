@@ -1,7 +1,10 @@
 import { useRef, useState } from 'react'
 import type { AiResult, CaptureInput } from '../types'
-import { analyzePhoto, describeBug, hasRealAi, suggestHabitat } from '../lib/ai'
+import { analyzePhoto, hasRealAi } from '../lib/ai'
 import {
+  askChatGPTText,
+  buildDescribePrompt,
+  buildHabitatPrompt,
   buildPrompt,
   countParsed,
   parseBugAnswer,
@@ -47,13 +50,10 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
   const [importText, setImportText] = useState('')
   const [importMsg, setImportMsg] = useState('')
   const [askMsg, setAskMsg] = useState('')
-  // せつめい（説明文）。AI／ChatGPT／手入力でつくる。
+  // せつめい（説明文）。ChatGPT／手入力でつくる。
   const [fact, setFact] = useState('')
-  const [describing, setDescribing] = useState(false) // AIで説明づくり中
-  const [describeMiss, setDescribeMiss] = useState(false)
-  // 生息地のAI提案
-  const [suggestingHab, setSuggestingHab] = useState(false)
-  const [habMiss, setHabMiss] = useState(false)
+  const [descNote, setDescNote] = useState('') // 説明のコピー案内
+  const [habNote, setHabNote] = useState('') // 生息地のコピー案内
 
   function reset() {
     setPhase('empty')
@@ -68,10 +68,8 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
     setImportMsg('')
     setAskMsg('')
     setFact('')
-    setDescribing(false)
-    setDescribeMiss(false)
-    setSuggestingHab(false)
-    setHabMiss(false)
+    setDescNote('')
+    setHabNote('')
   }
 
   // 写真（dataURL）をうけとってAIにしらべてもらう。
@@ -192,46 +190,32 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
     setImportMsg(`✅ ${n}こうもくを取り込んだよ！ないようをたしかめて記録してね。`)
   }
 
-  // なまえに あわせて、説明文だけをAIに書かせる
-  async function handleDescribe() {
+  // 説明文の質問をコピーしてAIチャットをひらく（答えは せつめい欄にはりつけ）
+  async function handleAskDescribe() {
     if (!name.trim()) {
       sfx.error()
       alert('さきに「なまえ」を入れてね🐛')
       return
     }
     sfx.tap()
-    setDescribeMiss(false)
-    setDescribing(true)
-    const text = await describeBug(name)
-    setDescribing(false)
-    if (text) {
-      setFact(text)
-      sfx.discover()
-    } else {
-      setDescribeMiss(true)
-      sfx.error()
-    }
+    await askChatGPTText(buildDescribePrompt(name))
+    setDescNote(
+      '📋 しつもんをコピーしたよ。AIチャットに はりつけて、こたえを ここに はりつけてね。',
+    )
   }
 
-  // なまえに あわせて、生息地をAIに提案させる
-  async function handleSuggestHabitat() {
+  // 生息地の質問をコピーしてAIチャットをひらく（答えは 生息地欄にはりつけ）
+  async function handleAskHabitat() {
     if (!name.trim()) {
       sfx.error()
       alert('さきに「なまえ」を入れてね🐛')
       return
     }
     sfx.tap()
-    setHabMiss(false)
-    setSuggestingHab(true)
-    const h = await suggestHabitat(name)
-    setSuggestingHab(false)
-    if (h) {
-      setHabitat(h)
-      sfx.discover()
-    } else {
-      setHabMiss(true)
-      sfx.error()
-    }
+    await askChatGPTText(buildHabitatPrompt(name))
+    setHabNote(
+      '📋 しつもんをコピーしたよ。AIチャットに はりつけて、こたえを 生息地に はりつけてね。',
+    )
   }
 
   return (
@@ -403,21 +387,12 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
                       <button
                         type="button"
                         className="lookup-btn"
-                        onClick={handleSuggestHabitat}
-                        disabled={suggestingHab}
+                        onClick={handleAskHabitat}
                       >
-                        {suggestingHab ? (
-                          <>
-                            <span className="spinner">🔎</span> しらべ中…
-                          </>
-                        ) : (
-                          <>🤖 AIがかく</>
-                        )}
+                        🤖 AIにきく（コピー）
                       </button>
-                      {habMiss && (
-                        <span className="lookup-miss">
-                          わからなかった…なまえを見なおしてね
-                        </span>
+                      {habNote && (
+                        <span className="lookup-note">{habNote}</span>
                       )}
                     </div>
                   ) : (
@@ -433,7 +408,7 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
               ))}
             </datalist>
 
-            {/* せつめい（訂正中は、名前に合わせてAIに書かせるボタンつき） */}
+            {/* せつめい（訂正中は、AIにきく質問をコピーできる） */}
             {!saved && (
               <div className="desc-field">
                 <div className="desc-head">
@@ -442,16 +417,9 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
                     <button
                       type="button"
                       className="desc-btn"
-                      onClick={handleDescribe}
-                      disabled={describing}
+                      onClick={handleAskDescribe}
                     >
-                      {describing ? (
-                        <>
-                          <span className="spinner">✍️</span> かいてます…
-                        </>
-                      ) : (
-                        <>🤖 なまえに あわせてAIがかく</>
-                      )}
+                      🤖 AIにきく（コピー）
                     </button>
                   )}
                 </div>
@@ -469,11 +437,7 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
                 ) : (
                   <p className="desc-none">（せつめいは まだ ないよ）</p>
                 )}
-                {describeMiss && (
-                  <p className="desc-miss">
-                    うまく かけなかった…（本物AIモードか、図鑑にある虫だと かけるよ）
-                  </p>
-                )}
+                {editing && descNote && <p className="desc-note">{descNote}</p>}
               </div>
             )}
 

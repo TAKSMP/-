@@ -4,7 +4,11 @@ import type { BugPatch } from '../lib/storage'
 import { findSpeciesByName, getSpeciesById } from '../data/bugs'
 import { INSECT_ORDERS } from '../data/orders'
 import { mainPhoto } from '../lib/storage'
-import { describeBug, suggestHabitat } from '../lib/ai'
+import {
+  askChatGPTText,
+  buildDescribePrompt,
+  buildHabitatPrompt,
+} from '../lib/chatgpt'
 import { StarRating } from './StarRating'
 import { sfx } from '../lib/sound'
 
@@ -52,10 +56,8 @@ export function BugDetailModal({
   const [fact, setFact] = useState('')
   const [place, setPlace] = useState('')
   const [foundDate, setFoundDate] = useState('') // YYYY-MM-DD
-  const [describing, setDescribing] = useState(false)
-  const [describeMiss, setDescribeMiss] = useState(false)
-  const [suggestingHab, setSuggestingHab] = useState(false)
-  const [habMiss, setHabMiss] = useState(false)
+  const [descNote, setDescNote] = useState('')
+  const [habNote, setHabNote] = useState('')
 
   if (!bug) return null
 
@@ -82,8 +84,8 @@ export function BugDetailModal({
     setFact(bug.fact ?? '')
     setPlace(mainCapture?.place ?? '')
     setFoundDate(msToDateInput(firstDate))
-    setDescribeMiss(false)
-    setHabMiss(false)
+    setDescNote('')
+    setHabNote('')
     setEditing(true)
   }
 
@@ -103,44 +105,30 @@ export function BugDetailModal({
     setEditing(false)
   }
 
-  async function handleDescribe() {
+  async function handleAskDescribe() {
     if (!name.trim()) {
       sfx.error()
       alert('さきに「なまえ」を入れてね🐛')
       return
     }
     sfx.tap()
-    setDescribeMiss(false)
-    setDescribing(true)
-    const text = await describeBug(name)
-    setDescribing(false)
-    if (text) {
-      setFact(text)
-      sfx.discover()
-    } else {
-      setDescribeMiss(true)
-      sfx.error()
-    }
+    await askChatGPTText(buildDescribePrompt(name))
+    setDescNote(
+      '📋 しつもんをコピーしたよ。AIチャットに はりつけて、こたえを ここに はりつけてね。',
+    )
   }
 
-  async function handleSuggestHabitat() {
+  async function handleAskHabitat() {
     if (!name.trim()) {
       sfx.error()
       alert('さきに「なまえ」を入れてね🐛')
       return
     }
     sfx.tap()
-    setHabMiss(false)
-    setSuggestingHab(true)
-    const h = await suggestHabitat(name)
-    setSuggestingHab(false)
-    if (h) {
-      setHabitat(h)
-      sfx.discover()
-    } else {
-      setHabMiss(true)
-      sfx.error()
-    }
+    await askChatGPTText(buildHabitatPrompt(name))
+    setHabNote(
+      '📋 しつもんをコピーしたよ。AIチャットに はりつけて、こたえを 生息地に はりつけてね。',
+    )
   }
 
   return (
@@ -206,22 +194,11 @@ export function BugDetailModal({
                     <button
                       type="button"
                       className="lookup-btn"
-                      onClick={handleSuggestHabitat}
-                      disabled={suggestingHab}
+                      onClick={handleAskHabitat}
                     >
-                      {suggestingHab ? (
-                        <>
-                          <span className="spinner">🔎</span> しらべ中…
-                        </>
-                      ) : (
-                        <>🤖 AIがかく</>
-                      )}
+                      🤖 AIにきく（コピー）
                     </button>
-                    {habMiss && (
-                      <span className="lookup-miss">
-                        わからなかった…なまえを見なおしてね
-                      </span>
-                    )}
+                    {habNote && <span className="lookup-note">{habNote}</span>}
                   </div>
                 </dd>
               </div>
@@ -260,16 +237,9 @@ export function BugDetailModal({
                 <button
                   type="button"
                   className="desc-btn"
-                  onClick={handleDescribe}
-                  disabled={describing}
+                  onClick={handleAskDescribe}
                 >
-                  {describing ? (
-                    <>
-                      <span className="spinner">✍️</span> かいてます…
-                    </>
-                  ) : (
-                    <>🤖 なまえに あわせてAIがかく</>
-                  )}
+                  🤖 AIにきく（コピー）
                 </button>
               </div>
               <textarea
@@ -280,11 +250,7 @@ export function BugDetailModal({
                 rows={3}
                 placeholder="この虫の せつめい"
               />
-              {describeMiss && (
-                <p className="desc-miss">
-                  うまく かけなかった…（本物AIモードか、図鑑にある虫だと かけるよ）
-                </p>
-              )}
+              {descNote && <p className="desc-note">{descNote}</p>}
             </div>
 
             <div className="modal-edit-actions">
