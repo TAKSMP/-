@@ -1,0 +1,60 @@
+name: Deploy to GitHub Pages
+
+# 作業ブランチにpushされるたびに、自動でビルドしてGitHub Pagesに公開します。
+# 手動実行（Actionsタブの "Run workflow"）もできます。
+on:
+  push:
+    branches:
+      - claude/chomushi-app-dev-nq41df
+  workflow_dispatch:
+
+# GitHub Pagesへの公開に必要な権限
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同時に走らないようにする（あとから来たpushを優先）
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: リポジトリを取得
+        uses: actions/checkout@v4
+
+      - name: Node.jsをセットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: 依存をインストール
+        run: npm ci
+
+      - name: Pages用にビルド（base=/-/）
+        run: npm run build:pages
+
+      - name: Pagesの設定（未設定なら有効化）
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: ビルド結果をアップロード
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: GitHub Pagesへデプロイ
+        id: deployment
+        uses: actions/deploy-pages@v4

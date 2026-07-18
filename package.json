@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:pages": "tsc -b && vite build --base=/-/",
     "build:single": "vite build --config vite.config.singlefile.ts",
     "preview": "vite preview"
   },
