@@ -8,9 +8,9 @@ import {
   buildPrompt,
   countParsed,
   parseBugAnswer,
-  shareToChatGPT,
 } from '../lib/chatgpt'
 import { compressImage } from '../lib/image'
+import { dateInputToMs, todayDateInput } from '../lib/format'
 import { ALL_HABITATS, findSpeciesByName } from '../data/bugs'
 import { INSECT_ORDERS } from '../data/orders'
 import { StarRating } from '../components/StarRating'
@@ -46,6 +46,7 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
   const [rarity, setRarity] = useState(3)
   const [habitat, setHabitat] = useState('')
   const [place, setPlace] = useState('') // みつけたばしょ
+  const [foundDate, setFoundDate] = useState(todayDateInput()) // みつけた日
   // ChatGPT取り込み用
   const [importText, setImportText] = useState('')
   const [importMsg, setImportMsg] = useState('')
@@ -63,6 +64,7 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
     setSaved(false)
     setMerged(false)
     setPlace('')
+    setFoundDate(todayDateInput())
     setErrorMsg('')
     setImportText('')
     setImportMsg('')
@@ -134,7 +136,7 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
       // せつめい（AI／ChatGPT／手入力）。あれば保存して優先表示。
       fact: fact.trim() || undefined,
       photo,
-      caughtAt: Date.now(),
+      caughtAt: dateInputToMs(foundDate) ?? Date.now(),
       place: place.trim() || undefined,
       corrected: editing,
     }
@@ -146,29 +148,14 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
     setTimeout(() => setConfetti(false), 200)
   }
 
-  // なまえをもとに、1つの項目（目 / レア度 / 生息地）をAIに調べさせて自動入力する
-  // ① 写真＋質問文をChatGPTにおくる（できなければコピーして開く）
+  // ① 質問文をコピーして、あたらしいタブでAIチャットをひらく
+  //    （生息地・せつめいと同じやり方。写真は自分でつけてもらう）
   async function handleAskChatGPT() {
     sfx.tap()
-    const prompt = buildPrompt()
-    // 質問文はいつでもコピーしておく（貼り付け用のバックアップ）
-    try {
-      await navigator.clipboard.writeText(prompt)
-    } catch {
-      /* コピーできなくても続行 */
-    }
-    const shared = photo ? await shareToChatGPT(photo, prompt) : false
-    if (shared) {
-      setAskMsg(
-        '📤 AIチャットに写真をおくったよ。答えは黒いわく（コードブロック）で出るので、右上のコピーボタンでコピーして、下に貼り付けてね。',
-      )
-    } else {
-      // シェアが使えないとき：質問文はコピー済み。ChatGPTを開く。
-      window.open('https://chatgpt.com/', '_blank', 'noopener')
-      setAskMsg(
-        '📋 質問文をコピーしたよ。すきなAIチャット（ChatGPT / Claude など）に貼り付けて、この虫の写真もつけて送ってね。答えのコピーボタンでコピーして、下に貼り付け。',
-      )
-    }
+    await askChatGPTText(buildPrompt())
+    setAskMsg(
+      '📋 しつもんをコピーしたよ。ひらいたAIチャット（ChatGPT / Claude など）に、この虫の写真をつけて、しつもんを はりつけて送ってね。答えは黒いわく（コードブロック）で出るので、そのコピーボタンでコピーして、下に はりつけ。',
+    )
   }
 
   // ③ ChatGPTの答えを取り込んで、各項目に自動入力
@@ -441,10 +428,20 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
               </div>
             )}
 
-            {/* みつけたばしょ（手入力＋過去に入れた場所からえらべる） */}
+            {/* みつけた日・みつけたばしょ */}
             {!saved && (
               <div className="place-field">
-                <label htmlFor="place-input">📍 みつけたばしょ</label>
+                <label htmlFor="found-date">📅 みつけた日</label>
+                <input
+                  id="found-date"
+                  type="date"
+                  className="date-input"
+                  value={foundDate}
+                  onChange={(e) => setFoundDate(e.target.value)}
+                />
+                <label htmlFor="place-input" className="place-label2">
+                  📍 みつけたばしょ
+                </label>
                 <input
                   id="place-input"
                   list="places"

@@ -772,6 +772,12 @@ input:focus {
   font-size: 14px;
   margin-bottom: 6px;
 }
+.place-field .place-label2 {
+  margin-top: 12px;
+}
+.place-field .date-input {
+  width: 100%;
+}
 .place-field input {
   border-color: var(--sky-deep);
 }
