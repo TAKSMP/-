@@ -2,6 +2,12 @@ import { useRef, useState } from 'react'
 import type { AiResult, CaughtBug } from '../types'
 import type { LookupField } from '../lib/ai'
 import { analyzePhoto, hasRealAi, lookupField } from '../lib/ai'
+import {
+  buildPrompt,
+  countParsed,
+  parseBugAnswer,
+  shareToChatGPT,
+} from '../lib/chatgpt'
 import { ALL_HABITATS, ALL_ORDERS, findSpeciesByName } from '../data/bugs'
 import { StarRating } from '../components/StarRating'
 import { Confetti } from '../components/Confetti'
@@ -35,6 +41,13 @@ export function CapturePage({ onSaved, onOpenSettings }: Props) {
   // 「AIに調べさせる」中の項目と、みつからなかった項目
   const [lookingUp, setLookingUp] = useState<LookupField | null>(null)
   const [notFound, setNotFound] = useState<LookupField | null>(null)
+  // ChatGPT取り込み用
+  const [importText, setImportText] = useState('')
+  const [importMsg, setImportMsg] = useState('')
+  const [askMsg, setAskMsg] = useState('')
+  // AI／ChatGPTが返した説明文と、それがどの名前のものか
+  const [aiFact, setAiFact] = useState<string | undefined>(undefined)
+  const [aiFactName, setAiFactName] = useState<string>('')
 
   function reset() {
     setPhase('empty')
@@ -45,6 +58,11 @@ export function CapturePage({ onSaved, onOpenSettings }: Props) {
     setLookingUp(null)
     setNotFound(null)
     setErrorMsg('')
+    setImportText('')
+    setImportMsg('')
+    setAskMsg('')
+    setAiFact(undefined)
+    setAiFactName('')
   }
 
   // 写真（dataURL）をうけとってAIにしらべてもらう。
@@ -59,6 +77,8 @@ export function CapturePage({ onSaved, onOpenSettings }: Props) {
       setOrder(r.order)
       setRarity(r.rarity)
       setHabitat(r.habitat)
+      setAiFact(r.fact)
+      setAiFactName(r.name)
       setPhase('result')
       sfx.discover()
       setConfetti(true)
@@ -104,11 +124,8 @@ export function CapturePage({ onSaved, onOpenSettings }: Props) {
       order: order.trim() || 'ふめい',
       rarity,
       habitat: habitat.trim() || 'ふめい',
-      // AIが名前を変えずに判定した種の説明があれば、それを保存して優先表示する
-      fact:
-        result && !editing && result.name === name.trim()
-          ? result.fact
-          : undefined,
+      // AI／ChatGPTが返した説明文が、いまの名前のものなら保存して優先表示
+      fact: aiFact && aiFactName === name.trim() ? aiFact : undefined,
       photo,
       caughtAt: Date.now(),
       corrected: editing,
@@ -141,6 +158,52 @@ export function CapturePage({ onSaved, onOpenSettings }: Props) {
     else if (field === 'habitat') setHabitat(String(res.value))
     else setRarity(Number(res.value))
     sfx.discover()
+  }
+
+  // ① 写真＋質問文をChatGPTにおくる（できなければコピーして開く）
+  async function handleAskChatGPT() {
+    sfx.tap()
+    const prompt = buildPrompt()
+    // 質問文はいつでもコピーしておく（貼り付け用のバックアップ）
+    try {
+      await navigator.clipboard.writeText(prompt)
+    } catch {
+      /* コピーできなくても続行 */
+    }
+    const shared = photo ? await shareToChatGPT(photo, prompt) : false
+    if (shared) {
+      setAskMsg('📤 ChatGPTに写真をおくったよ。答えをコピーして下に貼り付けてね。')
+    } else {
+      // スマホのシェアが使えないとき：ChatGPTを開く（質問文はコピー済み）
+      window.open('https://chatgpt.com/', '_blank', 'noopener')
+      setAskMsg(
+        '📋 質問文をコピーしたよ。ひらいたChatGPTに貼り付けて、この虫の写真もつけて送ってね。',
+      )
+    }
+  }
+
+  // ③ ChatGPTの答えを取り込んで、各項目に自動入力
+  function handleImportAnswer() {
+    const parsed = parseBugAnswer(importText)
+    const n = countParsed(parsed)
+    if (n === 0) {
+      sfx.error()
+      setImportMsg('うまく読み取れなかった…決まった形（名前: …）で答えてもらってね。')
+      return
+    }
+    setEditing(true)
+    if (parsed.name) setName(parsed.name)
+    if (parsed.order) setOrder(parsed.order)
+    if (parsed.rarity) setRarity(parsed.rarity)
+    if (parsed.habitat) setHabitat(parsed.habitat)
+    // 説明文もあれば保存用にもっておく（名前とひもづけ）
+    if (parsed.fact && parsed.name) {
+      setAiFact(parsed.fact)
+      setAiFactName(parsed.name)
+    }
+    sfx.discover()
+    setImportMsg(`✅ ${n}こうもくを取り込んだよ！ないようをたしかめて記録してね。`)
+    setNotFound(null)
   }
 
   // 各項目についている「AIに調べさせる」ボタン
@@ -372,6 +435,38 @@ export function CapturePage({ onSaved, onOpenSettings }: Props) {
                 <option key={h} value={h} />
               ))}
             </datalist>
+
+            {/* ChatGPTで正確にしらべて取り込む */}
+            {!saved && (
+              <details className="chatgpt-box">
+                <summary>🤖 ChatGPTでもっと正確にしらべる</summary>
+                <p className="chatgpt-lead">
+                  お手もちのChatGPT（有料版）でこの虫を同定して、答えをここに取り込めます。
+                </p>
+                <button className="btn btn-camera chatgpt-ask" onClick={handleAskChatGPT}>
+                  ① 写真と質問をChatGPTへ 📤
+                </button>
+                {askMsg && <p className="chatgpt-note">{askMsg}</p>}
+                <p className="chatgpt-step">
+                  ② ChatGPTの答えを、まるごとコピーして下に貼り付け👇
+                </p>
+                <textarea
+                  className="chatgpt-textarea"
+                  placeholder={'名前: オオカマキリ\n目: カマキリ目\nレア度: 3\n生息地: 草はら\n説明: …'}
+                  value={importText}
+                  onChange={(e) => setImportText(e.target.value)}
+                  rows={5}
+                />
+                <button
+                  className="btn btn-primary chatgpt-import"
+                  onClick={handleImportAnswer}
+                  disabled={!importText.trim()}
+                >
+                  ③ 取り込む ⬇️
+                </button>
+                {importMsg && <p className="chatgpt-note">{importMsg}</p>}
+              </details>
+            )}
 
             {!saved && (
               <div className="result-actions">

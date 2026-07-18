@@ -645,6 +645,72 @@ input:focus {
   color: var(--danger);
 }
 
+/* ChatGPT取り込みパネル */
+.chatgpt-box {
+  margin-top: 16px;
+  border: 2px solid #cfe3c4;
+  border-radius: 16px;
+  background: #f6fbf1;
+  padding: 4px 14px;
+}
+.chatgpt-box summary {
+  cursor: pointer;
+  font-weight: 800;
+  color: var(--green-deep);
+  padding: 10px 0;
+  list-style: none;
+}
+.chatgpt-box summary::-webkit-details-marker {
+  display: none;
+}
+.chatgpt-box[open] summary {
+  border-bottom: 2px dotted #dbe8d0;
+  margin-bottom: 8px;
+}
+.chatgpt-lead {
+  font-size: 13px;
+  color: #5a6b4a;
+  line-height: 1.6;
+  margin: 8px 0;
+}
+.chatgpt-ask,
+.chatgpt-import {
+  width: 100%;
+  margin: 6px 0;
+}
+.chatgpt-step {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--green-deep);
+  margin: 12px 0 6px;
+}
+.chatgpt-textarea {
+  width: 100%;
+  border: 2px solid var(--green);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 14px;
+  background: #fff;
+  resize: vertical;
+  line-height: 1.5;
+}
+.chatgpt-textarea:focus {
+  outline: none;
+  border-color: var(--yellow);
+  box-shadow: 0 0 0 3px #ffd23f55;
+}
+.chatgpt-note {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--green-deep);
+  background: #eafbe3;
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin: 8px 0;
+  line-height: 1.6;
+}
+
 .result-actions {
   display: flex;
   gap: 10px;
