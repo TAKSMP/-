@@ -239,3 +239,26 @@ export const ALL_HABITATS = Array.from(
 export function getSpeciesById(id: string): BugSpecies | undefined {
   return BUG_SPECIES.find((b) => b.id === id)
 }
+
+// ひらがな→カタカナに変換して、名前を照合しやすくする
+function toKatakana(s: string): string {
+  return s.replace(/[ぁ-ゖ]/g, (ch) =>
+    String.fromCharCode(ch.charCodeAt(0) + 0x60),
+  )
+}
+function normalizeName(s: string): string {
+  return toKatakana(s.trim().replace(/\s+/g, ''))
+}
+
+// 名前から図鑑データをさがす（完全一致→部分一致）。
+// 訂正した名前をもとに、正しい虫の種類（＝説明文など）を引き当てるのに使う。
+export function findSpeciesByName(name: string): BugSpecies | undefined {
+  const q = normalizeName(name)
+  if (!q) return undefined
+  const exact = BUG_SPECIES.find((b) => normalizeName(b.name) === q)
+  if (exact) return exact
+  return BUG_SPECIES.find((b) => {
+    const n = normalizeName(b.name)
+    return n.includes(q) || q.includes(n)
+  })
+}

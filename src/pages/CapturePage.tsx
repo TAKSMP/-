@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import type { AiResult, CaughtBug } from '../types'
 import type { LookupField } from '../lib/ai'
 import { analyzePhoto, hasRealAi, lookupField } from '../lib/ai'
-import { ALL_HABITATS, ALL_ORDERS } from '../data/bugs'
+import { ALL_HABITATS, ALL_ORDERS, findSpeciesByName } from '../data/bugs'
 import { StarRating } from '../components/StarRating'
 import { Confetti } from '../components/Confetti'
 import { CameraCapture } from '../components/CameraCapture'
@@ -80,9 +80,14 @@ export function CapturePage({ onSaved }: Props) {
 
   function handleSave() {
     if (!photo) return
+    // 訂正後の名前をもとに、図鑑データを引き直す。
+    // これで説明文（豆ちしき）が「最初にAIが判定した虫」ではなく
+    // 「訂正した虫」のものになる。名前が図鑑にないときは undefined。
+    const matched = findSpeciesByName(name)
     const bug: CaughtBug = {
       id: `bug_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      speciesId: result?.matchedSpeciesId,
+      // 名前が図鑑になければ undefined（まちがった説明文が出ないように）
+      speciesId: matched?.id,
       name: name.trim() || 'なぞの虫',
       order: order.trim() || 'ふめい',
       rarity,

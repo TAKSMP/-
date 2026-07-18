@@ -1,5 +1,5 @@
 import type { AiResult, BugSpecies } from '../types'
-import { BUG_SPECIES } from '../data/bugs'
+import { BUG_SPECIES, findSpeciesByName } from '../data/bugs'
 
 // =============================================================
 //  ちょうむしAI
@@ -241,28 +241,6 @@ export interface LookupResult {
   value: string | number
   // どうやって分かったか（表示用）
   source: 'zukan' | 'ai'
-}
-
-// ひらがな→カタカナに変換して、名前を照合しやすくする
-function toKatakana(s: string): string {
-  return s.replace(/[ぁ-ゖ]/g, (ch) =>
-    String.fromCharCode(ch.charCodeAt(0) + 0x60),
-  )
-}
-function normalizeName(s: string): string {
-  return toKatakana(s.trim().replace(/\s+/g, ''))
-}
-
-// 名前から図鑑データをさがす（完全一致→部分一致）
-function findSpeciesByName(name: string): BugSpecies | undefined {
-  const q = normalizeName(name)
-  if (!q) return undefined
-  const exact = BUG_SPECIES.find((b) => normalizeName(b.name) === q)
-  if (exact) return exact
-  return BUG_SPECIES.find((b) => {
-    const n = normalizeName(b.name)
-    return n.includes(q) || q.includes(n)
-  })
 }
 
 async function lookupFieldWithClaude(

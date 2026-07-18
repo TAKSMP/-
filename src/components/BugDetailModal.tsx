@@ -1,5 +1,5 @@
 import type { CaughtBug } from '../types'
-import { getSpeciesById } from '../data/bugs'
+import { findSpeciesByName, getSpeciesById } from '../data/bugs'
 import { StarRating } from './StarRating'
 import { sfx } from '../lib/sound'
 
@@ -12,7 +12,11 @@ interface Props {
 // 虫カードをタップしたときにひらく、大きな詳細画面。
 export function BugDetailModal({ bug, onClose, onDelete }: Props) {
   if (!bug) return null
-  const species = bug.speciesId ? getSpeciesById(bug.speciesId) : undefined
+  // 表示している名前をもとに説明文を引く（訂正後の名前を優先）。
+  // 古い記録で speciesId が最初の判定のままでも、正しい説明文になる。
+  const species =
+    findSpeciesByName(bug.name) ??
+    (bug.speciesId ? getSpeciesById(bug.speciesId) : undefined)
   const date = new Date(bug.caughtAt)
   const dateStr = `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`
 
