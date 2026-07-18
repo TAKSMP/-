@@ -256,36 +256,18 @@ export function clearApiKey(): void {
 }
 
 // =============================================================
-//  項目ごとの「AIに調べさせる」機能
+//  説明文だけをAIに書かせる（名前にあわせて）
 // -------------------------------------------------------------
-//  名前を訂正したあと、「目・レア度・生息地」のわからない所を
-//  AIに調べさせて自動入力するためのもの。
-//  まず図鑑データから名前で照合し、見つからなければ（本物AIモードなら）
-//  Claudeに問い合わせます。
+//  訂正した名前をもとに、その虫の説明文（せつめい）を自動生成する。
+//  本物AIモードならClaudeが書き、そうでなければ図鑑データの説明でおぎなう。
 // =============================================================
-
-export type LookupField = 'order' | 'rarity' | 'habitat'
-
-export interface LookupResult {
-  value: string | number
-  // どうやって分かったか（表示用）
-  source: 'zukan' | 'ai'
-}
-
-async function lookupFieldWithClaude(
-  name: string,
-  field: LookupField,
-): Promise<LookupResult | null> {
+async function describeWithClaude(name: string): Promise<string | null> {
   const apiKey = getApiKey()
   if (!apiKey) return null
 
-  // 種レベルで正確に。デモ図鑑の候補には縛らない。
-  const question =
-    field === 'order'
-      ? `日本の昆虫「${name}」は分類学上なに目ですか。「◯◯目」という正式な和名の目名だけを答えてください。ほかの文字は書かないこと。`
-      : field === 'habitat'
-        ? `日本の昆虫「${name}」が主に見られる生息地を、10文字程度の短い言葉だけで答えてください。漢字はつかわず、ひらがなとカタカナだけで書くこと（例: ぞうきばやし、いけや かわの ほとり）。ほかの文字は書かないこと。`
-        : `日本の昆虫「${name}」の、日本での見つけにくさ（レア度）を1（ふつう）〜5（とてもめずらしい）の整数1つで答えてください。数字だけを書くこと。`
+  const question = `日本の昆虫「${name}」について、その種ならではの特徴を、子ども向けに40〜80字で説明してください。
+漢字はつかわず、ひらがなとカタカナだけで書き、よみやすいように文節のくぎりに半角スペースを入れてください。
+一般論ではなく、その虫らしい特徴を書くこと。説明の文だけを返し、名前や「説明:」などの見出しは書かないでください。`
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -297,64 +279,39 @@ async function lookupFieldWithClaude(
     },
     body: JSON.stringify({
       model: 'claude-opus-4-8',
-      max_tokens: 40,
+      max_tokens: 200,
       messages: [{ role: 'user', content: question }],
     }),
   })
   if (!res.ok) throw new Error('AIのつうしんにしっぱいしました')
   const json = await res.json()
   const text: string = (json?.content?.[0]?.text ?? '').trim()
-  if (!text) return null
-
-  if (field === 'rarity') {
-    const m = text.match(/[1-5]/)
-    if (!m) return null
-    return { value: Number(m[0]), source: 'ai' }
-  }
-  // order は「◯◯目」の部分だけを取り出す
-  if (field === 'order') {
-    const m = text.match(/[ぁ-んァ-ヶ一-龠ー]+目/)
-    return { value: m ? m[0] : text, source: 'ai' }
-  }
-  return { value: text.replace(/[。\n]/g, '').trim(), source: 'ai' }
+  // 前後のカギカッコなどを軽くそうじ
+  return text.replace(/^[「『]|[」』]$/g, '').trim() || null
 }
 
-// 名前をもとに、1つの項目（目 / レア度 / 生息地）を調べる。
-// 見つからなければ null をかえす。
-export async function lookupField(
-  name: string,
-  field: LookupField,
-): Promise<LookupResult | null> {
+// 名前から説明文をつくる。かけなければ null。
+export async function describeBug(name: string): Promise<string | null> {
   const trimmed = name.trim()
   if (!trimmed) return null
 
-  // 演出用のちょっとした「かんがえてる」間
   const thinking = new Promise((r) => setTimeout(r, 700))
+  let result: string | null = null
 
-  let result: LookupResult | null = null
-
-  // 1) 本物AIモードなら、まずAIに正確に答えさせる（種名にあった答え）
+  // 1) 本物AIモードなら、Claudeに書かせる
   if (hasRealAi()) {
     try {
-      result = await lookupFieldWithClaude(trimmed, field)
+      result = await describeWithClaude(trimmed)
     } catch (e) {
-      console.warn('AIの項目しらべにしっぱいしました', e)
+      console.warn('AIの説明づくりにしっぱいしました', e)
       result = null
     }
   }
 
-  // 2) AIがつかえない/答えられないときは、図鑑データから照合
+  // 2) だめなら図鑑データの説明でおぎなう
   if (!result) {
     const sp = findSpeciesByName(trimmed)
-    if (sp) {
-      const value =
-        field === 'order'
-          ? sp.order
-          : field === 'habitat'
-            ? sp.habitat
-            : sp.rarity
-      result = { value, source: 'zukan' }
-    }
+    result = sp?.fact ?? null
   }
 
   await thinking

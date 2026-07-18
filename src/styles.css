@@ -645,6 +645,81 @@ input:focus {
   color: var(--danger);
 }
 
+/* せつめい 入力（訂正中はAIボタンつき） */
+.desc-field {
+  margin-top: 14px;
+  background: #fffbe6;
+  border: 2px solid #f0e2a8;
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+.desc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.desc-head label {
+  font-weight: 800;
+  color: #a8850f;
+  font-size: 14px;
+}
+.desc-btn {
+  border: none;
+  background: var(--sky-deep);
+  color: #fff;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 3px 0 #2f7fb0;
+}
+.desc-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #2f7fb0;
+}
+.desc-btn:disabled {
+  opacity: 0.6;
+}
+.desc-textarea {
+  width: 100%;
+  border: 2px solid var(--yellow);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.7;
+  background: #fff;
+  resize: vertical;
+}
+.desc-textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px #ffd23f55;
+}
+.desc-text {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.7;
+  color: #6b5b00;
+}
+.desc-none {
+  margin: 0;
+  font-size: 13px;
+  color: #b0a878;
+}
+.desc-miss {
+  margin: 8px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--danger);
+}
+
 /* みつけたばしょ 入力 */
 .place-field {
   margin-top: 14px;

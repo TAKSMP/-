@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import type { AiResult, CaptureInput } from '../types'
-import { analyzePhoto, hasRealAi } from '../lib/ai'
+import { analyzePhoto, describeBug, hasRealAi } from '../lib/ai'
 import {
   buildPrompt,
   countParsed,
@@ -47,9 +47,10 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
   const [importText, setImportText] = useState('')
   const [importMsg, setImportMsg] = useState('')
   const [askMsg, setAskMsg] = useState('')
-  // AI／ChatGPTが返した説明文と、それがどの名前のものか
-  const [aiFact, setAiFact] = useState<string | undefined>(undefined)
-  const [aiFactName, setAiFactName] = useState<string>('')
+  // せつめい（説明文）。AI／ChatGPT／手入力でつくる。
+  const [fact, setFact] = useState('')
+  const [describing, setDescribing] = useState(false) // AIで説明づくり中
+  const [describeMiss, setDescribeMiss] = useState(false)
 
   function reset() {
     setPhase('empty')
@@ -63,8 +64,9 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
     setImportText('')
     setImportMsg('')
     setAskMsg('')
-    setAiFact(undefined)
-    setAiFactName('')
+    setFact('')
+    setDescribing(false)
+    setDescribeMiss(false)
   }
 
   // 写真（dataURL）をうけとってAIにしらべてもらう。
@@ -81,8 +83,7 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
       setOrder(r.order)
       setRarity(r.rarity)
       setHabitat(r.habitat)
-      setAiFact(r.fact)
-      setAiFactName(r.name)
+      setFact(r.fact ?? '')
       setPhase('result')
       sfx.discover()
       setConfetti(true)
@@ -127,8 +128,8 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
       order: order.trim() || 'ふめい',
       rarity,
       habitat: habitat.trim() || 'ふめい',
-      // AI／ChatGPTが返した説明文が、いまの名前のものなら保存して優先表示
-      fact: aiFact && aiFactName === name.trim() ? aiFact : undefined,
+      // せつめい（AI／ChatGPT／手入力）。あれば保存して優先表示。
+      fact: fact.trim() || undefined,
       photo,
       caughtAt: Date.now(),
       place: place.trim() || undefined,
@@ -181,13 +182,30 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
     if (parsed.order) setOrder(parsed.order)
     if (parsed.rarity) setRarity(parsed.rarity)
     if (parsed.habitat) setHabitat(parsed.habitat)
-    // 説明文もあれば保存用にもっておく（名前とひもづけ）
-    if (parsed.fact && parsed.name) {
-      setAiFact(parsed.fact)
-      setAiFactName(parsed.name)
-    }
+    if (parsed.fact) setFact(parsed.fact)
     sfx.discover()
     setImportMsg(`✅ ${n}こうもくを取り込んだよ！ないようをたしかめて記録してね。`)
+  }
+
+  // なまえに あわせて、説明文だけをAIに書かせる
+  async function handleDescribe() {
+    if (!name.trim()) {
+      sfx.error()
+      alert('さきに「なまえ」を入れてね🐛')
+      return
+    }
+    sfx.tap()
+    setDescribeMiss(false)
+    setDescribing(true)
+    const text = await describeBug(name)
+    setDescribing(false)
+    if (text) {
+      setFact(text)
+      sfx.discover()
+    } else {
+      setDescribeMiss(true)
+      sfx.error()
+    }
   }
 
   return (
@@ -363,6 +381,50 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
                 <option key={h} value={h} />
               ))}
             </datalist>
+
+            {/* せつめい（訂正中は、名前に合わせてAIに書かせるボタンつき） */}
+            {!saved && (
+              <div className="desc-field">
+                <div className="desc-head">
+                  <label htmlFor="desc-input">📝 せつめい</label>
+                  {editing && (
+                    <button
+                      type="button"
+                      className="desc-btn"
+                      onClick={handleDescribe}
+                      disabled={describing}
+                    >
+                      {describing ? (
+                        <>
+                          <span className="spinner">✍️</span> かいてます…
+                        </>
+                      ) : (
+                        <>🤖 なまえに あわせてAIがかく</>
+                      )}
+                    </button>
+                  )}
+                </div>
+                {editing ? (
+                  <textarea
+                    id="desc-input"
+                    className="desc-textarea"
+                    value={fact}
+                    onChange={(e) => setFact(e.target.value)}
+                    rows={3}
+                    placeholder="この虫の せつめい"
+                  />
+                ) : fact ? (
+                  <p className="desc-text">{fact}</p>
+                ) : (
+                  <p className="desc-none">（せつめいは まだ ないよ）</p>
+                )}
+                {describeMiss && (
+                  <p className="desc-miss">
+                    うまく かけなかった…（本物AIモードか、図鑑にある虫だと かけるよ）
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* みつけたばしょ（手入力＋過去に入れた場所からえらべる） */}
             {!saved && (
