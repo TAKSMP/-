@@ -6,7 +6,7 @@ import { sfx } from '../lib/sound'
 
 const QUESTION_COUNT = 10
 
-type QKind = 'name' | 'habitat' | 'order'
+type QKind = 'name' | 'habitat' | 'order' | 'fact'
 
 interface Question {
   kind: QKind
@@ -15,9 +15,16 @@ interface Question {
   order: string
   habitat: string
   fact?: string
+  factClue?: string // 説明文クイズで見せる（名前を伏せた）説明文
   prompt: string
   options: string[]
   answer: string
+}
+
+// 説明文に虫の名前が入っていたら「◯◯」に伏せる（こたえバレ防止）
+function maskName(fact: string, name: string): string {
+  if (!name) return fact
+  return fact.split(name).join('◯◯')
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -45,11 +52,15 @@ function buildQuiz(bugs: CaughtBug[]): Question[] {
   const orders = uniq(bugs.map((b) => b.order))
   const habitats = uniq(bugs.map((b) => b.habitat))
 
+  const hasFacts = bugs.some((b) => b.fact && b.fact.trim())
+
   // つかえる問題タイプ（選択肢が2つ以上つくれるもの）
   const usable: QKind[] = []
   if (names.length >= 2) usable.push('name')
   if (orders.length >= 2) usable.push('order')
   if (habitats.length >= 2) usable.push('habitat')
+  // 説明文クイズ：名前の選択肢が2つ以上つくれて、説明文をもつ虫がいるとき
+  if (names.length >= 2 && hasFacts) usable.push('fact')
   if (usable.length === 0) return []
 
   const questions: Question[] = []
@@ -61,6 +72,7 @@ function buildQuiz(bugs: CaughtBug[]): Question[] {
     const kinds = usable.filter((k) => {
       if (k === 'name') return true
       if (k === 'order') return bug.order && bug.order !== 'ふめい'
+      if (k === 'fact') return Boolean(bug.fact && bug.fact.trim())
       return bug.habitat && bug.habitat !== 'ふめい'
     })
     if (kinds.length === 0) continue
@@ -70,6 +82,7 @@ function buildQuiz(bugs: CaughtBug[]): Question[] {
     let prompt: string
     let options: string[]
     let answer: string
+    let factClue: string | undefined
     if (kind === 'name') {
       answer = bug.name
       options = makeOptions(answer, names)
@@ -78,10 +91,16 @@ function buildQuiz(bugs: CaughtBug[]): Question[] {
       answer = bug.order
       options = makeOptions(answer, orders)
       prompt = `「${bug.name}」は なに目（もく）？`
-    } else {
+    } else if (kind === 'habitat') {
       answer = bug.habitat
       options = makeOptions(answer, habitats)
       prompt = `「${bug.name}」は どこにいる？`
+    } else {
+      // 説明文クイズ：説明を読んで、どの虫かをあてる
+      answer = bug.name
+      options = makeOptions(answer, names)
+      prompt = 'この せつめいの 虫は どれ？'
+      factClue = maskName(bug.fact!.trim(), bug.name)
     }
     if (options.length < 2) continue
 
@@ -92,6 +111,7 @@ function buildQuiz(bugs: CaughtBug[]): Question[] {
       order: bug.order,
       habitat: bug.habitat,
       fact: bug.fact,
+      factClue,
       prompt,
       options,
       answer,
@@ -232,7 +252,9 @@ export function QuizPage({ bugs, onGoCapture }: Props) {
           </div>
 
           <div className="quiz-card">
-            {current.photo ? (
+            {current.kind === 'fact' ? (
+              <div className="quiz-fact-clue">💬 {current.factClue}</div>
+            ) : current.photo ? (
               <img className="quiz-photo" src={current.photo} alt="クイズの虫" />
             ) : (
               <div className="quiz-emoji">🐛</div>
@@ -279,7 +301,9 @@ export function QuizPage({ bugs, onGoCapture }: Props) {
               <p>
                 こたえは <b>{current.answer}</b>
               </p>
-              {current.fact && <p className="quiz-fact">💡 {current.fact}</p>}
+              {current.fact && current.kind !== 'fact' && (
+                <p className="quiz-fact">💡 {current.fact}</p>
+              )}
               <button className="btn btn-big" onClick={next}>
                 {index + 1 >= questions.length ? 'けっかを見る 🏁' : 'つぎへ ▶'}
               </button>

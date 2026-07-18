@@ -1267,6 +1267,17 @@ input:focus {
   display: block;
   background: #eef3e8;
 }
+.quiz-fact-clue {
+  background: #fffbe6;
+  border: 2px solid var(--yellow);
+  border-radius: 14px;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.8;
+  color: #6b5b00;
+  text-align: left;
+}
 .quiz-prompt {
   font-size: 20px;
   color: var(--green-deep);
