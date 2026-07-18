@@ -932,6 +932,56 @@ input:focus {
   font-size: 14px;
 }
 
+.zukan-count {
+  text-align: center;
+  font-weight: 900;
+  font-size: 20px;
+  color: var(--green-deep);
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: var(--shadow);
+  margin-bottom: 12px;
+}
+.sort-bar {
+  margin-bottom: 14px;
+}
+.sort-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 800;
+  color: #6b7a5a;
+  margin-bottom: 6px;
+}
+.sort-chip {
+  border: 2px solid #d5e3c9;
+  background: #fff;
+  color: var(--green-deep);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.sort-chip.active {
+  background: var(--green);
+  border-color: var(--green-deep);
+  color: #fff;
+  transform: scale(1.05);
+}
+.zukan-group {
+  margin-bottom: 8px;
+}
+.group-title {
+  font-size: 16px;
+  color: var(--green-deep);
+  margin: 18px 4px 10px;
+  padding-left: 10px;
+  border-left: 6px solid var(--green);
+}
+
 /* からっぽ */
 .empty-state {
   text-align: center;

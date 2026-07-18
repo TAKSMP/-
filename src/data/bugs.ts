@@ -3,6 +3,8 @@ import type { BugSpecies } from '../types'
 // ちょうむし図鑑の「ずかんデータ」。
 // 身近でこどもに人気の虫を中心に集めました。
 // color は AI（デモモード）が写真の色から虫を推理するときのヒントに使います。
+// fact（せつめい）は、子どもが読めるように漢字をつかわず、
+// ひらがな・カタカナ＋半角スペースで書いています。
 export const BUG_SPECIES: BugSpecies[] = [
   {
     id: 'kabutomushi',
@@ -12,7 +14,7 @@ export const BUG_SPECIES: BugSpecies[] = [
     habitat: 'ぞうきばやし',
     emoji: '🪲',
     color: '#5b3a29',
-    fact: 'オスのツノでけんかをするよ。夜にクヌギの木のしるをなめにくるんだ。',
+    fact: 'オスの ツノで けんかを するよ。よるに クヌギの きの しるを なめに くるんだ。',
   },
   {
     id: 'kuwagata',
@@ -22,7 +24,7 @@ export const BUG_SPECIES: BugSpecies[] = [
     habitat: 'ぞうきばやし',
     emoji: '🪲',
     color: '#2b2b2b',
-    fact: '大きなアゴがトレードマーク。木のうろにかくれているよ。',
+    fact: 'おおきな アゴが トレードマーク。きの うろに かくれて いるよ。',
   },
   {
     id: 'monshirochou',
@@ -32,7 +34,7 @@ export const BUG_SPECIES: BugSpecies[] = [
     habitat: 'くさむら',
     emoji: '🦋',
     color: '#f5f5f0',
-    fact: 'キャベツ畑でよく見かける白いチョウ。よう虫はアオムシだよ。',
+    fact: 'キャベツばたけで よく みかける しろい チョウ。ようちゅうは アオムシだよ。',
   },
   {
     id: 'agehachou',
@@ -42,7 +44,7 @@ export const BUG_SPECIES: BugSpecies[] = [
     habitat: 'にわ',
     emoji: '🦋',
     color: '#f2d43a',
-    fact: '黄色と黒のもよう。ミカンの葉っぱにたまごをうむよ。',
+    fact: 'きいろと くろの もよう。ミカンの はっぱに たまごを うむよ。',
   },
   {
     id: 'nanahoshi',
@@ -52,7 +54,7 @@ export const BUG_SPECIES: BugSpecies[] = [
     habitat: 'くさむら',
     emoji: '🐞',
     color: '#e23b2e',
-    fact: '赤いせなかに黒い点が7つ。アブラムシを食べるよ。',
+    fact: 'あかい せなかに くろい てんが ななつ。アブラムシを たべるよ。',
   },
   {
     id: 'shouryoubatta',
@@ -62,7 +64,7 @@ export const BUG_SPECIES: BugSpecies[] = [
     habitat: 'くさむら',
     emoji: '🦗',
     color: '#7cb342',
-    fact: 'とがった頭がとくちょう。とぶときキチキチと音を出すよ。',
+    fact: 'とがった あたまが とくちょう。とぶとき キチキチと おとを だすよ。',
   },
   {
     id: 'tonosamabatta',
@@ -72,7 +74,7 @@ export const BUG_SPECIES: BugSpecies[] = [
     habitat: 'くさむら',
     emoji: '🦗',
     color: '#8a9a3a',
-    fact: 'ジャンプ力バツグン！とてもよくとぶ大きなバッタ。',
+    fact: 'ジャンプりょく バツグン！とても よく とぶ おおきな バッタ。',
   },
   {
     id: 'kamakiri',
@@ -82,7 +84,7 @@ export const BUG_SPECIES: BugSpecies[] = [
     habitat: 'くさむら',
     emoji: '🦖',
     color: '#6aa84f',
-    fact: '前あしのカマでえものをつかまえるハンター。たまごはあわのおうちの中。',
+    fact: 'まえあしの カマで えものを つかまえる ハンター。たまごは あわの おうちの なか。',
   },
   {
     id: 'oniyanma',
@@ -92,7 +94,7 @@ export const BUG_SPECIES: BugSpecies[] = [
     habitat: 'かわ',
     emoji: '🪰',
     color: '#3a5c1e',
-    fact: '日本でいちばん大きいトンボ。目がとても大きいよ。',
+    fact: 'にっぽんで いちばん おおきい トンボ。めが とても おおきいよ。',
   },
   {
     id: 'akiakane',
@@ -102,7 +104,7 @@ export const BUG_SPECIES: BugSpecies[] = [
     habitat: 'たんぼ',
     emoji: '🪰',
     color: '#d94f2b',
-    fact: 'あきになると赤くなる「あかとんぼ」のなかま。',
+    fact: 'あきに なると あかく なる「あかとんぼ」の なかま。',
   },
   {
     id: 'aburazemi',
@@ -112,7 +114,7 @@ export const BUG_SPECIES: BugSpecies[] = [
     habitat: 'き',
     emoji: '🐝',
     color: '#6b4423',
-    fact: '「ジージー」となく茶色いセミ。あぶらであげる音ににているよ。',
+    fact: '「ジージー」と なく ちゃいろい セミ。あぶらで あげる おとに にて いるよ。',
   },
   {
     id: 'minminzemi',
@@ -122,7 +124,7 @@ export const BUG_SPECIES: BugSpecies[] = [
     habitat: 'き',
     emoji: '🐝',
     color: '#2e7d32',
-    fact: '「ミーンミンミン」となく緑色のセミ。',
+    fact: '「ミーンミンミン」と なく みどりいろの セミ。',
   },
   {
     id: 'kanabun',
@@ -132,7 +134,7 @@ export const BUG_SPECIES: BugSpecies[] = [
     habitat: 'ぞうきばやし',
     emoji: '🪲',
     color: '#8a9a2b',
-    fact: 'ピカピカ光るせなか。ブーンととびながら木のしるを食べにくるよ。',
+    fact: 'ピカピカ ひかる せなか。ブーンと とびながら きの しるを たべに くるよ。',
   },
   {
     id: 'tamamushi',
@@ -142,7 +144,7 @@ export const BUG_SPECIES: BugSpecies[] = [
     habitat: 'き',
     emoji: '💚',
     color: '#00897b',
-    fact: 'にじ色にかがやくとってもきれいな虫。見つけたらラッキー！',
+    fact: 'にじいろに かがやく とっても きれいな むし。みつけたら ラッキー！',
   },
   {
     id: 'mitsubachi',
@@ -152,7 +154,7 @@ export const BUG_SPECIES: BugSpecies[] = [
     habitat: 'はなばたけ',
     emoji: '🐝',
     color: '#f6b93b',
-    fact: '花のみつをあつめてハチミツを作る。おしりのハリに気をつけて。',
+    fact: 'はなの みつを あつめて ハチミツを つくる。おしりの ハリに きを つけて。',
   },
   {
     id: 'kumaari',
@@ -162,7 +164,7 @@ export const BUG_SPECIES: BugSpecies[] = [
     habitat: 'つち',
     emoji: '🐜',
     color: '#222222',
-    fact: '日本で大きめのアリ。みんなで力を合わせてはたらくよ。',
+    fact: 'にっぽんで おおきめの アリ。みんなで ちからを あわせて はたらくよ。',
   },
   {
     id: 'dangomushi',
@@ -172,7 +174,7 @@ export const BUG_SPECIES: BugSpecies[] = [
     habitat: 'いしのした',
     emoji: '🪨',
     color: '#616161',
-    fact: 'さわるとまるくなる。じつは虫ではなくエビのなかまなんだ。',
+    fact: 'さわると まるく なる。じつは むしでは なく エビの なかまなんだ。',
   },
   {
     id: 'katatsumuri',
@@ -182,7 +184,7 @@ export const BUG_SPECIES: BugSpecies[] = [
     habitat: 'はっぱのうら',
     emoji: '🐌',
     color: '#a1887f',
-    fact: 'せなかにおうちをせおっている。雨の日に元気になるよ。',
+    fact: 'せなかに おうちを せおって いる。あめの ひに げんきに なるよ。',
   },
   {
     id: 'koganegumo',
@@ -192,7 +194,7 @@ export const BUG_SPECIES: BugSpecies[] = [
     habitat: 'くさむら',
     emoji: '🕷️',
     color: '#fbc02d',
-    fact: '黄色と黒のしまもよう。大きなあみをはってえものをまつよ。',
+    fact: 'きいろと くろの しまもよう。おおきな あみを はって えものを まつよ。',
   },
   {
     id: 'suzumushi',
@@ -202,7 +204,7 @@ export const BUG_SPECIES: BugSpecies[] = [
     habitat: 'くさむら',
     emoji: '🦗',
     color: '#3e3e3e',
-    fact: '「リーンリーン」ときれいな音でなく。あきの虫の代表だよ。',
+    fact: '「リーンリーン」と きれいな おとで なく。あきの むしの だいひょうだよ。',
   },
   {
     id: 'genjibotaru',
@@ -212,7 +214,7 @@ export const BUG_SPECIES: BugSpecies[] = [
     habitat: 'かわ',
     emoji: '✨',
     color: '#c6ff00',
-    fact: 'おしりが光る夜の虫。きれいな水のそばにしかいないよ。',
+    fact: 'おしりが ひかる よるの むし。きれいな みずの そばにしか いないよ。',
   },
   {
     id: 'hanmyou',
@@ -222,7 +224,7 @@ export const BUG_SPECIES: BugSpecies[] = [
     habitat: 'やまみち',
     emoji: '🌈',
     color: '#7e57c2',
-    fact: '人の前をとびながら道あんないするみたいに動く。色がとてもきれい。',
+    fact: 'ひとの まえを とびながら みちあんない する みたいに うごく。いろが とても きれい。',
   },
 ]
 

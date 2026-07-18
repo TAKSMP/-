@@ -1,9 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { CaughtBug } from '../types'
-import { BUG_SPECIES } from '../data/bugs'
 import { BugCard } from '../components/BugCard'
 import { BugDetailModal } from '../components/BugDetailModal'
-import { StarRating } from '../components/StarRating'
 import { sfx } from '../lib/sound'
 
 interface Props {
@@ -12,43 +10,57 @@ interface Props {
   onGoCapture: () => void
 }
 
-// あつめた虫がならぶ図鑑ページ。
+// 並べ替えの種類
+type SortKey = 'date' | 'name' | 'order' | 'habitat'
+
+const SORTS: { key: SortKey; label: string; emoji: string }[] = [
+  { key: 'date', label: 'とった日', emoji: '📅' },
+  { key: 'name', label: 'なまえ', emoji: '🔤' },
+  { key: 'order', label: '目（もく）', emoji: '🐾' },
+  { key: 'habitat', label: '生息地', emoji: '🌳' },
+]
+
+// あつめた虫がならぶ図鑑ページ。記録した虫をどんどんためていく。
 export function ZukanPage({ bugs, onDelete, onGoCapture }: Props) {
   const [selected, setSelected] = useState<CaughtBug | null>(null)
+  const [sort, setSort] = useState<SortKey>('date')
 
-  // 図鑑データのうち、なんしゅるい見つけたか
-  const foundSpeciesIds = useMemo(
-    () => new Set(bugs.map((b) => b.speciesId).filter(Boolean)),
-    [bugs],
-  )
-  const totalSpecies = BUG_SPECIES.length
-  const foundCount = foundSpeciesIds.size
-  const percent = Math.round((foundCount / totalSpecies) * 100)
+  // 並べ替え／グループ分けした結果をつくる。
+  // date・name は1つのまとまり、order・habitat は見出しつきのグループに分ける。
+  const groups = useMemo(() => {
+    const byDateNewest = (a: CaughtBug, b: CaughtBug) => b.caughtAt - a.caughtAt
 
-  // まだ見つけていない虫（シルエットで見せる）
-  const notFound = BUG_SPECIES.filter((sp) => !foundSpeciesIds.has(sp.id))
+    if (sort === 'date') {
+      return [{ title: '', items: [...bugs].sort(byDateNewest) }]
+    }
+    if (sort === 'name') {
+      const items = [...bugs].sort((a, b) =>
+        a.name.localeCompare(b.name, 'ja'),
+      )
+      return [{ title: '', items }]
+    }
+    // order / habitat: グループごとにまとめる
+    const keyOf = (b: CaughtBug) => (sort === 'order' ? b.order : b.habitat)
+    const map = new Map<string, CaughtBug[]>()
+    for (const bug of bugs) {
+      const k = keyOf(bug) || 'ふめい'
+      if (!map.has(k)) map.set(k, [])
+      map.get(k)!.push(bug)
+    }
+    return Array.from(map.entries())
+      .sort((a, b) => a[0].localeCompare(b[0], 'ja'))
+      .map(([title, items]) => ({
+        title,
+        items: items.sort(byDateNewest),
+      }))
+  }, [bugs, sort])
 
   return (
     <div className="page zukan">
       <header className="page-head">
         <h1>📖 むし図鑑</h1>
-        <p className="sub">きみがみつけた虫のきろく</p>
+        <p className="sub">きみが みつけた虫の きろく</p>
       </header>
-
-      {/* すすみぐあい */}
-      <div className="progress-card">
-        <div className="progress-top">
-          <span className="progress-big">{foundCount}</span>
-          <span className="progress-total">/ {totalSpecies} しゅるい</span>
-        </div>
-        <div className="progress-bar">
-          <div className="progress-fill" style={{ width: `${percent}%` }} />
-        </div>
-        <p className="progress-label">
-          ずかん たっせいりつ {percent}%
-          {percent === 100 && ' 🏆 コンプリート！'}
-        </p>
-      </div>
 
       {bugs.length === 0 ? (
         <div className="empty-state">
@@ -67,46 +79,45 @@ export function ZukanPage({ bugs, onDelete, onGoCapture }: Props) {
         </div>
       ) : (
         <>
-          <h3 className="section-title">
-            🎒 みつけた虫（{bugs.length}ひき）
-          </h3>
-          <div className="bug-grid">
-            {bugs.map((bug) => (
-              <BugCard
-                key={bug.id}
-                bug={bug}
-                onClick={() => {
-                  sfx.tap()
-                  setSelected(bug)
-                }}
-              />
-            ))}
-          </div>
-        </>
-      )}
+          <div className="zukan-count">🎒 {bugs.length}ひき あつめたよ</div>
 
-      {/* まだ見ぬ虫 */}
-      {notFound.length > 0 && (
-        <>
-          <h3 className="section-title">
-            ❔ まだ見つけていない虫（{notFound.length}しゅるい）
-          </h3>
-          <div className="bug-grid">
-            {notFound.map((sp) => (
-              <div className="bugcard silhouette" key={sp.id}>
-                <div className="bugcard-photo">
-                  <div className="silhouette-mark">❓</div>
-                </div>
-                <div className="bugcard-body">
-                  <div className="bugcard-name">？？？</div>
-                  <div className="bugcard-meta">
-                    <span className="chip chip-soft">{sp.habitat}にいるよ</span>
-                  </div>
-                  <StarRating value={sp.rarity} size={14} />
-                </div>
-              </div>
-            ))}
+          {/* 並べ替えボタン */}
+          <div className="sort-bar">
+            <span className="sort-label">ならびかえ</span>
+            <div className="chips-row">
+              {SORTS.map((s) => (
+                <button
+                  key={s.key}
+                  className={'sort-chip' + (sort === s.key ? ' active' : '')}
+                  onClick={() => {
+                    sfx.tap()
+                    setSort(s.key)
+                  }}
+                >
+                  {s.emoji} {s.label}
+                </button>
+              ))}
+            </div>
           </div>
+
+          {/* 虫のならび（グループごと） */}
+          {groups.map((g, i) => (
+            <div key={g.title || i} className="zukan-group">
+              {g.title && <h3 className="group-title">{g.title}</h3>}
+              <div className="bug-grid">
+                {g.items.map((bug) => (
+                  <BugCard
+                    key={bug.id}
+                    bug={bug}
+                    onClick={() => {
+                      sfx.tap()
+                      setSelected(bug)
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
         </>
       )}
 
