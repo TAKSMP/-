@@ -22,7 +22,14 @@ export interface AiResult {
   demo?: boolean // デモモード（色から推理しただけ）の結果かどうか
 }
 
-// 図鑑に記録された1件（＝子どもが実さいに見つけた虫）
+// 1回ぶんの撮影（写真＋とった日）。同じ虫を何回もとると、これがふえていく。
+export interface Capture {
+  id: string
+  photo: string // 写真（dataURL）
+  caughtAt: number // 記録した日時（ミリ秒）
+}
+
+// 図鑑に記録された1しゅるいの虫。撮影の履歴（captures）をもつ。
 export interface CaughtBug {
   id: string // レコードのID
   speciesId?: string // 図鑑データと一致した場合のID
@@ -31,7 +38,20 @@ export interface CaughtBug {
   rarity: number
   habitat: string
   fact?: string // 説明文（AIが書いた、その種に合ったもの。あれば優先表示）
-  photo: string // 写真（dataURL）
-  caughtAt: number // 記録した日時（ミリ秒）
-  corrected: boolean // ユーザーが訂正したかどうか
+  captures: Capture[] // 撮影の履歴（あたらしい順）
+  mainCaptureId: string // メイン画像につかう撮影のID
+  corrected: boolean // ユーザーが訂正したことがあるか
+}
+
+// 保存するときの入力（1回ぶんの撮影＋判定内容）
+export interface CaptureInput {
+  speciesId?: string
+  name: string
+  order: string
+  rarity: number
+  habitat: string
+  fact?: string
+  photo: string
+  caughtAt: number
+  corrected: boolean
 }

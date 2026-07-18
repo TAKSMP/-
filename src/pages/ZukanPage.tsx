@@ -2,11 +2,14 @@ import { useMemo, useState } from 'react'
 import type { CaughtBug } from '../types'
 import { BugCard } from '../components/BugCard'
 import { BugDetailModal } from '../components/BugDetailModal'
+import { latestCaughtAt } from '../lib/storage'
+import { countHiki } from '../lib/format'
 import { sfx } from '../lib/sound'
 
 interface Props {
   bugs: CaughtBug[]
   onDelete: (id: string) => void
+  onSetMain: (bugId: string, captureId: string) => void
   onGoCapture: () => void
 }
 
@@ -21,14 +24,24 @@ const SORTS: { key: SortKey; label: string; emoji: string }[] = [
 ]
 
 // あつめた虫がならぶ図鑑ページ。記録した虫をどんどんためていく。
-export function ZukanPage({ bugs, onDelete, onGoCapture }: Props) {
-  const [selected, setSelected] = useState<CaughtBug | null>(null)
+export function ZukanPage({
+  bugs,
+  onDelete,
+  onSetMain,
+  onGoCapture,
+}: Props) {
+  // 選択中はIDでもつ。bugsが更新されたら詳細もそのまま最新になる。
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const selected = selectedId
+    ? (bugs.find((b) => b.id === selectedId) ?? null)
+    : null
   const [sort, setSort] = useState<SortKey>('date')
 
   // 並べ替え／グループ分けした結果をつくる。
   // date・name は1つのまとまり、order・habitat は見出しつきのグループに分ける。
   const groups = useMemo(() => {
-    const byDateNewest = (a: CaughtBug, b: CaughtBug) => b.caughtAt - a.caughtAt
+    const byDateNewest = (a: CaughtBug, b: CaughtBug) =>
+      latestCaughtAt(b) - latestCaughtAt(a)
 
     if (sort === 'date') {
       return [{ title: '', items: [...bugs].sort(byDateNewest) }]
@@ -79,7 +92,9 @@ export function ZukanPage({ bugs, onDelete, onGoCapture }: Props) {
         </div>
       ) : (
         <>
-          <div className="zukan-count">🎒 {bugs.length}ひき あつめたよ</div>
+          <div className="zukan-count">
+            🎒 {countHiki(bugs.length)} あつめたよ
+          </div>
 
           {/* 並べ替えボタン */}
           <div className="sort-bar">
@@ -111,7 +126,7 @@ export function ZukanPage({ bugs, onDelete, onGoCapture }: Props) {
                     bug={bug}
                     onClick={() => {
                       sfx.tap()
-                      setSelected(bug)
+                      setSelectedId(bug.id)
                     }}
                   />
                 ))}
@@ -123,8 +138,9 @@ export function ZukanPage({ bugs, onDelete, onGoCapture }: Props) {
 
       <BugDetailModal
         bug={selected}
-        onClose={() => setSelected(null)}
+        onClose={() => setSelectedId(null)}
         onDelete={onDelete}
+        onSetMain={onSetMain}
       />
     </div>
   )

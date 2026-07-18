@@ -252,6 +252,11 @@ function normalizeName(s: string): string {
   return toKatakana(s.trim().replace(/\s+/g, ''))
 }
 
+// 同じ虫かどうかを名前で判定するための正規化（外から使う）
+export function normalizeBugName(s: string): string {
+  return normalizeName(s)
+}
+
 // 名前から図鑑データをさがす（完全一致→部分一致）。
 // 訂正した名前をもとに、正しい虫の種類（＝説明文など）を引き当てるのに使う。
 export function findSpeciesByName(name: string): BugSpecies | undefined {

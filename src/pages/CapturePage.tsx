@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import type { AiResult, CaughtBug } from '../types'
+import type { AiResult, CaptureInput } from '../types'
 import type { LookupField } from '../lib/ai'
 import { analyzePhoto, hasRealAi, lookupField } from '../lib/ai'
 import {
@@ -17,7 +17,8 @@ import { sfx } from '../lib/sound'
 type Phase = 'empty' | 'analyzing' | 'result' | 'error'
 
 interface Props {
-  onSaved: (bug: CaughtBug) => void
+  // 保存して、すでにいる虫なら true（履歴に足した）をかえす
+  onSaved: (input: CaptureInput) => boolean
   onOpenSettings: () => void
 }
 
@@ -29,6 +30,7 @@ export function CapturePage({ onSaved, onOpenSettings }: Props) {
   const [editing, setEditing] = useState(false)
   const [confetti, setConfetti] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [merged, setMerged] = useState(false)
   const [cameraOpen, setCameraOpen] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
@@ -55,6 +57,7 @@ export function CapturePage({ onSaved, onOpenSettings }: Props) {
     setResult(null)
     setEditing(false)
     setSaved(false)
+    setMerged(false)
     setLookingUp(null)
     setNotFound(null)
     setErrorMsg('')
@@ -116,8 +119,7 @@ export function CapturePage({ onSaved, onOpenSettings }: Props) {
     // これで説明文（豆ちしき）が「最初にAIが判定した虫」ではなく
     // 「訂正した虫」のものになる。名前が図鑑にないときは undefined。
     const matched = findSpeciesByName(name)
-    const bug: CaughtBug = {
-      id: `bug_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    const input: CaptureInput = {
       // 名前が図鑑になければ undefined（まちがった説明文が出ないように）
       speciesId: matched?.id,
       name: name.trim() || 'なぞの虫',
@@ -130,7 +132,8 @@ export function CapturePage({ onSaved, onOpenSettings }: Props) {
       caughtAt: Date.now(),
       corrected: editing,
     }
-    onSaved(bug)
+    const wasMerged = onSaved(input)
+    setMerged(wasMerged)
     sfx.discover()
     setConfetti(true)
     setSaved(true)
@@ -266,16 +269,10 @@ export function CapturePage({ onSaved, onOpenSettings }: Props) {
               🖼️ 写真をえらぶ
             </button>
           </div>
-          {hasRealAi() ? (
+          {hasRealAi() && (
             <p className="hint mode-on">
               ✨ 本物AIモード：Claudeが種名まで判定するよ
             </p>
-          ) : (
-            <button className="mode-warn" onClick={onOpenSettings}>
-              ⚠️ いまはデモモード（色から推理するだけ）です。
-              <br />
-              <b>正確に判定するには、ここをタップしてAIキーを設定 ⚙️</b>
-            </button>
           )}
         </div>
       )}
@@ -492,7 +489,15 @@ export function CapturePage({ onSaved, onOpenSettings }: Props) {
             {saved && (
               <div className="saved-banner">
                 <div className="saved-emoji">🎉</div>
-                <p>「{name}」を図鑑にきろくしたよ！</p>
+                {merged ? (
+                  <p>
+                    「{name}」は もう図鑑にいたよ！
+                    <br />
+                    きょうの写真を きろくに ついかしたよ 📸
+                  </p>
+                ) : (
+                  <p>「{name}」を図鑑にきろくしたよ！</p>
+                )}
                 <button className="btn btn-big" onClick={reset}>
                   つぎの虫をしらべる 🔎
                 </button>

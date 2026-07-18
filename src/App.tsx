@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
-import type { CaughtBug } from './types'
-import { addToZukan, loadZukan, removeFromZukan } from './lib/storage'
+import type { CaptureInput, CaughtBug } from './types'
+import {
+  loadZukan,
+  recordCapture,
+  removeFromZukan,
+  setMainCapture,
+} from './lib/storage'
 import { CapturePage } from './pages/CapturePage'
 import { ZukanPage } from './pages/ZukanPage'
 import { SearchPage } from './pages/SearchPage'
@@ -29,12 +34,19 @@ export default function App() {
     setBugs(loadZukan())
   }, [])
 
-  function handleSaved(bug: CaughtBug) {
-    setBugs(addToZukan(bug))
+  // 撮影を保存。すでにいる虫なら履歴に足す（merged=true）。
+  function handleSaved(input: CaptureInput): boolean {
+    const { bugs: next, merged } = recordCapture(input)
+    setBugs(next)
+    return merged
   }
 
   function handleDelete(id: string) {
     setBugs(removeFromZukan(id))
+  }
+
+  function handleSetMain(bugId: string, captureId: string) {
+    setBugs(setMainCapture(bugId, captureId))
   }
 
   return (
@@ -59,6 +71,7 @@ export default function App() {
           <ZukanPage
             bugs={bugs}
             onDelete={handleDelete}
+            onSetMain={handleSetMain}
             onGoCapture={() => setTab('capture')}
           />
         )}

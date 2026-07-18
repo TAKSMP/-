@@ -129,8 +129,14 @@ export function SearchPage({ bugs }: Props) {
         </button>
       )}
 
-      <p className="result-count">{results.length}しゅるい 見つかったよ</p>
+      {!hasFilter && (
+        <div className="search-hint">
+          <div className="empty-emoji">🔍</div>
+          <p>なまえ・目（もく）・生息地・レア度で さがしてみよう！</p>
+        </div>
+      )}
 
+      {hasFilter && (
       <div className="bug-grid">
         {results.map((sp) => {
           const found = foundIds.has(sp.id)
@@ -168,6 +174,7 @@ export function SearchPage({ bugs }: Props) {
           </div>
         )}
       </div>
+      )}
 
       {/* しゅるいの詳細 */}
       {selected && (
