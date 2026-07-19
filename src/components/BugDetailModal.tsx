@@ -55,7 +55,6 @@ export function BugDetailModal({
   const [habitat, setHabitat] = useState('')
   const [fact, setFact] = useState('')
   const [place, setPlace] = useState('')
-  const [foundDate, setFoundDate] = useState('') // YYYY-MM-DD
   const [descNote, setDescNote] = useState('')
   const [habNote, setHabNote] = useState('')
 
@@ -83,7 +82,6 @@ export function BugDetailModal({
     setHabitat(bug.habitat)
     setFact(bug.fact ?? '')
     setPlace(mainCapture?.place ?? '')
-    setFoundDate(msToDateInput(firstDate))
     setDescNote('')
     setHabNote('')
     setEditing(true)
@@ -91,7 +89,6 @@ export function BugDetailModal({
 
   function saveEdit() {
     if (!bug || !onUpdate) return
-    const firstCaughtAt = dateInputToMs(foundDate)
     onUpdate(bug.id, {
       name,
       order,
@@ -99,7 +96,6 @@ export function BugDetailModal({
       habitat,
       fact,
       mainPlace: place,
-      ...(firstCaughtAt !== null ? { firstCaughtAt } : {}),
     })
     sfx.discover()
     setEditing(false)
@@ -218,18 +214,10 @@ export function BugDetailModal({
                   </datalist>
                 </dd>
               </div>
-              <div className="field">
-                <dt>はじめて みつけた日</dt>
-                <dd>
-                  <input
-                    type="date"
-                    className="date-input"
-                    value={foundDate}
-                    onChange={(e) => setFoundDate(e.target.value)}
-                  />
-                </dd>
-              </div>
             </dl>
+            <p className="edit-note">
+              ※ 日づけは、下の「とった しゃしん」で 写真ごとに なおせるよ。
+            </p>
 
             <div className="desc-field">
               <div className="desc-head">
@@ -319,29 +307,47 @@ export function BugDetailModal({
                 📸 とった しゃしん（{captures.length}まい）
               </div>
               <p className="history-hint">
-                しゃしんを タップすると、メイン画像に できるよ。
+                しゃしんを タップすると メイン画像に。日づけは 写真ごとに なおせるよ。
               </p>
               <div className="history-grid">
                 {captures.map((c) => {
                   const isMain = c.id === bug.mainCaptureId
                   return (
-                    <button
+                    <div
                       key={c.id}
                       className={'history-item' + (isMain ? ' main' : '')}
-                      onClick={() => {
-                        if (!isMain && onSetMain) {
-                          sfx.tap()
-                          onSetMain(bug.id, c.id)
-                        }
-                      }}
                     >
-                      <img src={c.photo} alt={bug.name} loading="lazy" />
-                      <span className="history-date">
-                        {formatDate(c.caughtAt)}
-                        {c.place ? ` ・${c.place}` : ''}
-                      </span>
-                      {isMain && <span className="history-badge">メイン</span>}
-                    </button>
+                      <button
+                        className="history-photo"
+                        onClick={() => {
+                          if (!isMain && onSetMain) {
+                            sfx.tap()
+                            onSetMain(bug.id, c.id)
+                          }
+                        }}
+                      >
+                        <img src={c.photo} alt={bug.name} loading="lazy" />
+                        {isMain && (
+                          <span className="history-badge">メイン</span>
+                        )}
+                      </button>
+                      <input
+                        type="date"
+                        className="history-date-input"
+                        value={msToDateInput(c.caughtAt)}
+                        onChange={(e) => {
+                          const ms = dateInputToMs(e.target.value)
+                          if (ms !== null && onUpdate) {
+                            onUpdate(bug.id, {
+                              captureDate: { id: c.id, caughtAt: ms },
+                            })
+                          }
+                        }}
+                      />
+                      {c.place && (
+                        <span className="history-place">📍 {c.place}</span>
+                      )}
+                    </div>
                   )
                 })}
               </div>

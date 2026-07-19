@@ -9,7 +9,7 @@ export interface BugPatch {
   habitat?: string
   fact?: string
   mainPlace?: string // メイン写真の「みつけたばしょ」
-  firstCaughtAt?: number // 「はじめて みつけた日」（いちばん古い撮影の日付）
+  captureDate?: { id: string; caughtAt: number } // 写真1枚ごとの「みつけた日」
 }
 
 // 図鑑（つかまえた虫の記録）はブラウザの localStorage に保存します。
@@ -165,19 +165,10 @@ export function updateBug(bugId: string, patch: BugPatch): CaughtBug[] {
         c.id === b.mainCaptureId ? { ...c, place } : c,
       )
     }
-    if (patch.firstCaughtAt !== undefined && captures.length > 0) {
-      // いちばん古い撮影の日付をなおす
-      let minId = captures[0].id
-      let minAt = captures[0].caughtAt
-      for (const c of captures) {
-        if (c.caughtAt < minAt) {
-          minAt = c.caughtAt
-          minId = c.id
-        }
-      }
-      captures = captures.map((c) =>
-        c.id === minId ? { ...c, caughtAt: patch.firstCaughtAt! } : c,
-      )
+    if (patch.captureDate) {
+      // 指定した写真1枚だけの日付をなおす（ほかの写真はそのまま）
+      const { id, caughtAt } = patch.captureDate
+      captures = captures.map((c) => (c.id === id ? { ...c, caughtAt } : c))
     }
     next.captures = captures
 
