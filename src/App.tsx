@@ -104,14 +104,16 @@ export default function App() {
       </button>
 
       <main className="app-main">
-        {tab === 'capture' && (
+        {/* 「しらべる」はタブを切りかえても入力が消えないよう、
+            アンマウントせずに 非表示にするだけにする（登録するまでデータ保持）。 */}
+        <div style={{ display: tab === 'capture' ? 'contents' : 'none' }}>
           <CapturePage
             key={aiVersion}
             onSaved={handleSaved}
             pastPlaces={collectPlaces(bugs)}
             onOpenSettings={() => setSettingsOpen(true)}
           />
-        )}
+        </div>
         {tab === 'zukan' && (
           <ZukanPage
             bugs={bugs}
