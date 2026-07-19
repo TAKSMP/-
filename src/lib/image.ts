@@ -46,13 +46,13 @@ export function dataUrlBytes(dataUrl: string): number {
 }
 
 // 写真を保存まえに、しっかり小さくする。
-// localStorage は約5MBしかないので、たくさん（100件以上）ためられるよう、
-// 目標サイズ（既定45KB）いかになるまで、サイズと画質を だんだん下げていく。
-// 図鑑の表示は最大でも300pxくらいなので、720px・低画質でも見た目は十分。
+// localStorage は約5MBしかないので、たくさん（200件以上）ためられるよう、
+// 目標サイズ（既定22KB）いかになるまで、サイズと画質を だんだん下げていく。
+// 図鑑の表示は最大でも300pxくらいなので、512px・低画質でも見た目は十分。
 export async function compressImage(
   dataUrl: string,
-  maxDim = 720,
-  targetBytes = 45000,
+  maxDim = 512,
+  targetBytes = 22000,
 ): Promise<string> {
   return new Promise((resolve) => {
     const img = new Image()
@@ -66,7 +66,7 @@ export async function compressImage(
       let best = dataUrl
       let bestLen = dataUrlBytes(dataUrl)
       const dims = [maxDim, Math.round(maxDim * 0.75), Math.round(maxDim * 0.55)]
-      const quals = [0.7, 0.55, 0.42]
+      const quals = [0.55, 0.42, 0.32]
       for (const dim of dims) {
         let w = ow
         let h = oh

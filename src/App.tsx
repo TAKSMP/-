@@ -26,7 +26,7 @@ async function recompressBugs(bugs: CaughtBug[]): Promise<CaughtBug[] | null> {
   for (const bug of bugs) {
     const caps = []
     for (const c of bug.captures) {
-      if (c.photo && dataUrlBytes(c.photo) > 80000) {
+      if (c.photo && dataUrlBytes(c.photo) > 35000) {
         const small = await compressImage(c.photo)
         if (small.length < c.photo.length) {
           caps.push({ ...c, photo: small })
