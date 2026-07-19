@@ -1,3 +1,43 @@
+// dataURL を PNG の Blob にする（クリップボード用）
+function dataUrlToPngBlob(dataUrl: string): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => {
+      const c = document.createElement('canvas')
+      c.width = img.naturalWidth
+      c.height = img.naturalHeight
+      const ctx = c.getContext('2d')
+      if (!ctx) {
+        reject(new Error('no ctx'))
+        return
+      }
+      ctx.drawImage(img, 0, 0)
+      c.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error('no blob'))),
+        'image/png',
+      )
+    }
+    img.onerror = () => reject(new Error('img load failed'))
+    img.src = dataUrl
+  })
+}
+
+// 写真をクリップボードにコピーする（ChatGPTなどに ペーストできる）。
+// できなければ false。
+export async function copyImageToClipboard(dataUrl: string): Promise<boolean> {
+  try {
+    const clip = navigator.clipboard
+    const CI = window.ClipboardItem
+    if (!clip || !CI || !clip.write) return false
+    // Safari 対策で Blob の Promise をそのまま わたす（ユーザー操作の間に生成）
+    await clip.write([new CI({ 'image/png': dataUrlToPngBlob(dataUrl) })])
+    return true
+  } catch (e) {
+    console.warn('写真のコピーにしっぱい', e)
+    return false
+  }
+}
+
 // 写真を保存・送信まえに、ほどよいサイズに小さくする。
 // もとの写真はスマホだと数MBになり、そのまま localStorage に入れると
 // すぐ容量オーバーになる。長辺を maxDim までちぢめ、JPEGで軽くする。
