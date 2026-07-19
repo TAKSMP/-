@@ -94,7 +94,8 @@ export function BugDetailModal({
     setEditing(true)
   }
 
-  function saveEdit() {
+  // いま編集中の内容を保存する
+  function commitEdit() {
     if (!bug || !onUpdate) return
     onUpdate(bug.id, {
       name,
@@ -104,8 +105,18 @@ export function BugDetailModal({
       fact,
       mainPlace: place,
     })
+  }
+
+  function saveEdit() {
+    commitEdit()
     sfx.discover()
     setEditing(false)
+  }
+
+  // ✕・そとがわタップで閉じるとき。編集中なら、その内容を保存してから閉じる。
+  function handleClose() {
+    if (editing) commitEdit()
+    onClose()
   }
 
   async function handleAskDescribe() {
@@ -135,9 +146,9 @@ export function BugDetailModal({
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className="modal-backdrop" onClick={handleClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose} aria-label="とじる">
+        <button className="modal-close" onClick={handleClose} aria-label="とじる">
           ✕
         </button>
 
