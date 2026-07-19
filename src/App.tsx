@@ -9,12 +9,37 @@ import {
   updateBug,
 } from './lib/storage'
 import type { BugPatch } from './lib/storage'
+import { saveZukan } from './lib/storage'
+import { compressImage, dataUrlBytes } from './lib/image'
 import { CapturePage } from './pages/CapturePage'
 import { ZukanPage } from './pages/ZukanPage'
 import { SearchPage } from './pages/SearchPage'
 import { QuizPage } from './pages/QuizPage'
 import { SettingsModal } from './components/SettingsModal'
 import { sfx } from './lib/sound'
+
+// 図鑑の中の「大きすぎる写真」を小さくしなおす（容量節約）。
+// 変わったものがあれば あたらしい配列を、なければ null をかえす。
+async function recompressBugs(bugs: CaughtBug[]): Promise<CaughtBug[] | null> {
+  let changed = false
+  const out: CaughtBug[] = []
+  for (const bug of bugs) {
+    const caps = []
+    for (const c of bug.captures) {
+      if (c.photo && dataUrlBytes(c.photo) > 80000) {
+        const small = await compressImage(c.photo)
+        if (small.length < c.photo.length) {
+          caps.push({ ...c, photo: small })
+          changed = true
+          continue
+        }
+      }
+      caps.push(c)
+    }
+    out.push({ ...bug, captures: caps })
+  }
+  return changed ? out : null
+}
 
 type Tab = 'capture' | 'zukan' | 'search' | 'quiz'
 
@@ -32,9 +57,17 @@ export default function App() {
   // AIせっていが変わったら子を再描画してモード表示を更新するためのカウンタ
   const [aiVersion, setAiVersion] = useState(0)
 
-  // さいしょに図鑑データをよみこむ
+  // さいしょに図鑑データをよみこむ。
+  // ついでに、大きすぎる写真を小さくしなおして容量を節約する（1回だけ）。
   useEffect(() => {
-    setBugs(loadZukan())
+    const loaded = loadZukan()
+    setBugs(loaded)
+    recompressBugs(loaded).then((next) => {
+      if (next) {
+        saveZukan(next)
+        setBugs(next)
+      }
+    })
   }, [])
 
   // 撮影を保存。すでにいる虫なら履歴に足す（merged=true）。
