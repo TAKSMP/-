@@ -448,16 +448,26 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
                 </label>
                 <input
                   id="place-input"
-                  list="places"
                   value={place}
                   onChange={(e) => setPlace(e.target.value)}
                   placeholder="れい: こうえん、にわ、がっこう"
                 />
-                <datalist id="places">
-                  {pastPlaces.map((p) => (
-                    <option key={p} value={p} />
-                  ))}
-                </datalist>
+                {pastPlaces.length > 0 && (
+                  <select
+                    className="place-select"
+                    value=""
+                    onChange={(e) => {
+                      if (e.target.value) setPlace(e.target.value)
+                    }}
+                  >
+                    <option value="">▼ これまでの ばしょから えらぶ</option>
+                    {pastPlaces.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
             )}
 

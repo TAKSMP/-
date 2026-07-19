@@ -778,6 +778,28 @@ input:focus {
 .place-field .date-input {
   width: 100%;
 }
+.place-select {
+  width: 100%;
+  margin-top: 8px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  border: 2px solid var(--sky-deep);
+  border-radius: 12px;
+  padding: 9px 12px;
+  background: #f2f8ff;
+  color: var(--sky-deep);
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'><path d='M4 6l4 4 4-4' fill='none' stroke='%234aa8e0' stroke-width='2' stroke-linecap='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 34px;
+}
+.place-select:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px #8fd3ff66;
+}
 .place-field input {
   border-color: var(--sky-deep);
 }

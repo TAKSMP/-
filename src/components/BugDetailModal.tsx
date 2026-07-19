@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { CaughtBug } from '../types'
 import type { BugPatch } from '../lib/storage'
 import { findSpeciesByName, getSpeciesById } from '../data/bugs'
@@ -57,6 +57,13 @@ export function BugDetailModal({
   const [place, setPlace] = useState('')
   const [descNote, setDescNote] = useState('')
   const [habNote, setHabNote] = useState('')
+
+  // ひらいている虫が変わったら、編集モードはリセットする。
+  // （別の虫を開いたのに、前の虫の入力内容が残って上書きされるのを防ぐ）
+  const bugId = bug?.id
+  useEffect(() => {
+    setEditing(false)
+  }, [bugId])
 
   if (!bug) return null
 
@@ -202,16 +209,26 @@ export function BugDetailModal({
                 <dt>みつけたばしょ</dt>
                 <dd>
                   <input
-                    list="edit-places"
                     value={place}
                     onChange={(e) => setPlace(e.target.value)}
                     placeholder="れい: こうえん"
                   />
-                  <datalist id="edit-places">
-                    {pastPlaces.map((p) => (
-                      <option key={p} value={p} />
-                    ))}
-                  </datalist>
+                  {pastPlaces.length > 0 && (
+                    <select
+                      className="place-select"
+                      value=""
+                      onChange={(e) => {
+                        if (e.target.value) setPlace(e.target.value)
+                      }}
+                    >
+                      <option value="">▼ これまでの ばしょから えらぶ</option>
+                      {pastPlaces.map((p) => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </dd>
               </div>
             </dl>
