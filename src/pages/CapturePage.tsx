@@ -10,7 +10,8 @@ import {
   parseBugAnswer,
 } from '../lib/chatgpt'
 import { compressImage } from '../lib/image'
-import { dateInputToMs, todayDateInput } from '../lib/format'
+import { readPhotoDate } from '../lib/exif'
+import { dateInputToMs, msToDateInput, todayDateInput } from '../lib/format'
 import { ALL_HABITATS, findSpeciesByName } from '../data/bugs'
 import { INSECT_ORDERS } from '../data/orders'
 import { StarRating } from '../components/StarRating'
@@ -103,13 +104,16 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
     }
   }
 
-  function handleFile(file: File) {
+  async function handleFile(file: File) {
     if (!file.type.startsWith('image/')) {
       sfx.error()
       alert('虫の写真をえらんでね📷')
       return
     }
     sfx.shutter()
+    // 写真にうめこまれた撮影日(EXIF)があれば「みつけた日」に反映
+    const shotMs = await readPhotoDate(file)
+    setFoundDate(shotMs ? msToDateInput(shotMs) : todayDateInput())
     const reader = new FileReader()
     reader.onload = () => analyzeDataUrl(String(reader.result))
     reader.readAsDataURL(file)
