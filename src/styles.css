@@ -1634,6 +1634,20 @@ input:focus {
 .modal-edit .field dt {
   color: #8a9a7a;
 }
+/* 日付入力（iOSで枠がはみ出さないように） */
+.date-input,
+.history-date-input {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.date-input::-webkit-date-and-time-value,
+.history-date-input::-webkit-date-and-time-value {
+  text-align: left;
+  margin: 0;
+}
 .date-input {
   font-family: inherit;
   font-size: 16px;
