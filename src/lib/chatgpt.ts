@@ -55,6 +55,21 @@ export function buildDescribePrompt(name: string): string {
 せつめいの 文だけを 返し、名前や 見出しは 書かないでください。`
 }
 
+// テキストをクリップボードにコピーするだけ（ひらかない）。
+export async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text)
+    return true
+  } catch {
+    return false
+  }
+}
+
+// あたらしいタブで ChatGPT をひらくだけ（クリップボードは さわらない）。
+export function openChatGPT(): void {
+  window.open('https://chatgpt.com/', '_blank', 'noopener')
+}
+
 // 質問文をクリップボードにコピーして、AIチャット（ChatGPT）をひらく。
 export async function askChatGPTText(prompt: string): Promise<boolean> {
   let copied = false

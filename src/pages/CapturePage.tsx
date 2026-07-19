@@ -6,7 +6,9 @@ import {
   buildDescribePrompt,
   buildHabitatPrompt,
   buildPrompt,
+  copyText,
   countParsed,
+  openChatGPT,
   parseBugAnswer,
 } from '../lib/chatgpt'
 import { compressImage, copyImageToClipboard } from '../lib/image'
@@ -152,27 +154,36 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
     setTimeout(() => setConfetti(false), 200)
   }
 
-  // ① 写真をクリップボードにコピー（ChatGPTに ペーストできる）
+  // ① 写真をクリップボードにコピー
   async function handleCopyPhoto() {
     sfx.tap()
     const ok = photo ? await copyImageToClipboard(photo) : false
     if (ok) {
       setAskMsg(
-        '🖼️ 写真をコピーしたよ！ ②を押してChatGPTをひらいたら、入力らんを長おしして「ペースト」で写真をはりつけてね。',
+        '① 写真をコピーしたよ！ つぎに ②「ChatGPTをひらく」→ 入力らんを長おしして「ペースト」で 写真をはってね。',
       )
     } else {
       setAskMsg(
-        'この端末では 写真のコピーが できないみたい。写真は アルバムから ChatGPTに つけてね（②で しつもんはコピーできるよ）。',
+        'この端末では 写真のコピーが できないみたい。ChatGPTで アルバムから 写真をつけてね（しつもんは ③でコピーできるよ）。',
       )
     }
   }
 
-  // ② 質問文をコピーして、あたらしいタブでAIチャットをひらく
-  async function handleAskChatGPT() {
+  // ② ChatGPTをひらく（クリップボードはさわらない＝写真がのこる）
+  function handleOpenChatGPT() {
     sfx.tap()
-    await askChatGPTText(buildPrompt())
+    openChatGPT()
     setAskMsg(
-      '📋 しつもんをコピー＆ChatGPTをひらいたよ。入力らんに「写真をペースト」＆「しつもんをペースト」して送ってね。答えは黒いわく（コードブロック）で出るので、そのコピーボタンでコピーして、下に はりつけ。',
+      '② ChatGPTを ひらいたよ。入力らんに 写真を ペーストしてね。はれたら ③「しつもんをコピー」。',
+    )
+  }
+
+  // ③ しつもんをコピー（写真をはった後に押す）
+  async function handleCopyQuestion() {
+    sfx.tap()
+    await copyText(buildPrompt())
+    setAskMsg(
+      '③ しつもんをコピーしたよ。ChatGPTに もどって しつもんも ペースト → 送信。答えは黒いわく（コードブロック）で出るので、コピーして 下に貼り付け。',
     )
   }
 
@@ -490,8 +501,8 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
               <details className="chatgpt-box">
                 <summary>🤖 AIチャットでもっと正確にしらべる</summary>
                 <p className="chatgpt-lead">
-                  お手もちのAIチャット（ChatGPT / Claude など）でこの虫を同定して、
-                  答えをここに取り込めます。写真もいっしょに もっていけます。
+                  お手もちのAIチャット（ChatGPT / Claude など）で同定して、答えを
+                  ここに取り込めます。写真と しつもんを 順番に もっていってね。
                 </p>
                 <button
                   className="btn btn-camera chatgpt-ask"
@@ -501,14 +512,19 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
                 </button>
                 <button
                   className="btn btn-camera chatgpt-ask"
-                  onClick={handleAskChatGPT}
+                  onClick={handleOpenChatGPT}
                 >
-                  ② しつもんをコピーして ひらく 📋
+                  ② ChatGPTをひらく 🔗（写真をペースト）
+                </button>
+                <button
+                  className="btn btn-camera chatgpt-ask"
+                  onClick={handleCopyQuestion}
+                >
+                  ③ しつもんをコピー 📋（ペーストして送信）
                 </button>
                 {askMsg && <p className="chatgpt-note">{askMsg}</p>}
                 <p className="chatgpt-step">
-                  ③ ChatGPTに 写真と しつもんを ペーストして送信。答えの黒いわくの
-                  コピーボタンで コピーして、下に貼り付け👇
+                  ④ ChatGPTの答え（黒いわく）を コピーして、下に貼り付け👇
                 </p>
                 <textarea
                   className="chatgpt-textarea"
@@ -522,7 +538,7 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
                   onClick={handleImportAnswer}
                   disabled={!importText.trim()}
                 >
-                  ④ 取り込む ⬇️
+                  ⑤ 取り込む ⬇️
                 </button>
                 {importMsg && <p className="chatgpt-note">{importMsg}</p>}
               </details>
