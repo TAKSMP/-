@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react'
-import type { AiResult, CaptureInput } from '../types'
-import { analyzePhoto, hasRealAi } from '../lib/ai'
+import type { CaptureInput } from '../types'
 import {
   askChatGPTText,
   buildDescribePrompt,
@@ -21,26 +20,24 @@ import { Confetti } from '../components/Confetti'
 import { CameraCapture } from '../components/CameraCapture'
 import { sfx } from '../lib/sound'
 
-type Phase = 'empty' | 'analyzing' | 'result' | 'error'
+type Phase = 'empty' | 'result'
 
 interface Props {
   // 保存して、すでにいる虫なら true（履歴に足した）をかえす
   onSaved: (input: CaptureInput) => boolean
   pastPlaces: string[] // これまで入力した「みつけたばしょ」の候補
-  onOpenSettings: () => void
 }
 
-// 写真をよみこんで、AIが虫を判定するメインのページ。
-export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
+// 写真をよみこんで、名前などを入力していくメインのページ。
+// AIによる自動判定はせず、読みこんだらそのまま入力フォームを出す。
+export function CapturePage({ onSaved, pastPlaces }: Props) {
   const [phase, setPhase] = useState<Phase>('empty')
   const [photo, setPhoto] = useState<string>('')
-  const [result, setResult] = useState<AiResult | null>(null)
   const [editing, setEditing] = useState(false)
   const [confetti, setConfetti] = useState(false)
   const [saved, setSaved] = useState(false)
   const [merged, setMerged] = useState(false)
   const [cameraOpen, setCameraOpen] = useState(false)
-  const [errorMsg, setErrorMsg] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
   // へんしゅう中の4項目
@@ -56,54 +53,50 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
   const [askMsg, setAskMsg] = useState('')
   // せつめい（説明文）。ChatGPT／手入力でつくる。
   const [fact, setFact] = useState('')
+  const [nameNote, setNameNote] = useState('') // なまえのコピー案内
   const [descNote, setDescNote] = useState('') // 説明のコピー案内
   const [habNote, setHabNote] = useState('') // 生息地のコピー案内
 
   function reset() {
     setPhase('empty')
     setPhoto('')
-    setResult(null)
     setEditing(false)
     setSaved(false)
     setMerged(false)
+    setName('')
+    setOrder('')
+    setRarity(3)
+    setHabitat('')
     setPlace('')
     setFoundDate(todayDateInput())
-    setErrorMsg('')
     setImportText('')
     setImportMsg('')
     setAskMsg('')
     setFact('')
+    setNameNote('')
     setDescNote('')
     setHabNote('')
   }
 
-  // 写真（dataURL）をうけとってAIにしらべてもらう。
+  // 写真（dataURL）をうけとって、そのまま入力フォームをだす。
+  // AIによる自動判定はしない（名前などは じぶんで入れる or AIにきくボタンで）。
   // ファイル読み込みでもカメラ撮影でも、ここにながれてくる。
-  async function analyzeDataUrl(dataUrl: string) {
+  async function loadPhoto(dataUrl: string) {
     // 保存・送信まえに小さく圧縮（容量オーバー防止）
     const small = await compressImage(dataUrl)
     setPhoto(small)
-    setPhase('analyzing')
-    try {
-      const r = await analyzePhoto(small)
-      setResult(r)
-      setName(r.name)
-      setOrder(r.order)
-      setRarity(r.rarity)
-      setHabitat(r.habitat)
-      setFact(r.fact ?? '')
-      setPhase('result')
-      sfx.discover()
-      setConfetti(true)
-      setTimeout(() => setConfetti(false), 200)
-    } catch (e) {
-      // 本物AIモードで失敗したとき（キーちがい・通信エラーなど）は
-      // 当てずっぽうを見せずに、エラーとして知らせる。
-      console.warn('AI判定にしっぱい', e)
-      setErrorMsg(e instanceof Error ? e.message : String(e))
-      setPhase('error')
-      sfx.error()
-    }
+    setName('')
+    setOrder('')
+    setRarity(3)
+    setHabitat('')
+    setFact('')
+    setNameNote('')
+    setDescNote('')
+    setHabNote('')
+    setSaved(false)
+    setMerged(false)
+    setEditing(true) // 読みこんだら すぐ入力できるように
+    setPhase('result')
   }
 
   async function handleFile(file: File) {
@@ -117,13 +110,13 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
     const shotMs = await readPhotoDate(file)
     setFoundDate(shotMs ? msToDateInput(shotMs) : todayDateInput())
     const reader = new FileReader()
-    reader.onload = () => analyzeDataUrl(String(reader.result))
+    reader.onload = () => loadPhoto(String(reader.result))
     reader.readAsDataURL(file)
   }
 
   function handleCameraCapture(dataUrl: string) {
     setCameraOpen(false)
-    analyzeDataUrl(dataUrl)
+    loadPhoto(dataUrl)
   }
 
   function handleSave() {
@@ -206,6 +199,20 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
     setImportMsg(`✅ ${n}こうもくを取り込んだよ！ないようをたしかめて記録してね。`)
   }
 
+  // なまえを聞く：写真をクリップボードにコピーした状態でChatGPTをひらく。
+  // ChatGPTの入力らんに写真をペースト →「この虫の名前は？」ときいて、
+  // こたえを「なまえ」欄に入れる。
+  async function handleAskName() {
+    sfx.tap()
+    const ok = photo ? await copyImageToClipboard(photo) : false
+    openChatGPT()
+    setNameNote(
+      ok
+        ? '📋 写真をコピーして ChatGPTをひらいたよ。入力らんを長おしして「ペースト」で写真をはり、「この虫の名前は？」ときいてね。こたえを ここに入れてね。'
+        : 'ChatGPTをひらいたよ。アルバムから写真をつけて「この虫の名前は？」ときいてね。こたえを ここに入れてね。',
+    )
+  }
+
   // 説明文の質問をコピーしてAIチャットをひらく（答えは せつめい欄にはりつけ）
   async function handleAskDescribe() {
     if (!name.trim()) {
@@ -270,59 +277,17 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
               🖼️ 写真をえらぶ
             </button>
           </div>
-          {hasRealAi() && (
-            <p className="hint mode-on">
-              ✨ 本物AIモード：Claudeが種名まで判定するよ
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* --- 解析中 --- */}
-      {phase === 'analyzing' && (
-        <div className="analyzing">
-          <img className="analyzing-photo" src={photo} alt="しらべ中の虫" />
-          <div className="scanline" />
-          <div className="analyzing-text">
-            <span className="spinner">🔬</span> AIがしらべているよ…
-          </div>
-        </div>
-      )}
-
-      {/* --- エラー（本物AIモードで失敗） --- */}
-      {phase === 'error' && (
-        <div className="error-card">
-          <div className="error-emoji">😵</div>
-          <h2>AIがしらべられませんでした</h2>
-          <p className="error-detail">{errorMsg}</p>
-          <p className="error-hint">
-            APIキーがまちがっているか、通信のちょうしがわるいのかも。
+          <p className="hint">
+            写真をよみこんだら、なまえは「🤖 AIにきく」ボタンで しらべられるよ。
           </p>
-          <div className="error-actions">
-            <button className="btn btn-ghost" onClick={onOpenSettings}>
-              ⚙️ AIせっていをひらく
-            </button>
-            <button className="btn btn-primary" onClick={reset}>
-              もういちど
-            </button>
-          </div>
         </div>
       )}
 
-      {/* --- けっか --- */}
-      {phase === 'result' && result && (
+      {/* --- にゅうりょく（写真をよみこんだ後） --- */}
+      {phase === 'result' && (
         <div className="result">
           <div className="result-photo">
-            <img src={photo} alt={name} />
-            {result.demo ? (
-              <button className="confidence demo" onClick={onOpenSettings}>
-                デモ判定（色から推理）⚙️
-              </button>
-            ) : (
-              <div className="confidence" title="AIの自信度">
-                じしん {Math.round(result.confidence * 100)}%
-              </div>
-            )}
+            <img src={photo} alt={name || 'よみこんだ虫'} />
           </div>
 
           <div className="result-card">
@@ -344,10 +309,23 @@ export function CapturePage({ onSaved, pastPlaces, onOpenSettings }: Props) {
                 <dt>なまえ</dt>
                 <dd>
                   {editing ? (
-                    <input
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                    />
+                    <div className="field-edit">
+                      <input
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="なんの虫かな？"
+                      />
+                      <button
+                        type="button"
+                        className="lookup-btn"
+                        onClick={handleAskName}
+                      >
+                        🤖 AIにきく（写真）
+                      </button>
+                      {nameNote && (
+                        <span className="lookup-note">{nameNote}</span>
+                      )}
+                    </div>
                   ) : (
                     name
                   )}

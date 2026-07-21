@@ -111,7 +111,6 @@ export default function App() {
             key={aiVersion}
             onSaved={handleSaved}
             pastPlaces={collectPlaces(bugs)}
-            onOpenSettings={() => setSettingsOpen(true)}
           />
         </div>
         {tab === 'zukan' && (
