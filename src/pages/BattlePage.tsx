@@ -7,9 +7,107 @@ import {
   DODGE_CHANCE,
   effectInfo,
 } from '../lib/battle'
+import { INSECT_ORDERS, canonicalOrder, orderEmoji } from '../data/orders'
 import { StarRating } from '../components/StarRating'
 import { Confetti } from '../components/Confetti'
 import { sfx } from '../lib/sound'
+
+const OTHER = '__other__'
+
+// 図鑑とおなじ「もくじ」から、目（もく）ごとに虫をえらぶ。
+function BugPicker({
+  bugs,
+  onPick,
+}: {
+  bugs: CaughtBug[]
+  onPick: (b: CaughtBug) => void
+}) {
+  const [openOrder, setOpenOrder] = useState<string | null>(null)
+
+  // 目ごとの発見数
+  const counts = new Map<string, number>()
+  for (const o of INSECT_ORDERS) counts.set(o, 0)
+  let otherCount = 0
+  for (const b of bugs) {
+    const key = canonicalOrder(b.order)
+    if (key && counts.has(key)) counts.set(key, (counts.get(key) ?? 0) + 1)
+    else otherCount++
+  }
+  const mokuji = INSECT_ORDERS.map((name, idx) => ({
+    name,
+    idx,
+    count: counts.get(name) ?? 0,
+  }))
+    .filter((x) => x.count > 0)
+    .sort((a, b) => b.count - a.count || a.idx - b.idx)
+
+  if (openOrder) {
+    const title = openOrder === OTHER ? 'その他' : openOrder
+    const list = bugs.filter((b) => {
+      const key = canonicalOrder(b.order)
+      return openOrder === OTHER ? !key : key === openOrder
+    })
+    return (
+      <>
+        <button
+          className="back-btn"
+          onClick={() => {
+            sfx.tap()
+            setOpenOrder(null)
+          }}
+        >
+          ← もくじにもどる
+        </button>
+        <p className="picker-order-title">
+          {openOrder === OTHER ? '🔎' : orderEmoji(openOrder)} {title}
+        </p>
+        <div className="statcard-grid">
+          {list.map((b) => (
+            <button
+              key={b.id}
+              className="statcard-btn"
+              onClick={() => onPick(b)}
+            >
+              <StatCard bug={b} />
+            </button>
+          ))}
+        </div>
+      </>
+    )
+  }
+
+  return (
+    <div className="mokuji-list">
+      {mokuji.map((it) => (
+        <button
+          key={it.name}
+          className="mokuji-item"
+          onClick={() => {
+            sfx.tap()
+            setOpenOrder(it.name)
+          }}
+        >
+          <span className="mokuji-emoji">{orderEmoji(it.name)}</span>
+          <span className="mokuji-name">{it.name}</span>
+          <span className="mokuji-count">{it.count}</span>
+        </button>
+      ))}
+      {otherCount > 0 && (
+        <button
+          className="mokuji-item"
+          onClick={() => {
+            sfx.tap()
+            setOpenOrder(OTHER)
+          }}
+        >
+          <span className="mokuji-emoji">🔎</span>
+          <span className="mokuji-name">その他</span>
+          <span className="mokuji-count">{otherCount}</span>
+        </button>
+      )}
+    </div>
+  )
+}
 
 interface Props {
   bugs: CaughtBug[]
@@ -370,17 +468,7 @@ export function BattlePage({ bugs, onGoCapture }: Props) {
       {phase === 'pickMine' && (
         <div className="battle-step">
           <h2 className="battle-step-title">① きみの虫を えらぼう</h2>
-          <div className="statcard-grid">
-            {bugs.map((b) => (
-              <button
-                key={b.id}
-                className="statcard-btn"
-                onClick={() => pickMine(b)}
-              >
-                <StatCard bug={b} />
-              </button>
-            ))}
-          </div>
+          <BugPicker bugs={bugs} onPick={pickMine} />
         </div>
       )}
 
@@ -416,19 +504,10 @@ export function BattlePage({ bugs, onGoCapture }: Props) {
               </button>
             </div>
           ) : (
-            <div className="statcard-grid">
-              {bugs
-                .filter((b) => b.id !== myBug?.id)
-                .map((b) => (
-                  <button
-                    key={b.id}
-                    className="statcard-btn"
-                    onClick={() => startFoe(b)}
-                  >
-                    <StatCard bug={b} />
-                  </button>
-                ))}
-            </div>
+            <BugPicker
+              bugs={bugs.filter((b) => b.id !== myBug?.id)}
+              onPick={startFoe}
+            />
           )}
           <button className="btn btn-ghost battle-back" onClick={reset}>
             ← さいしょから
