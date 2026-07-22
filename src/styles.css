@@ -1817,11 +1817,12 @@ input:focus {
 }
 .tabbar-btn {
   flex: 1;
+  min-width: 0;
   border: none;
   background: none;
   font-family: inherit;
   cursor: pointer;
-  padding: 8px 4px;
+  padding: 8px 2px;
   border-radius: 16px;
   display: flex;
   flex-direction: column;
@@ -1833,11 +1834,12 @@ input:focus {
   transition: all 0.12s ease;
 }
 .tabbar-emoji {
-  font-size: 26px;
+  font-size: 24px;
   transition: transform 0.15s ease;
 }
 .tabbar-label {
-  font-size: 12px;
+  font-size: 11px;
+  white-space: nowrap;
 }
 .tabbar-btn.active {
   color: var(--green-deep);
@@ -1969,6 +1971,193 @@ input:focus {
   font-weight: 900;
   font-size: 16px;
   margin: 8px 0 12px;
+}
+
+/* =========================================================
+   ミッション
+   ========================================================= */
+.mission-cards {
+  display: grid;
+  gap: 12px;
+}
+.mission-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 14px;
+  text-align: center;
+  border-top: 6px solid #ccc;
+}
+.mission-card.lv-easy {
+  border-top-color: var(--green);
+}
+.mission-card.lv-normal {
+  border-top-color: var(--yellow);
+}
+.mission-card.lv-hard {
+  border-top-color: var(--danger);
+}
+.mission-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 800;
+  font-size: 13px;
+}
+.mission-level {
+  color: var(--ink);
+}
+.mission-track {
+  color: #9aa88a;
+}
+.mission-emoji {
+  font-size: 40px;
+  line-height: 1;
+  margin: 6px 0 4px;
+}
+.mission-title {
+  font-weight: 900;
+  font-size: 16px;
+  margin: 4px 0 10px;
+}
+.mission-bar {
+  height: 14px;
+  background: #e6ecdf;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.mission-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #7cc36a, #5a9e49);
+  border-radius: 999px;
+  transition: width 0.5s ease;
+}
+.mission-progress {
+  font-weight: 900;
+  margin: 6px 0 2px;
+}
+.mission-remain {
+  font-size: 12px;
+  color: #9aa88a;
+  font-weight: 700;
+}
+.mission-reward {
+  font-size: 12px;
+  color: #b5643a;
+  font-weight: 800;
+  margin: 2px 0 0;
+}
+.mission-clear {
+  padding: 8px 0;
+  font-weight: 900;
+  color: var(--green-deep);
+}
+.mission-hint {
+  text-align: center;
+  margin: 18px 0;
+  line-height: 2;
+}
+
+/* --- 獲得バッジ --- */
+.badge-section {
+  margin-top: 22px;
+}
+.badge-title {
+  text-align: center;
+  font-size: 16px;
+  margin: 0 0 12px;
+}
+.badge-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.badge-item {
+  background: var(--card);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 12px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-align: center;
+}
+.badge-item.locked {
+  background: #f0efe6;
+  box-shadow: none;
+  opacity: 0.75;
+}
+.badge-emoji {
+  font-size: 34px;
+  line-height: 1;
+}
+.badge-item.got .badge-emoji {
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.15));
+}
+.badge-name {
+  font-size: 12px;
+  font-weight: 900;
+}
+.badge-goal {
+  font-size: 10px;
+  color: #9aa88a;
+  line-height: 1.4;
+}
+
+/* --- バッジ ゲット！ トースト --- */
+.badge-toast {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+}
+.badge-toast-inner {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 24px 20px;
+  text-align: center;
+  max-width: 320px;
+  width: 100%;
+  box-shadow: var(--shadow);
+  animation: pop-in 0.3s ease;
+}
+@keyframes pop-in {
+  from {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.badge-toast-title {
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--green-deep);
+  margin-bottom: 12px;
+}
+.badge-toast-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.badge-toast-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 900;
+  font-size: 16px;
+}
+.badge-toast-emoji {
+  font-size: 34px;
 }
 .statcard-btn {
   border: 3px solid transparent;

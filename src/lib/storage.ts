@@ -16,6 +16,28 @@ export interface BugPatch {
 // 図鑑（つかまえた虫の記録）はブラウザの localStorage に保存します。
 // これでページをとじても、あつめた虫がきえません。
 const STORAGE_KEY = 'chomushi.zukan.v1'
+// 獲得ずみのバッジ（ミッションID）は べつのキーにほぞん。
+// いちど とったバッジは、あとで虫をけしても きえないようにする。
+const BADGE_KEY = 'chomushi.badges.v1'
+
+export function loadClaimedBadges(): string[] {
+  try {
+    const raw = localStorage.getItem(BADGE_KEY)
+    if (!raw) return []
+    const data = JSON.parse(raw)
+    return Array.isArray(data) ? data.filter((x) => typeof x === 'string') : []
+  } catch {
+    return []
+  }
+}
+
+export function saveClaimedBadges(ids: string[]): void {
+  try {
+    localStorage.setItem(BADGE_KEY, JSON.stringify(ids))
+  } catch (e) {
+    console.warn('バッジの保存に失敗しました', e)
+  }
+}
 
 function uid(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`

@@ -15,6 +15,7 @@ import { CapturePage } from './pages/CapturePage'
 import { ZukanPage } from './pages/ZukanPage'
 import { SearchPage } from './pages/SearchPage'
 import { PlayPage } from './pages/PlayPage'
+import { MissionPage } from './pages/MissionPage'
 import { SettingsModal } from './components/SettingsModal'
 import { sfx } from './lib/sound'
 
@@ -41,11 +42,12 @@ async function recompressBugs(bugs: CaughtBug[]): Promise<CaughtBug[] | null> {
   return changed ? out : null
 }
 
-type Tab = 'capture' | 'zukan' | 'search' | 'quiz'
+type Tab = 'capture' | 'zukan' | 'search' | 'quiz' | 'mission'
 
 const TABS: { id: Tab; label: string; emoji: string }[] = [
   { id: 'capture', label: 'しらべる', emoji: '🔎' },
   { id: 'zukan', label: 'ずかん', emoji: '📖' },
+  { id: 'mission', label: 'ミッション', emoji: '🎯' },
   { id: 'search', label: 'けんさく', emoji: '🔍' },
   { id: 'quiz', label: 'あそぶ', emoji: '🎮' },
 ]
@@ -134,6 +136,9 @@ export default function App() {
         )}
         {tab === 'quiz' && (
           <PlayPage bugs={bugs} onGoCapture={() => setTab('capture')} />
+        )}
+        {tab === 'mission' && (
+          <MissionPage bugs={bugs} onGoCapture={() => setTab('capture')} />
         )}
       </main>
 
