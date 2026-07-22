@@ -18,7 +18,10 @@ export interface BugPatch {
 const STORAGE_KEY = 'chomushi.zukan.v1'
 // 獲得ずみのバッジ（ミッションID）は べつのキーにほぞん。
 // いちど とったバッジは、あとで虫をけしても きえないようにする。
-const BADGE_KEY = 'chomushi.badges.v1'
+// v2: ミッションを「いまの図鑑からの差分」ではんていする方式に変えたので新キー。
+const BADGE_KEY = 'chomushi.badges.v2'
+// ミッションの「きじゅん（baseline）」。はじめてページを開いたときの図鑑の状態。
+const BASELINE_KEY = 'chomushi.mission-base.v1'
 
 export function loadClaimedBadges(): string[] {
   try {
@@ -36,6 +39,34 @@ export function saveClaimedBadges(ids: string[]): void {
     localStorage.setItem(BADGE_KEY, JSON.stringify(ids))
   } catch (e) {
     console.warn('バッジの保存に失敗しました', e)
+  }
+}
+
+// ミッションの きじゅん（なければ null）
+export function loadMissionBaseline(): unknown | null {
+  try {
+    const raw = localStorage.getItem(BASELINE_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+export function saveMissionBaseline(base: unknown): void {
+  try {
+    localStorage.setItem(BASELINE_KEY, JSON.stringify(base))
+  } catch (e) {
+    console.warn('ミッション基準の保存に失敗しました', e)
+  }
+}
+
+// ミッションを「いまの図鑑」から やりなおす（きじゅんを 今にリセットし、バッジも消す）
+export function resetMissions(): void {
+  try {
+    localStorage.removeItem(BASELINE_KEY)
+    localStorage.removeItem(BADGE_KEY)
+  } catch (e) {
+    console.warn('ミッションのリセットに失敗しました', e)
   }
 }
 

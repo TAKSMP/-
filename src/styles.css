@@ -1942,9 +1942,6 @@ input:focus {
 }
 
 /* --- バトル ぜんたい --- */
-.battle {
-  display: block;
-}
 .battle-empty {
   text-align: center;
   padding: 40px 16px;
@@ -2103,6 +2100,11 @@ input:focus {
   font-size: 10px;
   color: #9aa88a;
   line-height: 1.4;
+}
+.mission-reset {
+  width: 100%;
+  margin-top: 16px;
+  font-size: 13px;
 }
 
 /* --- バッジ ゲット！ トースト --- */

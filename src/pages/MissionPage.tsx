@@ -1,8 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CaughtBug } from '../types'
-import type { Mission } from '../data/missions'
-import { LEVELS, MISSIONS } from '../data/missions'
-import { loadClaimedBadges, saveClaimedBadges } from '../lib/storage'
+import type { Baseline, Mission } from '../data/missions'
+import {
+  LEVELS,
+  MISSIONS,
+  computeBaseline,
+  metricProgress,
+} from '../data/missions'
+import {
+  loadClaimedBadges,
+  loadMissionBaseline,
+  resetMissions,
+  saveClaimedBadges,
+  saveMissionBaseline,
+} from '../lib/storage'
 import { Confetti } from '../components/Confetti'
 import { sfx } from '../lib/sound'
 
@@ -11,18 +22,39 @@ interface Props {
   onGoCapture: () => void
 }
 
+// ほぞんされた baseline が ただしい形か たしかめる
+function isBaseline(x: unknown): x is Baseline {
+  if (!x || typeof x !== 'object') return false
+  const b = x as Record<string, unknown>
+  return (
+    typeof b.kinds === 'number' &&
+    typeof b.orders === 'number' &&
+    typeof b.places === 'number' &&
+    typeof b.captures === 'number'
+  )
+}
+
 export function MissionPage({ bugs, onGoCapture }: Props) {
+  // きじゅん（はじめて開いたときの図鑑の状態）。なければ 今の図鑑でつくって保存。
+  const [baseline, setBaseline] = useState<Baseline>(() => {
+    const stored = loadMissionBaseline()
+    if (isBaseline(stored)) return stored
+    const b = computeBaseline(bugs)
+    saveMissionBaseline(b)
+    return b
+  })
   const [claimed, setClaimed] = useState<string[]>(() => loadClaimedBadges())
   const [justEarned, setJustEarned] = useState<Mission[]>([])
   const [confetti, setConfetti] = useState(false)
   const claimedRef = useRef(claimed)
 
   // 達成したミッションが あれば バッジをつけて お祝いする。
-  // （マウント時と、あつめた虫が ふえたとき に チェック）
   useEffect(() => {
     const prev = claimedRef.current
     const newly = MISSIONS.filter(
-      (m) => !prev.includes(m.id) && m.progress(bugs) >= m.goal,
+      (m) =>
+        !prev.includes(m.id) &&
+        metricProgress(bugs, baseline, m.metric) >= m.goal,
     )
     if (newly.length === 0) return
     const next = [...prev, ...newly.map((m) => m.id)]
@@ -34,7 +66,24 @@ export function MissionPage({ bugs, onGoCapture }: Props) {
     sfx.discover()
     const t = setTimeout(() => setConfetti(false), 400)
     return () => clearTimeout(t)
-  }, [bugs])
+  }, [bugs, baseline])
+
+  function handleReset() {
+    if (
+      !confirm(
+        'いまの図鑑を あたらしい「きじゅん」にして、ミッションを さいしょから やりなおす？（とったバッジも きえます）',
+      )
+    )
+      return
+    sfx.tap()
+    resetMissions()
+    const b = computeBaseline(bugs)
+    saveMissionBaseline(b)
+    claimedRef.current = []
+    setBaseline(b)
+    setClaimed([])
+    setJustEarned([])
+  }
 
   const earnedCount = claimed.length
 
@@ -65,7 +114,10 @@ export function MissionPage({ bugs, onGoCapture }: Props) {
               </div>
               {active ? (
                 (() => {
-                  const cur = Math.min(active.progress(bugs), active.goal)
+                  const cur = Math.min(
+                    metricProgress(bugs, baseline, active.metric),
+                    active.goal,
+                  )
                   const pct = Math.round((cur / active.goal) * 100)
                   return (
                     <>
@@ -138,6 +190,9 @@ export function MissionPage({ bugs, onGoCapture }: Props) {
             )
           })}
         </div>
+        <button className="btn btn-ghost mission-reset" onClick={handleReset}>
+          🔄 いまの図鑑から やりなおす
+        </button>
       </div>
 
       {/* たった今 とれたバッジの お祝い */}
