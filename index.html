@@ -6,9 +6,83 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#7cc36a" />
     <title>ちょうむしアプリ 🐛</title>
+    <script>
+      // ふるいキャッシュが のこっていて、あたらしいプログラムファイルが
+      // 見つからない（デプロイ直後の 404）ときに、一度だけ 読み直して なおす。
+      // これで「アプリが立ち上がらない（まっしろ）」を じどうで かいひする。
+      (function () {
+        window.addEventListener(
+          'error',
+          function (e) {
+            var t = e && e.target
+            if (
+              t &&
+              t.tagName === 'SCRIPT' &&
+              t.src &&
+              t.src.indexOf('/assets/index-') !== -1
+            ) {
+              if (!sessionStorage.getItem('chomushi-reloaded')) {
+                sessionStorage.setItem('chomushi-reloaded', '1')
+                // クエリを つけて キャッシュを さけ、あたらしい index を とりにいく
+                location.replace(location.pathname + '?v=' + Date.now())
+              }
+            }
+          },
+          true,
+        )
+        // ぶじ 起動できたら フラグを クリア（つぎの デプロイでも つかえるように）
+        window.addEventListener('load', function () {
+          setTimeout(function () {
+            var root = document.getElementById('root')
+            if (root && root.children.length > 0) {
+              sessionStorage.removeItem('chomushi-reloaded')
+              if (location.search.indexOf('v=') !== -1) {
+                history.replaceState(null, '', location.pathname)
+              }
+            }
+          }, 2000)
+        })
+      })()
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- 起動できないときに 見える 予備がめん（Reactが 起動すると 消える） -->
+      <div
+        id="boot-fallback"
+        style="
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          padding: 24px;
+          text-align: center;
+          font-family: 'Hiragino Maru Gothic ProN', 'M PLUS Rounded 1c',
+            system-ui, sans-serif;
+          color: #2f3a24;
+        "
+      >
+        <div style="font-size: 48px">🐛</div>
+        <p style="margin: 0">よみこみ中…</p>
+        <button
+          onclick="location.reload()"
+          style="
+            margin-top: 8px;
+            border: none;
+            background: #7cc36a;
+            color: #fff;
+            font-weight: 800;
+            font-size: 15px;
+            padding: 10px 20px;
+            border-radius: 999px;
+          "
+        >
+          🔄 もういちど よみこむ
+        </button>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
