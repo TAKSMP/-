@@ -17,6 +17,40 @@ function getCtx(): AudioContext | null {
   return ctx
 }
 
+// iOS/Safari は「ユーザーがさわった瞬間」に 音のじゅんびをしないと 鳴らない。
+// さいしょのタッチで オーディオを アンロックし、画面に もどったときも さいかいする。
+let unlocked = false
+function unlockAudio() {
+  const c = getCtx()
+  if (!c) return
+  if (c.state === 'suspended') c.resume().catch(() => {})
+  if (!unlocked) {
+    try {
+      // 無音を1回ならして iOS の ロックを はずす
+      const b = c.createBuffer(1, 1, 22050)
+      const s = c.createBufferSource()
+      s.buffer = b
+      s.connect(c.destination)
+      s.start(0)
+      unlocked = true
+    } catch {
+      /* むし */
+    }
+  }
+}
+
+if (typeof window !== 'undefined') {
+  const opt = { passive: true } as AddEventListenerOptions
+  ;['touchend', 'pointerdown', 'mousedown', 'keydown'].forEach((ev) =>
+    window.addEventListener(ev, unlockAudio, opt),
+  )
+  // バックグラウンドから もどったら（＝self-healリロード後なども）さいかい
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && ctx && ctx.state !== 'running')
+      ctx.resume().catch(() => {})
+  })
+}
+
 function beep(
   freq: number,
   duration: number,
