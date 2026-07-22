@@ -652,7 +652,7 @@ export function BattlePage({ bugs, onGoCapture }: Props) {
             <>
               <p className="janken-lead">
                 {rolling
-                  ? 'あいての て が まわってる…！'
+                  ? 'じゃーん けーん…'
                   : myHand
                     ? 'あいこ！ もういちど てを えらんでね'
                     : 'てを えらんでね'}
