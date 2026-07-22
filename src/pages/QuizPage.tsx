@@ -182,7 +182,9 @@ export function QuizPage({ bugs, onGoCapture }: Props) {
     sfx.tap()
     if (index + 1 >= questions.length) {
       setPhase('done')
-      sfx.discover()
+      // けっかの音楽（半分いじょうで かちジングル、それ未満は しょんぼり）
+      if (score * 2 >= questions.length) sfx.win()
+      else sfx.lose()
       setConfetti(true)
       setTimeout(() => setConfetti(false), 150)
     } else {

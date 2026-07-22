@@ -149,7 +149,7 @@ export default function App() {
             key={t.id}
             className={'tabbar-btn' + (tab === t.id ? ' active' : '')}
             onClick={() => {
-              sfx.tap()
+              sfx.nav()
               setTab(t.id)
             }}
           >

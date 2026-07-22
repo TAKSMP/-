@@ -63,7 +63,7 @@ export function MissionPage({ bugs, onGoCapture }: Props) {
     setClaimed(next)
     setJustEarned(newly)
     setConfetti(true)
-    sfx.discover()
+    sfx.badge()
     const t = setTimeout(() => setConfetti(false), 400)
     return () => clearTimeout(t)
   }, [bugs, baseline])

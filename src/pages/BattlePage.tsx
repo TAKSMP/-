@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { CaughtBug, SpecialMove } from '../types'
+import type { CaughtBug, MoveEffect, SpecialMove } from '../types'
 import { mainPhoto } from '../lib/storage'
 import {
   battleStatsOf,
@@ -14,6 +14,61 @@ import { sfx } from '../lib/sound'
 
 const OTHER = '__other__'
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+// こうげきの うごき（写真の アニメ）
+type AtkAnim = 'hit' | 'lunge' | 'cast'
+
+// ひっさつわざの こうかごとの えんしゅつ設定
+//  target 'foe' … あいて（ぼうぎょ側）に、'self' … つかった本人に
+interface FxConfig {
+  emoji: string
+  count: number
+  target: 'foe' | 'self'
+}
+const FX: Record<MoveEffect, FxConfig> = {
+  powerStrike: { emoji: '💥', count: 5, target: 'foe' }, // ドーン＋ぺちゃんこ
+  doubleAttack: { emoji: '⚡', count: 6, target: 'foe' }, // ハリ／いなずまが飛ぶ＋さかさま
+  heal: { emoji: '💚', count: 6, target: 'self' }, // 大きなハートが ゆらゆら
+  attackUp: { emoji: '🔥', count: 6, target: 'self' }, // ほのおが たちのぼる
+  defenseUp: { emoji: '🛡️', count: 5, target: 'self' }, // たてが きらめく
+}
+
+// ひっさつわざの キラキラ／エフェクトの つぶを 表示する
+function BattleFx({
+  effect,
+  attacker,
+}: {
+  effect: MoveEffect
+  attacker: 'me' | 'foe'
+}) {
+  const cfg = FX[effect]
+  const defender = attacker === 'me' ? 'foe' : 'me'
+  const zone = cfg.target === 'foe' ? defender : attacker
+  // zone 'foe' は うえ、'me' は した に つぶを あつめる
+  const baseTop = zone === 'foe' ? 8 : 56
+  const baseLeft = zone === 'foe' ? 58 : 6
+  return (
+    <div className={'battle-fx fx-' + effect}>
+      {Array.from({ length: cfg.count }).map((_, i) => {
+        const left = baseLeft + (i % 3) * 12 + Math.random() * 8
+        const top = baseTop + Math.floor(i / 3) * 12 + Math.random() * 8
+        return (
+          <span
+            key={i}
+            className="fx-particle"
+            style={{
+              left: left + '%',
+              top: top + '%',
+              animationDelay: i * 70 + 'ms',
+            }}
+          >
+            {cfg.emoji}
+          </span>
+        )
+      })}
+    </div>
+  )
+}
 
 // 図鑑とおなじ「もくじ」から、目（もく）ごとに虫をえらぶ。
 function BugPicker({
@@ -323,9 +378,13 @@ export function BattlePage({ bugs, onGoCapture }: Props) {
   const [visibleLog, setVisibleLog] = useState<string[]>([])
   const [confetti, setConfetti] = useState(false)
   // えんしゅつ用
-  const [atk, setAtk] = useState<{ side: 'me' | 'foe'; special: boolean } | null>(null)
+  const [atk, setAtk] = useState<{ side: 'me' | 'foe'; anim: AtkAnim } | null>(
+    null,
+  )
   const [hurt, setHurt] = useState<'me' | 'foe' | null>(null)
-  const [flash, setFlash] = useState(false)
+  const [fx, setFx] = useState<{ effect: MoveEffect; attacker: 'me' | 'foe' } | null>(
+    null,
+  )
   const [busy, setBusy] = useState(false)
   const runningRef = useRef(false)
   const battleRef = useRef<BState | null>(null)
@@ -382,7 +441,7 @@ export function BattlePage({ bugs, onGoCapture }: Props) {
     setVisibleLog([])
     setAtk(null)
     setHurt(null)
-    setFlash(false)
+    setFx(null)
     setBusy(false)
     setMyHand(null)
     setFoeHand(null)
@@ -476,9 +535,10 @@ export function BattlePage({ bugs, onGoCapture }: Props) {
     setVisibleLog([first === 'me' ? 'きみの ターンから！' : 'あいての ターンから！'])
     setAtk(null)
     setHurt(null)
-    setFlash(false)
+    setFx(null)
     setBusy(false)
     setPhase('battle')
+    sfx.battleStart()
   }
 
   // 1つの こうどうを、えんしゅつ（アニメ）と いっしょに ゆっくり すすめる
@@ -494,32 +554,42 @@ export function BattlePage({ bugs, onGoCapture }: Props) {
     const next = performAction(cur, actor, action)
     const newLines = next.log.slice(cur.log.length)
     const special = action === 'special'
+    const effect = special ? (actor === 'me' ? cur.me : cur.foe).move.effect : null
+    const offensive =
+      effect === 'powerStrike' || effect === 'doubleAttack'
+    const defender: 'me' | 'foe' = actor === 'me' ? 'foe' : 'me'
+    const dodged = newLines.some((l) => l.includes('よけた'))
 
     // ① こうげき／ひっさつわざ の うごき（ふりかぶり〜つっこむ）
-    setAtk({ side: actor, special })
+    if (!special) setAtk({ side: actor, anim: 'hit' })
+    else if (offensive) setAtk({ side: actor, anim: 'lunge' })
+    else setAtk(null) // ほじょわざは 本人が ひからせる（fx-glow）
     sfx.tap()
-    await sleep(special ? 700 : 430)
+    await sleep(special ? (offensive ? 700 : 480) : 430)
 
-    // ② ヒット：ダメージを はんえい、あいてが ゆれる
+    // ② ヒット：ダメージを はんえい、えんしゅつ＋音
     battleRef.current = next
     setBattle(next)
-    setHurt(actor === 'me' ? 'foe' : 'me')
-    if (special) {
-      setFlash(true)
-      sfx.discover()
+    if (special && effect) {
+      setFx({ effect, attacker: actor })
+      sfx.special(effect)
+    } else if (dodged) {
+      sfx.dodge()
+    } else {
+      setHurt(defender)
+      sfx.hit()
     }
 
     // ③ テキストを ひとつずつ ゆっくり だす
     for (let i = 0; i < newLines.length; i++) {
       setVisibleLog((prev) => [...prev, newLines[i]])
-      if (i > 0) sfx.tap()
       await sleep(700)
     }
 
-    setFlash(false)
     await sleep(280)
     setAtk(null)
     setHurt(null)
+    setFx(null)
     runningRef.current = false
     setBusy(false)
   }
@@ -544,23 +614,41 @@ export function BattlePage({ bugs, onGoCapture }: Props) {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight
   }, [visibleLog.length])
 
-  // 勝敗が ついたら、少し まって けっか画面へ
+  // 勝敗が ついたら、少し まって けっか画面へ（かち／まけの音つき）
   useEffect(() => {
     if (!battle?.over) return
     if (battle.winner === 'me') {
       setConfetti(true)
-      setTimeout(() => setConfetti(false), 500)
+      setTimeout(() => setConfetti(false), 600)
+      setTimeout(() => sfx.win(), 300)
+    } else {
+      setTimeout(() => sfx.lose(), 300)
     }
-    const t = setTimeout(() => setPhase('result'), 1700)
+    const t = setTimeout(() => setPhase('result'), 2100)
     return () => clearTimeout(t)
   }, [battle?.over, battle?.winner])
 
-  const meAnim =
-    (atk?.side === 'me' ? (atk.special ? ' sp-up' : ' atk-up') : '') +
-    (hurt === 'me' ? ' hurt' : '')
-  const foeAnim =
-    (atk?.side === 'foe' ? (atk.special ? ' sp-down' : ' atk-down') : '') +
-    (hurt === 'foe' ? ' hurt' : '')
+  // 写真1まいの アニメクラスを くみたてる
+  function photoClass(side: 'me' | 'foe'): string {
+    let c = ''
+    if (atk?.side === side) {
+      if (atk.anim === 'hit') c += side === 'me' ? ' atk-up' : ' atk-down'
+      else if (atk.anim === 'lunge') c += side === 'me' ? ' sp-up' : ' sp-down'
+      else if (atk.anim === 'cast') c += ' fx-cast'
+    }
+    if (fx) {
+      const defender = fx.attacker === 'me' ? 'foe' : 'me'
+      const offensive =
+        fx.effect === 'powerStrike' || fx.effect === 'doubleAttack'
+      if (offensive && side === defender)
+        c += fx.effect === 'powerStrike' ? ' fx-squash' : ' fx-flip'
+      else if (!offensive && side === fx.attacker) c += ' fx-glow'
+    }
+    if (hurt === side) c += ' hurt'
+    return c
+  }
+  const meAnim = photoClass('me')
+  const foeAnim = photoClass('foe')
 
   return (
     <div className="battle">
@@ -693,12 +781,13 @@ export function BattlePage({ bugs, onGoCapture }: Props) {
 
       {/* --- ④ せんとう（ぜんめん ステージ） --- */}
       {phase === 'battle' && battle && (
-        <div className={'battle-stage' + (flash ? ' flash' : '')}>
+        <div className="battle-stage">
           <button className="battle-flee" onClick={reset}>
             ✕ やめる
           </button>
 
           <div className="stage-scene">
+            {fx && <BattleFx effect={fx.effect} attacker={fx.attacker} />}
             {/* あいて：おく（うえ） */}
             <div className="stage-foe">
               <div className="stage-namebox">

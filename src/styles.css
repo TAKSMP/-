@@ -2699,22 +2699,175 @@ input:focus {
   outline: 4px solid rgba(232, 106, 92, 0.9);
   filter: brightness(1.15) saturate(1.4);
 }
-/* ひっさつわざの がめん てんめつ */
-.battle-stage.flash::after {
-  content: '';
+/* ひっさつわざ：あいてが つぶれる／さかさま／本人が ひかる */
+@keyframes fx-squash {
+  0% {
+    transform: scaleY(1);
+  }
+  30% {
+    transform: scaleY(0.45) scaleX(1.25) translateY(24px);
+  }
+  55% {
+    transform: scaleY(1.08) scaleX(0.95);
+  }
+  75% {
+    transform: scaleY(0.96) scaleX(1.02);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+@keyframes fx-flip {
+  0% {
+    transform: rotate(0);
+  }
+  25% {
+    transform: rotate(180deg) scale(0.92);
+  }
+  70% {
+    transform: rotate(180deg) scale(0.92);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+@keyframes fx-glow {
+  0%,
+  100% {
+    filter: none;
+    transform: scale(1);
+  }
+  40% {
+    filter: brightness(1.3) drop-shadow(0 0 12px rgba(255, 210, 60, 0.9));
+    transform: scale(1.1);
+  }
+}
+@keyframes fx-cast {
+  0% {
+    transform: translateY(0);
+  }
+  35% {
+    transform: translateY(-12px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+.stage-photo.fx-squash {
+  animation: fx-squash 0.6s ease;
+}
+.stage-photo.fx-flip {
+  animation: fx-flip 0.8s ease;
+}
+.stage-photo.fx-glow {
+  animation: fx-glow 0.8s ease;
+}
+.stage-photo.fx-cast {
+  animation: fx-cast 0.5s ease;
+}
+
+/* ひっさつわざ：とびちる つぶ（こうかで かわる） */
+.battle-fx {
   position: absolute;
   inset: 0;
-  background: #fff;
-  z-index: 5;
   pointer-events: none;
-  animation: stage-flash 0.5s ease;
+  z-index: 5;
 }
-@keyframes stage-flash {
+.fx-particle {
+  position: absolute;
+  font-size: 40px;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.fx-powerStrike .fx-particle {
+  font-size: 54px;
+  animation: fx-burst 0.7s ease forwards;
+}
+@keyframes fx-burst {
   0% {
-    opacity: 0.85;
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  25% {
+    opacity: 1;
+    transform: scale(1.5);
   }
   100% {
     opacity: 0;
+    transform: scale(2);
+  }
+}
+.fx-doubleAttack .fx-particle {
+  animation: fx-zip 0.55s ease forwards;
+}
+@keyframes fx-zip {
+  0% {
+    opacity: 0;
+    transform: translate(-46px, -12px) rotate(-25deg) scale(0.5);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(46px, 20px) rotate(25deg) scale(1);
+  }
+}
+.fx-heal .fx-particle {
+  font-size: 48px;
+  animation: fx-float 1.1s ease forwards;
+}
+@keyframes fx-float {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) rotate(-8deg) scale(0.6);
+  }
+  25% {
+    opacity: 1;
+  }
+  60% {
+    transform: translateY(-30px) rotate(8deg) scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-64px) rotate(-6deg) scale(1.1);
+  }
+}
+.fx-attackUp .fx-particle {
+  animation: fx-rise 0.8s ease forwards;
+}
+@keyframes fx-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(24px) scale(0.6);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-44px) scale(1.15);
+  }
+}
+.fx-defenseUp .fx-particle {
+  animation: fx-shimmer 0.8s ease forwards;
+}
+@keyframes fx-shimmer {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) rotate(-6deg);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.15) rotate(6deg);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1) rotate(-3deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.1);
   }
 }
 
