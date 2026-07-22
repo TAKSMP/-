@@ -13,6 +13,7 @@ import { Confetti } from '../components/Confetti'
 import { sfx } from '../lib/sound'
 
 const OTHER = '__other__'
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 // 図鑑とおなじ「もくじ」から、目（もく）ごとに虫をえらぶ。
 function BugPicker({
@@ -24,7 +25,6 @@ function BugPicker({
 }) {
   const [openOrder, setOpenOrder] = useState<string | null>(null)
 
-  // 目ごとの発見数
   const counts = new Map<string, number>()
   for (const o of INSECT_ORDERS) counts.set(o, 0)
   let otherCount = 0
@@ -161,7 +161,6 @@ function performAction(state: BState, actor: 'me' | 'foe', action: Action): BSta
   const def = actor === 'me' ? foe : me
   const log = [...state.log]
 
-  // 1かいぶんの こうげき（bonus は ひっさつわざの ついかダメージ）
   const doAttack = (bonus = 0) => {
     if (def.hp <= 0) return
     if (Math.random() < DODGE_CHANCE) {
@@ -217,12 +216,9 @@ function chooseFoeAction(state: BState): Action {
   const me = state.me
   const info = effectInfo(foe.move.effect)
   if (foe.moveLeft <= 0) return 'normal'
-  // たいりょくが すくないと かいふく
   if (foe.move.effect === 'heal' && foe.hp <= foe.maxHp * 0.4) return 'special'
-  // あいてを たおせそうなら つよい技でとどめ
   if (info.strong && me.hp <= computeDamage(foe.attack + foe.move.power + 1, me.defense))
     return 'special'
-  // それ以外は ときどき つかう
   return Math.random() < 0.45 ? 'special' : 'normal'
 }
 
@@ -308,7 +304,8 @@ const HANDS: { key: Hand; emoji: string; label: string }[] = [
   { key: 'scissors', emoji: '✌️', label: 'チョキ' },
   { key: 'paper', emoji: '✋', label: 'パー' },
 ]
-// a が b に かつなら true
+const handEmoji = (h: Hand | null) =>
+  h ? (HANDS.find((x) => x.key === h)?.emoji ?? '❓') : '❓'
 function handBeats(a: Hand, b: Hand): boolean {
   return (
     (a === 'rock' && b === 'scissors') ||
@@ -323,14 +320,35 @@ export function BattlePage({ bugs, onGoCapture }: Props) {
   const [foeMode, setFoeMode] = useState<'random' | 'choose'>('random')
   const [foeBug, setFoeBug] = useState<CaughtBug | null>(null)
   const [battle, setBattle] = useState<BState | null>(null)
+  const [visibleLog, setVisibleLog] = useState<string[]>([])
   const [confetti, setConfetti] = useState(false)
+  // えんしゅつ用
+  const [atk, setAtk] = useState<{ side: 'me' | 'foe'; special: boolean } | null>(null)
+  const [hurt, setHurt] = useState<'me' | 'foe' | null>(null)
+  const [flash, setFlash] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const runningRef = useRef(false)
+  const battleRef = useRef<BState | null>(null)
   // じゃんけん
   const [myHand, setMyHand] = useState<Hand | null>(null)
   const [foeHand, setFoeHand] = useState<Hand | null>(null)
+  const [rollHand, setRollHand] = useState<Hand | null>(null)
+  const [rolling, setRolling] = useState(false)
   const [firstTurn, setFirstTurn] = useState<'me' | 'foe' | null>(null)
+  const jankenTimer = useRef<number | null>(null)
   const logRef = useRef<HTMLDivElement>(null)
 
-  // 虫が2ひきいじょう ないと たいせんできない
+  useEffect(() => {
+    battleRef.current = battle
+  }, [battle])
+
+  // かたづけ（タイマーを のこさない）
+  useEffect(() => {
+    return () => {
+      if (jankenTimer.current) clearTimeout(jankenTimer.current)
+    }
+  }, [])
+
   if (bugs.length < 2) {
     return (
       <div className="battle-empty">
@@ -354,13 +372,22 @@ export function BattlePage({ bugs, onGoCapture }: Props) {
   }
 
   function reset() {
+    if (jankenTimer.current) clearTimeout(jankenTimer.current)
+    runningRef.current = false
     sfx.tap()
     setPhase('pickMine')
     setMyBug(null)
     setFoeBug(null)
     setBattle(null)
+    setVisibleLog([])
+    setAtk(null)
+    setHurt(null)
+    setFlash(false)
+    setBusy(false)
     setMyHand(null)
     setFoeHand(null)
+    setRollHand(null)
+    setRolling(false)
     setFirstTurn(null)
   }
 
@@ -375,6 +402,8 @@ export function BattlePage({ bugs, onGoCapture }: Props) {
     setFoeBug(bug)
     setMyHand(null)
     setFoeHand(null)
+    setRollHand(null)
+    setRolling(false)
     setFirstTurn(null)
     setPhase('janken')
   }
@@ -386,22 +415,44 @@ export function BattlePage({ bugs, onGoCapture }: Props) {
     startFoe(foe)
   }
 
-  // じゃんけん
+  // じゃんけん：てをえらぶと、あいての手が ルーレットで まわって ゆっくり とまる
   function playJanken(hand: Hand) {
-    if (firstTurn) return
-    const foe = HANDS[Math.floor(Math.random() * 3)].key
+    if (rolling || firstTurn || myHand) return
     setMyHand(hand)
-    setFoeHand(foe)
-    if (hand === foe) {
-      sfx.tap()
-      // あいこ → もういちど（少しまってリセット）
-      setTimeout(() => {
+    setFoeHand(null)
+    setRolling(true)
+    const target = HANDS[Math.floor(Math.random() * 3)].key
+    const spins = 15 + Math.floor(Math.random() * 3)
+    let i = 0
+    sfx.tap()
+    const step = () => {
+      setRollHand(HANDS[i % 3].key)
+      i++
+      if (i < spins) {
+        const d = 55 + i * i * 1.4 // だんだん おそくなる
+        jankenTimer.current = window.setTimeout(step, d)
+      } else {
+        setRollHand(target)
+        setFoeHand(target)
+        setRolling(false)
+        sfx.tap()
+        jankenTimer.current = window.setTimeout(() => resolveJanken(hand, target), 700)
+      }
+    }
+    step()
+  }
+
+  function resolveJanken(mine: Hand, foe: Hand) {
+    if (mine === foe) {
+      // あいこ → もういちど
+      jankenTimer.current = window.setTimeout(() => {
         setMyHand(null)
         setFoeHand(null)
-      }, 900)
+        setRollHand(null)
+      }, 700)
       return
     }
-    const iWin = handBeats(hand, foe)
+    const iWin = handBeats(mine, foe)
     setFirstTurn(iWin ? 'me' : 'foe')
     if (iWin) sfx.discover()
     else sfx.error()
@@ -410,61 +461,112 @@ export function BattlePage({ bugs, onGoCapture }: Props) {
   function startBattle() {
     if (!myBug || !foeBug || !firstTurn) return
     sfx.tap()
-    setBattle({
+    const first = firstTurn
+    const init: BState = {
       me: makeSide(myBug),
       foe: makeSide(foeBug),
-      turn: firstTurn,
-      log: [firstTurn === 'me' ? 'きみの ターンから！' : 'あいての ターンから！'],
+      turn: first,
+      log: [],
       over: false,
       winner: null,
-    })
+    }
+    battleRef.current = init
+    runningRef.current = false
+    setBattle(init)
+    setVisibleLog([first === 'me' ? 'きみの ターンから！' : 'あいての ターンから！'])
+    setAtk(null)
+    setHurt(null)
+    setFlash(false)
+    setBusy(false)
     setPhase('battle')
   }
 
-  function myMove(action: Action) {
-    if (!battle || battle.over || battle.turn !== 'me') return
-    if (action === 'special' && battle.me.moveLeft <= 0) return
+  // 1つの こうどうを、えんしゅつ（アニメ）と いっしょに ゆっくり すすめる
+  async function runAction(actor: 'me' | 'foe', action: Action) {
+    if (runningRef.current) return
+    const cur = battleRef.current
+    if (!cur || cur.over || cur.turn !== actor) return
+    const actSide = actor === 'me' ? cur.me : cur.foe
+    if (action === 'special' && actSide.moveLeft <= 0) return
+    runningRef.current = true
+    setBusy(true)
+
+    const next = performAction(cur, actor, action)
+    const newLines = next.log.slice(cur.log.length)
+    const special = action === 'special'
+
+    // ① こうげき／ひっさつわざ の うごき（ふりかぶり〜つっこむ）
+    setAtk({ side: actor, special })
     sfx.tap()
-    setBattle(performAction(battle, 'me', action))
+    await sleep(special ? 700 : 430)
+
+    // ② ヒット：ダメージを はんえい、あいてが ゆれる
+    battleRef.current = next
+    setBattle(next)
+    setHurt(actor === 'me' ? 'foe' : 'me')
+    if (special) {
+      setFlash(true)
+      sfx.discover()
+    }
+
+    // ③ テキストを ひとつずつ ゆっくり だす
+    for (let i = 0; i < newLines.length; i++) {
+      setVisibleLog((prev) => [...prev, newLines[i]])
+      if (i > 0) sfx.tap()
+      await sleep(700)
+    }
+
+    setFlash(false)
+    await sleep(280)
+    setAtk(null)
+    setHurt(null)
+    runningRef.current = false
+    setBusy(false)
   }
 
-  // あいての ターンは じどうで すすむ
+  function myMove(action: Action) {
+    void runAction('me', action)
+  }
+
+  // あいての ターンは じどうで すすむ（少し まってから）
   useEffect(() => {
-    if (!battle || battle.over || battle.turn !== 'foe') return
+    if (!battle || battle.over || battle.turn !== 'foe' || busy) return
     const t = setTimeout(() => {
-      setBattle((prev) => {
-        if (!prev || prev.over || prev.turn !== 'foe') return prev
-        return performAction(prev, 'foe', chooseFoeAction(prev))
-      })
-    }, 950)
+      const cur = battleRef.current
+      if (cur) void runAction('foe', chooseFoeAction(cur))
+    }, 800)
     return () => clearTimeout(t)
-  }, [battle])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [battle, busy])
 
   // ログを いちばん下へ
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight
-  }, [battle?.log.length])
+  }, [visibleLog.length])
 
-  // けっけつ（勝敗が ついたら）
+  // 勝敗が ついたら、少し まって けっか画面へ
   useEffect(() => {
-    if (battle?.over) {
-      if (battle.winner === 'me') {
-        sfx.discover()
-        setConfetti(true)
-        setTimeout(() => setConfetti(false), 300)
-      } else {
-        sfx.error()
-      }
-      const t = setTimeout(() => setPhase('result'), 1100)
-      return () => clearTimeout(t)
+    if (!battle?.over) return
+    if (battle.winner === 'me') {
+      setConfetti(true)
+      setTimeout(() => setConfetti(false), 500)
     }
+    const t = setTimeout(() => setPhase('result'), 1700)
+    return () => clearTimeout(t)
   }, [battle?.over, battle?.winner])
+
+  const meAnim =
+    (atk?.side === 'me' ? (atk.special ? ' sp-up' : ' atk-up') : '') +
+    (hurt === 'me' ? ' hurt' : '')
+  const foeAnim =
+    (atk?.side === 'foe' ? (atk.special ? ' sp-down' : ' atk-down') : '') +
+    (hurt === 'foe' ? ' hurt' : '')
 
   return (
     <div className="battle">
       <Confetti show={confetti} />
 
-      {/* --- じぶんの虫をえらぶ --- */}
+      {/* --- ① じぶんの虫をえらぶ --- */}
       {phase === 'pickMine' && (
         <div className="battle-step">
           <h2 className="battle-step-title">① きみの虫を えらぼう</h2>
@@ -472,7 +574,7 @@ export function BattlePage({ bugs, onGoCapture }: Props) {
         </div>
       )}
 
-      {/* --- あいてをえらぶ --- */}
+      {/* --- ② あいてをえらぶ --- */}
       {phase === 'pickFoe' && (
         <div className="battle-step">
           <h2 className="battle-step-title">② あいてを えらぼう</h2>
@@ -500,7 +602,7 @@ export function BattlePage({ bugs, onGoCapture }: Props) {
             <div className="foe-random">
               <p>あいては ランダムで きまるよ！</p>
               <button className="btn btn-big btn-primary" onClick={pickRandomFoe}>
-                あいてを きめる 🎲
+                じゅんばんぎめへ ▶
               </button>
             </div>
           ) : (
@@ -515,7 +617,7 @@ export function BattlePage({ bugs, onGoCapture }: Props) {
         </div>
       )}
 
-      {/* --- じゃんけん（先攻・後攻） --- */}
+      {/* --- ③ じゃんけん（先攻・後攻） --- */}
       {phase === 'janken' && myBug && foeBug && (
         <div className="battle-step">
           <h2 className="battle-step-title">③ じゃんけんで せんこう を きめよう</h2>
@@ -531,16 +633,36 @@ export function BattlePage({ bugs, onGoCapture }: Props) {
             </div>
           </div>
 
+          {/* きみ と あいての て（あいては ルーレット） */}
+          <div className="janken-play">
+            <div className="janken-slot">
+              <span className="janken-slot-label">きみ</span>
+              <span className="janken-slot-hand">{handEmoji(myHand)}</span>
+            </div>
+            <span className="janken-vs-mid">VS</span>
+            <div className="janken-slot">
+              <span className="janken-slot-label">あいて</span>
+              <span className={'janken-slot-hand' + (rolling ? ' rolling' : '')}>
+                {handEmoji(rolling ? rollHand : foeHand)}
+              </span>
+            </div>
+          </div>
+
           {!firstTurn ? (
             <>
               <p className="janken-lead">
-                {myHand ? 'あいこ！ もういちど！' : 'てを えらんでね'}
+                {rolling
+                  ? 'あいての て が まわってる…！'
+                  : myHand
+                    ? 'あいこ！ もういちど てを えらんでね'
+                    : 'てを えらんでね'}
               </p>
               <div className="janken-hands">
                 {HANDS.map((h) => (
                   <button
                     key={h.key}
                     className="janken-btn"
+                    disabled={rolling || !!myHand}
                     onClick={() => playJanken(h.key)}
                   >
                     <span className="janken-emoji">{h.emoji}</span>
@@ -551,14 +673,6 @@ export function BattlePage({ bugs, onGoCapture }: Props) {
             </>
           ) : (
             <div className="janken-result">
-              <div className="janken-show">
-                <span>
-                  きみ {HANDS.find((h) => h.key === myHand)?.emoji}
-                </span>
-                <span>
-                  あいて {HANDS.find((h) => h.key === foeHand)?.emoji}
-                </span>
-              </div>
               <p className="janken-win">
                 {firstTurn === 'me'
                   ? '🎉 かった！ きみが せんこう！'
@@ -569,66 +683,85 @@ export function BattlePage({ bugs, onGoCapture }: Props) {
               </button>
             </div>
           )}
-          <button className="btn btn-ghost battle-back" onClick={reset}>
-            ← さいしょから
-          </button>
+          {!rolling && !firstTurn && (
+            <button className="btn btn-ghost battle-back" onClick={reset}>
+              ← さいしょから
+            </button>
+          )}
         </div>
       )}
 
-      {/* --- せんとう --- */}
+      {/* --- ④ せんとう（ぜんめん ステージ） --- */}
       {phase === 'battle' && battle && (
-        <div className="battle-arena">
-          <div className="fighter foe">
-            <div className="fighter-info">
-              <span className="fighter-name">{battle.foe.name}</span>
-              <HpBar side={battle.foe} />
+        <div className={'battle-stage' + (flash ? ' flash' : '')}>
+          <button className="battle-flee" onClick={reset}>
+            ✕ やめる
+          </button>
+
+          <div className="stage-scene">
+            {/* あいて：おく（うえ） */}
+            <div className="stage-foe">
+              <div className="stage-namebox">
+                <span className="fighter-name">{battle.foe.name}</span>
+                <HpBar side={battle.foe} />
+              </div>
+              <img
+                className={'stage-photo' + foeAnim}
+                src={battle.foe.photo}
+                alt={battle.foe.name}
+              />
             </div>
-            <img
-              className={'fighter-photo' + (battle.turn === 'foe' ? ' active' : '')}
-              src={battle.foe.photo}
-              alt={battle.foe.name}
-            />
+
+            {/* じぶん：てまえ（した） */}
+            <div className="stage-me">
+              <img
+                className={'stage-photo' + meAnim}
+                src={battle.me.photo}
+                alt={battle.me.name}
+              />
+              <div className="stage-namebox">
+                <span className="fighter-name">{battle.me.name}</span>
+                <HpBar side={battle.me} />
+              </div>
+            </div>
           </div>
 
-          <div className="fighter me">
-            <img
-              className={'fighter-photo' + (battle.turn === 'me' ? ' active' : '')}
-              src={battle.me.photo}
-              alt={battle.me.name}
-            />
-            <div className="fighter-info">
-              <span className="fighter-name">{battle.me.name}</span>
-              <HpBar side={battle.me} />
+          {/* した：戦いの ようす（テキストウインドウ）＋ ボタン */}
+          <div className="stage-bottom">
+            <div className="stage-log" ref={logRef}>
+              {visibleLog.map((line, i) => (
+                <p key={i}>{line}</p>
+              ))}
             </div>
+            {!battle.over && battle.turn === 'me' && !busy ? (
+              <div className="stage-actions">
+                <button
+                  className="stage-btn atk"
+                  onClick={() => myMove('normal')}
+                >
+                  ⚔️ こうげき
+                </button>
+                <button
+                  className="stage-btn sp"
+                  onClick={() => myMove('special')}
+                  disabled={battle.me.moveLeft <= 0}
+                >
+                  {effectInfo(battle.me.move.effect).emoji} {battle.me.move.name}
+                  <small>のこり{battle.me.moveLeft}</small>
+                </button>
+              </div>
+            ) : (
+              <div className="stage-actions">
+                <span className="stage-wait">
+                  {battle.over
+                    ? '…'
+                    : busy
+                      ? 'たたかい中…'
+                      : 'あいての ターン…'}
+                </span>
+              </div>
+            )}
           </div>
-
-          <div className="battle-log" ref={logRef}>
-            {battle.log.map((line, i) => (
-              <p key={i}>{line}</p>
-            ))}
-          </div>
-
-          {!battle.over && (
-            <div className="battle-actions">
-              {battle.turn === 'me' ? (
-                <>
-                  <button className="btn btn-primary" onClick={() => myMove('normal')}>
-                    ⚔️ こうげき
-                  </button>
-                  <button
-                    className="btn btn-camera"
-                    onClick={() => myMove('special')}
-                    disabled={battle.me.moveLeft <= 0}
-                  >
-                    {effectInfo(battle.me.move.effect).emoji} {battle.me.move.name}
-                    （のこり{battle.me.moveLeft}）
-                  </button>
-                </>
-              ) : (
-                <p className="battle-wait">あいての ターン…</p>
-              )}
-            </div>
-          )}
         </div>
       )}
 
