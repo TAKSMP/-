@@ -31,6 +31,31 @@ export interface Capture {
   place?: string // みつけたばしょ（子どもが入力する、じっさいの場所）
 }
 
+// ひっさつわざの こうか（効果）のしゅるい
+export type MoveEffect =
+  | 'powerStrike' // つよいいちげき（大ダメージ・1かいだけ）
+  | 'doubleAttack' // にかいこうげき（2かいこうげき・1かいだけ）
+  | 'heal' // かいふく（たいりょくをかいふく）
+  | 'attackUp' // こうげきアップ
+  | 'defenseUp' // ぼうぎょアップ
+
+// ひっさつわざ
+export interface SpecialMove {
+  name: string // わざの名前（その虫ならではの特徴）
+  effect: MoveEffect // こうか
+  power: number // こうかの大きさ（ダメージ加算・回復量・バフ量など。1〜6）
+  uses: number // つかえる回数（つよい技は1回だけ）
+  desc: string // わざのせつめい
+}
+
+// バトル用のステータス
+export interface BattleStats {
+  hp: number // たいりょく（1〜20・よこゲージ）
+  attack: number // こうげきりょく（1〜10・星）
+  defense: number // ぼうぎょりょく（1〜10・星）
+  move: SpecialMove // ひっさつわざ
+}
+
 // 図鑑に記録された1しゅるいの虫。撮影の履歴（captures）をもつ。
 export interface CaughtBug {
   id: string // レコードのID
@@ -43,6 +68,7 @@ export interface CaughtBug {
   captures: Capture[] // 撮影の履歴（あたらしい順）
   mainCaptureId: string // メイン画像につかう撮影のID
   corrected: boolean // ユーザーが訂正したことがあるか
+  battle?: BattleStats // バトル用ステータス（未設定なら レア度から自動生成）
 }
 
 // 保存するときの入力（1回ぶんの撮影＋判定内容）

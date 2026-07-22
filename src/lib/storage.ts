@@ -1,4 +1,4 @@
-import type { CaptureInput, CaughtBug } from '../types'
+import type { BattleStats, CaptureInput, CaughtBug } from '../types'
 import { findSpeciesByName, normalizeBugName } from '../data/bugs'
 
 // 図鑑登録後に、各項目をなおすためのパッチ
@@ -10,6 +10,7 @@ export interface BugPatch {
   fact?: string
   mainPlace?: string // メイン写真の「みつけたばしょ」
   captureDate?: { id: string; caughtAt: number } // 写真1枚ごとの「みつけた日」
+  battle?: BattleStats // バトル用ステータス
 }
 
 // 図鑑（つかまえた虫の記録）はブラウザの localStorage に保存します。
@@ -156,6 +157,7 @@ export function updateBug(bugId: string, patch: BugPatch): CaughtBug[] {
     if (patch.habitat !== undefined)
       next.habitat = patch.habitat.trim() || 'ふめい'
     if (patch.fact !== undefined) next.fact = patch.fact.trim() || undefined
+    if (patch.battle !== undefined) next.battle = patch.battle
 
     // 写真（captures）にかかわる変更をまとめて反映
     let captures = b.captures

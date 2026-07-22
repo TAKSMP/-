@@ -1,21 +1,29 @@
 interface Props {
-  value: number // 1〜5
+  value: number
   editable?: boolean
   onChange?: (v: number) => void
   size?: number
+  max?: number // 星のかず（レア度は5、こうげき・ぼうぎょは10）
 }
 
-// レア度をあらわす星（⭐）。editable のときはタップでかえられる。
-export function StarRating({ value, editable, onChange, size = 28 }: Props) {
+// 星（⭐）ひょうか。editable のときはタップでかえられる。
+// max で星のかず（だんかい）をかえられる。
+export function StarRating({
+  value,
+  editable,
+  onChange,
+  size = 28,
+  max = 5,
+}: Props) {
   return (
     <div className="stars" style={{ fontSize: size }}>
-      {[1, 2, 3, 4, 5].map((n) => (
+      {Array.from({ length: max }, (_, i) => i + 1).map((n) => (
         <button
           key={n}
           type="button"
           className={'star' + (n <= value ? ' on' : '')}
           disabled={!editable}
-          aria-label={`レア度 ${n}`}
+          aria-label={`${n}`}
           onClick={() => editable && onChange?.(n)}
         >
           {n <= value ? '⭐' : '☆'}

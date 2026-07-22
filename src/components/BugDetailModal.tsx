@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { CaughtBug } from '../types'
+import type { CaughtBug, MoveEffect } from '../types'
 import type { BugPatch } from '../lib/storage'
 import { findSpeciesByName, getSpeciesById } from '../data/bugs'
 import { INSECT_ORDERS } from '../data/orders'
@@ -9,6 +9,20 @@ import {
   buildDescribePrompt,
   buildHabitatPrompt,
 } from '../lib/chatgpt'
+import {
+  battleStatsOf,
+  buildBattlePrompt,
+  EFFECTS,
+  effectInfo,
+  HP_MAX,
+  HP_MIN,
+  normalizeStats,
+  parseBattleAnswer,
+  POWER_MAX,
+  POWER_MIN,
+  STAT_MAX,
+  usesForEffect,
+} from '../lib/battle'
 import { StarRating } from './StarRating'
 import { sfx } from '../lib/sound'
 
@@ -57,12 +71,25 @@ export function BugDetailModal({
   const [place, setPlace] = useState('')
   const [descNote, setDescNote] = useState('')
   const [habNote, setHabNote] = useState('')
+  // バトルステータス（へんしゅう中）
+  const [bHp, setBHp] = useState(12)
+  const [bAtk, setBAtk] = useState(6)
+  const [bDef, setBDef] = useState(5)
+  const [mvName, setMvName] = useState('')
+  const [mvEffect, setMvEffect] = useState<MoveEffect>('powerStrike')
+  const [mvPower, setMvPower] = useState(3)
+  const [mvDesc, setMvDesc] = useState('')
+  const [battleText, setBattleText] = useState('')
+  const [battleNote, setBattleNote] = useState('')
+  // ひょうじモードで バトルステータスをひらくか
+  const [showBattle, setShowBattle] = useState(false)
 
   // ひらいている虫が変わったら、編集モードはリセットする。
   // （別の虫を開いたのに、前の虫の入力内容が残って上書きされるのを防ぐ）
   const bugId = bug?.id
   useEffect(() => {
     setEditing(false)
+    setShowBattle(false)
   }, [bugId])
 
   if (!bug) return null
@@ -91,6 +118,17 @@ export function BugDetailModal({
     setPlace(mainCapture?.place ?? '')
     setDescNote('')
     setHabNote('')
+    // バトルステータス（未設定なら レア度からの自動値）を編集欄にいれる
+    const bs = battleStatsOf(bug)
+    setBHp(bs.hp)
+    setBAtk(bs.attack)
+    setBDef(bs.defense)
+    setMvName(bs.move.name)
+    setMvEffect(bs.move.effect)
+    setMvPower(bs.move.power)
+    setMvDesc(bs.move.desc)
+    setBattleText('')
+    setBattleNote('')
     setEditing(true)
   }
 
@@ -104,7 +142,52 @@ export function BugDetailModal({
       habitat,
       fact,
       mainPlace: place,
+      battle: normalizeStats({
+        hp: bHp,
+        attack: bAtk,
+        defense: bDef,
+        move: {
+          name: mvName,
+          effect: mvEffect,
+          power: mvPower,
+          uses: usesForEffect(mvEffect),
+          desc: mvDesc,
+        },
+      }),
     })
+  }
+
+  // バトルステータスを AI（ChatGPT）に かんがえてもらう
+  async function handleAskBattle() {
+    if (!name.trim()) {
+      sfx.error()
+      alert('さきに「なまえ」を入れてね🐛')
+      return
+    }
+    sfx.tap()
+    await askChatGPTText(buildBattlePrompt(name, fact))
+    setBattleNote(
+      '📋 しつもんをコピーしたよ。AIチャットに はりつけて、こたえ（コードブロック）を 下に はりつけて「とりこむ」をおしてね。',
+    )
+  }
+
+  // AIの答えを よみとって、バトルステータス欄に いれる
+  function handleImportBattle() {
+    const parsed = parseBattleAnswer(battleText)
+    if (!parsed) {
+      sfx.error()
+      setBattleNote('うまく よみとれなかった…決まった形（たいりょく: …）で 答えてもらってね。')
+      return
+    }
+    setBHp(parsed.hp)
+    setBAtk(parsed.attack)
+    setBDef(parsed.defense)
+    setMvName(parsed.move.name)
+    setMvEffect(parsed.move.effect)
+    setMvPower(parsed.move.power)
+    setMvDesc(parsed.move.desc)
+    sfx.discover()
+    setBattleNote('✅ バトルステータスを とりこんだよ！ないようを たしかめて「なおす」をおしてね。')
   }
 
   function saveEdit() {
@@ -269,6 +352,133 @@ export function BugDetailModal({
               {descNote && <p className="desc-note">{descNote}</p>}
             </div>
 
+            {/* ============ バトルステータス（へんしゅう） ============ */}
+            <div className="battle-edit">
+              <div className="battle-edit-head">
+                <span className="battle-edit-title">⚔️ バトルステータス</span>
+                <button
+                  type="button"
+                  className="desc-btn"
+                  onClick={handleAskBattle}
+                >
+                  🤖 AIにきめてもらう
+                </button>
+              </div>
+              <p className="battle-edit-lead">
+                バランスは AIに かんがえてもらうのが おすすめ。手で なおしてもOK。
+              </p>
+
+              <div className="battle-edit-row">
+                <label>たいりょく（1〜{HP_MAX}）</label>
+                <div className="hp-edit">
+                  <input
+                    type="range"
+                    min={HP_MIN}
+                    max={HP_MAX}
+                    value={bHp}
+                    onChange={(e) => setBHp(Number(e.target.value))}
+                  />
+                  <span className="hp-edit-num">{bHp}</span>
+                </div>
+              </div>
+
+              <div className="battle-edit-row">
+                <label>こうげき（★{STAT_MAX}だんかい）</label>
+                <StarRating
+                  value={bAtk}
+                  editable
+                  onChange={setBAtk}
+                  size={18}
+                  max={STAT_MAX}
+                />
+              </div>
+
+              <div className="battle-edit-row">
+                <label>ぼうぎょ（★{STAT_MAX}だんかい）</label>
+                <StarRating
+                  value={bDef}
+                  editable
+                  onChange={setBDef}
+                  size={18}
+                  max={STAT_MAX}
+                />
+              </div>
+
+              <div className="battle-edit-row col">
+                <label>ひっさつわざの なまえ</label>
+                <input
+                  value={mvName}
+                  onChange={(e) => setMvName(e.target.value)}
+                  placeholder="れい: カマのいちげき"
+                />
+              </div>
+
+              <div className="battle-edit-row col">
+                <label>こうか</label>
+                <select
+                  className="order-select"
+                  value={mvEffect}
+                  onChange={(e) => setMvEffect(e.target.value as MoveEffect)}
+                >
+                  {EFFECTS.map((ef) => (
+                    <option key={ef.key} value={ef.key}>
+                      {ef.emoji} {ef.label}（{ef.hint}）
+                    </option>
+                  ))}
+                </select>
+                <p className="battle-uses-note">
+                  つかえる回数: {usesForEffect(mvEffect)}回
+                </p>
+              </div>
+
+              <div className="battle-edit-row">
+                <label>こうかの つよさ（{POWER_MIN}〜{POWER_MAX}）</label>
+                <input
+                  type="number"
+                  className="power-input"
+                  min={POWER_MIN}
+                  max={POWER_MAX}
+                  value={mvPower}
+                  onChange={(e) => setMvPower(Number(e.target.value))}
+                />
+              </div>
+
+              <div className="battle-edit-row col">
+                <label>わざの せつめい</label>
+                <textarea
+                  className="desc-textarea"
+                  value={mvDesc}
+                  onChange={(e) => setMvDesc(e.target.value)}
+                  rows={2}
+                  placeholder="この わざの せつめい"
+                />
+              </div>
+
+              <details className="battle-import">
+                <summary>🤖 AIの答えを とりこむ</summary>
+                <p className="battle-import-lead">
+                  「AIにきめてもらう」で コピーした しつもんを AIチャットに はりつけ、
+                  こたえ（コードブロック）を 下に はって「とりこむ」。
+                </p>
+                <textarea
+                  className="chatgpt-textarea"
+                  placeholder={'たいりょく: 14\nこうげき: 7\nぼうぎょ: 5\nわざ: カマのいちげき\nこうか: つよいいちげき\nこうかりょう: 4\nわざせつめい: …'}
+                  value={battleText}
+                  onChange={(e) => setBattleText(e.target.value)}
+                  rows={5}
+                />
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleImportBattle}
+                  disabled={!battleText.trim()}
+                >
+                  ⬇️ とりこむ
+                </button>
+              </details>
+              {battleNote && <p className="desc-note">{battleNote}</p>}
+            </div>
+
             <div className="modal-edit-actions">
               <button
                 className="btn btn-ghost"
@@ -322,6 +532,67 @@ export function BugDetailModal({
                 <p>{factText}</p>
               </div>
             )}
+
+            {/* ⚔️ バトルステータス（ひょうじ） */}
+            {(() => {
+              const bs = battleStatsOf(bug)
+              const info = effectInfo(bs.move.effect)
+              return (
+                <div className="battle-view">
+                  <button
+                    className="battle-view-toggle"
+                    onClick={() => {
+                      sfx.tap()
+                      setShowBattle((s) => !s)
+                    }}
+                  >
+                    ⚔️ バトルステータス {showBattle ? '▲' : '▼'}
+                  </button>
+                  {showBattle && (
+                    <div className="battle-view-body">
+                      <div className="statrow">
+                        <span className="statlabel">たいりょく</span>
+                        <span className="statval">
+                          <span className="hpbar mini">
+                            <span
+                              className="hpbar-fill"
+                              style={{ width: (bs.hp / HP_MAX) * 100 + '%' }}
+                            />
+                          </span>
+                          {bs.hp}
+                        </span>
+                      </div>
+                      <div className="statrow">
+                        <span className="statlabel">こうげき</span>
+                        <StarRating value={bs.attack} size={14} max={STAT_MAX} />
+                      </div>
+                      <div className="statrow">
+                        <span className="statlabel">ぼうぎょ</span>
+                        <StarRating value={bs.defense} size={14} max={STAT_MAX} />
+                      </div>
+                      <div className="battle-view-move">
+                        <p className="move-name">
+                          {info.emoji} ひっさつわざ「{bs.move.name}」
+                        </p>
+                        <p className="move-eff">
+                          {info.label}（{info.hint}）／ つよさ{bs.move.power}・
+                          {bs.move.uses}回
+                        </p>
+                        {bs.move.desc && (
+                          <p className="move-desc">{bs.move.desc}</p>
+                        )}
+                      </div>
+                      {!bug.battle && (
+                        <p className="battle-view-auto">
+                          ※ これは レア度からの じどうステータス。「✏️ ないようを
+                          なおす」で じぶん好みに できるよ。
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
 
             {onUpdate && (
               <button className="btn btn-ghost modal-edit-btn" onClick={startEdit}>

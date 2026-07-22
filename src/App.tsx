@@ -14,7 +14,7 @@ import { compressImage, dataUrlBytes } from './lib/image'
 import { CapturePage } from './pages/CapturePage'
 import { ZukanPage } from './pages/ZukanPage'
 import { SearchPage } from './pages/SearchPage'
-import { QuizPage } from './pages/QuizPage'
+import { PlayPage } from './pages/PlayPage'
 import { SettingsModal } from './components/SettingsModal'
 import { sfx } from './lib/sound'
 
@@ -47,7 +47,7 @@ const TABS: { id: Tab; label: string; emoji: string }[] = [
   { id: 'capture', label: 'しらべる', emoji: '🔎' },
   { id: 'zukan', label: 'ずかん', emoji: '📖' },
   { id: 'search', label: 'けんさく', emoji: '🔍' },
-  { id: 'quiz', label: 'クイズ', emoji: '🧠' },
+  { id: 'quiz', label: 'あそぶ', emoji: '🎮' },
 ]
 
 export default function App() {
@@ -133,7 +133,7 @@ export default function App() {
           />
         )}
         {tab === 'quiz' && (
-          <QuizPage bugs={bugs} onGoCapture={() => setTab('capture')} />
+          <PlayPage bugs={bugs} onGoCapture={() => setTab('capture')} />
         )}
       </main>
 

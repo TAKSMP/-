@@ -247,9 +247,7 @@ export function CapturePage({ onSaved, pastPlaces }: Props) {
 
       <header className="page-head">
         <h1>🔎 むしを しらべる</h1>
-        <p className="sub">
-          つかまえた虫の写真をよみこむと、AIがなまえをあててくれるよ！
-        </p>
+        <p className="sub">虫の写真をきろくして図鑑を完成させよう！</p>
       </header>
 
       {/* --- 写真をえらぶ前 --- */}
@@ -477,7 +475,7 @@ export function CapturePage({ onSaved, pastPlaces }: Props) {
             {/* AIチャットで正確にしらべて取り込む */}
             {!saved && (
               <details className="chatgpt-box">
-                <summary>🤖 AIチャットでもっと正確にしらべる</summary>
+                <summary>🤖 AIでまとめてしらべる</summary>
                 <p className="chatgpt-lead">
                   お手もちのAIチャット（ChatGPT / Claude など）で同定して、答えを
                   ここに取り込めます。写真と しつもんを 順番に もっていってね。
@@ -525,15 +523,9 @@ export function CapturePage({ onSaved, pastPlaces }: Props) {
             {!saved && (
               <div className="result-actions">
                 <button
-                  className="btn btn-ghost"
-                  onClick={() => {
-                    sfx.tap()
-                    setEditing((e) => !e)
-                  }}
+                  className="btn btn-primary btn-big"
+                  onClick={handleSave}
                 >
-                  {editing ? '✅ なおしおわり' : '✏️ まちがいをなおす'}
-                </button>
-                <button className="btn btn-primary" onClick={handleSave}>
                   📖 図鑑にきろく！
                 </button>
               </div>
