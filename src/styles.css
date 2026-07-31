@@ -1927,6 +1927,237 @@ input:focus {
 .game-card.battle {
   background: linear-gradient(160deg, #ffe0d6, #ffc4b0);
 }
+.game-card.race {
+  background: linear-gradient(160deg, #d6ecff, #a9d3ff);
+}
+
+/* =========================================================
+   むしレース
+   ========================================================= */
+.race-lead {
+  text-align: center;
+  color: #6a7a58;
+  margin: 0 0 12px;
+}
+.race-lineup {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin: 8px 0 18px;
+}
+.race-chip {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: var(--card);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 10px;
+  width: 96px;
+  border: 3px solid transparent;
+}
+.race-chip.mine {
+  border-color: var(--yellow);
+}
+.race-chip img {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+.race-chip-name {
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.race-chip-you {
+  position: absolute;
+  top: -8px;
+  right: -6px;
+  background: var(--yellow);
+  color: #5a4600;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.race-lineup-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* --- コース --- */
+.race-track-area {
+  position: relative;
+}
+.race-lanes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+.race-lane {
+  background: #eef7ff;
+  border-radius: 14px;
+  padding: 8px 10px;
+}
+.race-lane.mine {
+  background: #fff7d6;
+  outline: 2px solid var(--yellow);
+}
+.race-lane-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+.race-lane-rank {
+  font-size: 16px;
+}
+.race-track {
+  position: relative;
+  height: 46px;
+  background: repeating-linear-gradient(
+    90deg,
+    #dceafe 0,
+    #dceafe 18px,
+    #cfe2fb 18px,
+    #cfe2fb 36px
+  );
+  border-radius: 10px;
+  overflow: hidden;
+}
+.race-goal {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 24px;
+  z-index: 1;
+}
+.race-runner {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: left 0.09s linear;
+  z-index: 2;
+}
+.race-runner img {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  object-fit: cover;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  display: block;
+}
+.race-runner.dash::before {
+  content: '💨';
+  position: absolute;
+  left: -18px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 18px;
+  animation: race-puff 0.4s infinite;
+}
+@keyframes race-puff {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: translateY(-50%) scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1.1);
+  }
+}
+.race-countdown {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 120px;
+  font-weight: 900;
+  color: var(--danger);
+  text-shadow: 0 4px 0 rgba(255, 255, 255, 0.8);
+  pointer-events: none;
+  animation: race-count 0.7s ease;
+}
+@keyframes race-count {
+  0% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+}
+
+/* --- けっか --- */
+.race-result {
+  text-align: center;
+  margin-top: 18px;
+}
+.race-result-msg {
+  font-size: 17px;
+  font-weight: 900;
+  margin: 0 0 14px;
+}
+.race-result-msg.win {
+  color: var(--green-deep);
+}
+.race-rank-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.race-rank-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 8px 12px;
+}
+.race-rank-item.mine {
+  outline: 2px solid var(--yellow);
+}
+.race-rank-medal {
+  font-size: 22px;
+  width: 30px;
+  flex: none;
+}
+.race-rank-item img {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex: none;
+}
+.race-rank-name {
+  font-weight: 800;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.race-result-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 .game-emoji {
   font-size: 52px;
   line-height: 1;

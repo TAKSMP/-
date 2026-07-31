@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { CaughtBug } from '../types'
 import { QuizPage } from './QuizPage'
 import { BattlePage } from './BattlePage'
+import { RacePage } from './RacePage'
 import { sfx } from '../lib/sound'
 
 interface Props {
@@ -9,7 +10,7 @@ interface Props {
   onGoCapture: () => void
 }
 
-type Game = null | 'quiz' | 'battle'
+type Game = null | 'quiz' | 'battle' | 'race'
 
 // 「あそぶ」ページ。クイズと バトルの 2つのゲームをえらべる。
 export function PlayPage({ bugs, onGoCapture }: Props) {
@@ -53,6 +54,27 @@ export function PlayPage({ bugs, onGoCapture }: Props) {
     )
   }
 
+  if (game === 'race') {
+    return (
+      <div className="page play">
+        <button
+          className="btn btn-ghost play-back"
+          onClick={() => {
+            sfx.tap()
+            setGame(null)
+          }}
+        >
+          ← あそぶ に もどる
+        </button>
+        <header className="page-head">
+          <h1>🏁 むしレース</h1>
+          <p className="sub">あつめた虫で かけっこ！</p>
+        </header>
+        <RacePage bugs={bugs} onGoCapture={onGoCapture} />
+      </div>
+    )
+  }
+
   return (
     <div className="page play">
       <header className="page-head">
@@ -81,6 +103,17 @@ export function PlayPage({ bugs, onGoCapture }: Props) {
           <span className="game-emoji">⚔️</span>
           <span className="game-title">バトル</span>
           <span className="game-desc">虫どうしで たいせん！ ひっさつわざで かとう</span>
+        </button>
+        <button
+          className="game-card race"
+          onClick={() => {
+            sfx.tap()
+            setGame('race')
+          }}
+        >
+          <span className="game-emoji">🏁</span>
+          <span className="game-title">レース</span>
+          <span className="game-desc">虫たちで かけっこ！ だれが 1いかな</span>
         </button>
       </div>
     </div>
