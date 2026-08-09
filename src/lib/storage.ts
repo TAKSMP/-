@@ -23,6 +23,20 @@ const BADGE_KEY = 'chomushi.badges.v2'
 // ミッションの「きじゅん（baseline）」。はじめてページを開いたときの図鑑の状態。
 const BASELINE_KEY = 'chomushi.mission-base.v1'
 
+const BACKUP_FORMAT = 'chomushi-backup'
+const BACKUP_VERSION = 1
+
+interface BackupFileV1 {
+  format: typeof BACKUP_FORMAT
+  version: typeof BACKUP_VERSION
+  createdAt: string
+  data: {
+    zukan: CaughtBug[]
+    badges: string[]
+    missionBaseline: unknown | null
+  }
+}
+
 export function loadClaimedBadges(): string[] {
   try {
     const raw = localStorage.getItem(BADGE_KEY)
@@ -68,6 +82,130 @@ export function resetMissions(): void {
   } catch (e) {
     console.warn('ミッションのリセットに失敗しました', e)
   }
+}
+
+// 図鑑・写真・バッジ・ミッションを、ほかのブラウザへ持っていくための
+// バックアップファイルを作る。APIキーは安全のため含めない。
+export function createBackupJson(): string {
+  const backup: BackupFileV1 = {
+    format: BACKUP_FORMAT,
+    version: BACKUP_VERSION,
+    createdAt: new Date().toISOString(),
+    data: {
+      zukan: loadZukan(),
+      badges: loadClaimedBadges(),
+      missionBaseline: loadMissionBaseline(),
+    },
+  }
+  return JSON.stringify(backup)
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+function isValidBug(bug: CaughtBug): boolean {
+  return (
+    typeof bug.id === 'string' &&
+    typeof bug.name === 'string' &&
+    typeof bug.order === 'string' &&
+    typeof bug.rarity === 'number' &&
+    Number.isFinite(bug.rarity) &&
+    typeof bug.habitat === 'string' &&
+    typeof bug.mainCaptureId === 'string' &&
+    typeof bug.corrected === 'boolean' &&
+    Array.isArray(bug.captures) &&
+    bug.captures.length > 0 &&
+    bug.captures.every(
+      (capture) =>
+        Boolean(capture) &&
+        typeof capture.id === 'string' &&
+        typeof capture.photo === 'string' &&
+        typeof capture.caughtAt === 'number' &&
+        Number.isFinite(capture.caughtAt) &&
+        (capture.place === undefined || typeof capture.place === 'string'),
+    )
+  )
+}
+
+function normalizeBackupZukan(value: unknown): CaughtBug[] {
+  if (!Array.isArray(value)) {
+    throw new Error('図鑑データが入っていないファイルです。')
+  }
+
+  const bugs = value.map(migrate)
+  if (bugs.some((bug) => bug === null)) {
+    throw new Error('図鑑データの形式がこわれています。')
+  }
+
+  const validBugs = bugs as CaughtBug[]
+  if (!validBugs.every(isValidBug)) {
+    throw new Error('図鑑データの内容を確認できませんでした。')
+  }
+  return validBugs
+}
+
+function restoreStorageValue(key: string, value: string | null): void {
+  if (value === null) localStorage.removeItem(key)
+  else localStorage.setItem(key, value)
+}
+
+// バックアップファイルを検査してから、3つの保存領域をまとめて復元する。
+// 書き込みに失敗したときは、復元前のデータへ戻す。
+export function restoreBackupJson(text: string): CaughtBug[] {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    throw new Error('このファイルは読みこめませんでした。JSON形式を選んでください。')
+  }
+
+  if (!isObject(parsed) || parsed.format !== BACKUP_FORMAT) {
+    throw new Error('ちょうむしのバックアップファイルではありません。')
+  }
+  if (parsed.version !== BACKUP_VERSION) {
+    throw new Error('このバックアップには、今のアプリでは対応していません。')
+  }
+  if (!isObject(parsed.data)) {
+    throw new Error('バックアップの中身が見つかりません。')
+  }
+
+  const bugs = normalizeBackupZukan(parsed.data.zukan)
+  const badges = parsed.data.badges
+  if (!Array.isArray(badges) || !badges.every((id) => typeof id === 'string')) {
+    throw new Error('バッジデータの形式を確認できませんでした。')
+  }
+  const missionBaseline = Object.prototype.hasOwnProperty.call(
+    parsed.data,
+    'missionBaseline',
+  )
+    ? parsed.data.missionBaseline
+    : null
+
+  const previous = {
+    zukan: localStorage.getItem(STORAGE_KEY),
+    badges: localStorage.getItem(BADGE_KEY),
+    missionBaseline: localStorage.getItem(BASELINE_KEY),
+  }
+
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(bugs))
+    localStorage.setItem(BADGE_KEY, JSON.stringify(badges))
+    if (missionBaseline === null) localStorage.removeItem(BASELINE_KEY)
+    else localStorage.setItem(BASELINE_KEY, JSON.stringify(missionBaseline))
+  } catch (error) {
+    try {
+      restoreStorageValue(STORAGE_KEY, previous.zukan)
+      restoreStorageValue(BADGE_KEY, previous.badges)
+      restoreStorageValue(BASELINE_KEY, previous.missionBaseline)
+    } catch {
+      console.warn('復元前のデータに戻せませんでした')
+    }
+    console.warn('バックアップの復元に失敗しました', error)
+    throw new Error('保存容量が足りず、復元できませんでした。')
+  }
+
+  return bugs
 }
 
 function uid(prefix: string): string {

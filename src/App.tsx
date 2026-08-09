@@ -58,6 +58,8 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   // AIせっていが変わったら子を再描画してモード表示を更新するためのカウンタ
   const [aiVersion, setAiVersion] = useState(0)
+  // バックアップを復元したら、各ページの内部状態も新しいデータで作りなおす。
+  const [dataVersion, setDataVersion] = useState(0)
 
   // さいしょに図鑑データをよみこむ。
   // ついでに、大きすぎる写真を小さくしなおして容量を節約する（1回だけ）。
@@ -91,6 +93,11 @@ export default function App() {
     setBugs(updateBug(bugId, patch))
   }
 
+  function handleDataRestored(restored: CaughtBug[]) {
+    setBugs(restored)
+    setDataVersion((version) => version + 1)
+  }
+
   return (
     <div className="app">
       <button
@@ -99,8 +106,8 @@ export default function App() {
           sfx.tap()
           setSettingsOpen(true)
         }}
-        aria-label="AIせってい"
-        title="AIせってい"
+        aria-label="せってい"
+        title="せってい"
       >
         ⚙️
       </button>
@@ -110,13 +117,14 @@ export default function App() {
             アンマウントせずに 非表示にするだけにする（登録するまでデータ保持）。 */}
         <div style={{ display: tab === 'capture' ? 'contents' : 'none' }}>
           <CapturePage
-            key={aiVersion}
+            key={`capture-${aiVersion}-${dataVersion}`}
             onSaved={handleSaved}
             pastPlaces={collectPlaces(bugs)}
           />
         </div>
         {tab === 'zukan' && (
           <ZukanPage
+            key={`zukan-${dataVersion}`}
             bugs={bugs}
             onDelete={handleDelete}
             onSetMain={handleSetMain}
@@ -127,6 +135,7 @@ export default function App() {
         )}
         {tab === 'search' && (
           <SearchPage
+            key={`search-${dataVersion}`}
             bugs={bugs}
             onDelete={handleDelete}
             onSetMain={handleSetMain}
@@ -135,10 +144,18 @@ export default function App() {
           />
         )}
         {tab === 'quiz' && (
-          <PlayPage bugs={bugs} onGoCapture={() => setTab('capture')} />
+          <PlayPage
+            key={`play-${dataVersion}`}
+            bugs={bugs}
+            onGoCapture={() => setTab('capture')}
+          />
         )}
         {tab === 'mission' && (
-          <MissionPage bugs={bugs} onGoCapture={() => setTab('capture')} />
+          <MissionPage
+            key={`mission-${dataVersion}`}
+            bugs={bugs}
+            onGoCapture={() => setTab('capture')}
+          />
         )}
       </main>
 
@@ -166,6 +183,7 @@ export default function App() {
         <SettingsModal
           onClose={() => setSettingsOpen(false)}
           onChanged={() => setAiVersion((v) => v + 1)}
+          onDataRestored={handleDataRestored}
         />
       )}
     </div>

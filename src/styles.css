@@ -468,6 +468,61 @@ body {
   font-weight: 800;
   margin: 10px 0 0;
 }
+.settings-backup {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 3px dashed #cfe3c4;
+  color: #4a5540;
+}
+.settings-backup h3 {
+  color: var(--green-deep);
+  font-size: 18px;
+  margin: 0 0 8px;
+}
+.settings-backup > p {
+  font-size: 13px;
+  line-height: 1.7;
+}
+.settings-backup-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+.settings-backup-actions .btn {
+  width: 100%;
+}
+.settings-backup-actions .btn:disabled {
+  cursor: wait;
+  filter: grayscale(0.4);
+  opacity: 0.65;
+}
+.settings-backup-input {
+  display: none;
+}
+.settings-backup-guide {
+  background: #eef8e8;
+  border-radius: 12px;
+  color: var(--green-deep);
+  font-weight: 800;
+  padding: 9px 11px;
+  text-align: center;
+}
+.settings-data-message {
+  border-radius: 12px;
+  font-weight: 800;
+  margin-bottom: 0;
+  padding: 10px 12px;
+  text-align: center;
+}
+.settings-data-message.success {
+  background: #eafbe3;
+  color: var(--green-deep);
+}
+.settings-data-message.error {
+  background: #fff3f1;
+  color: #b3453a;
+}
 
 /* かいせき中 */
 .analyzing {
