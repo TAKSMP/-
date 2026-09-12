@@ -36,8 +36,8 @@ jobs:
       - name: 依存をインストール
         run: npm ci
 
-      - name: Pages用にビルド（base=/-/）
-        run: npm run build:pages
+      - name: Pages用にビルド（1ファイルにまとめる＝キャッシュ切れで真っ白を防ぐ）
+        run: npm run build:single
 
       - name: Pagesの設定（未設定なら有効化）
         uses: actions/configure-pages@v5
@@ -47,7 +47,7 @@ jobs:
       - name: ビルド結果をアップロード
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist
+          path: ./dist-single
 
   deploy:
     needs: build
