@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { CaughtBug } from '../types'
 import { QuizPage } from './QuizPage'
 import { BattlePage } from './BattlePage'
+import { BattlePage2 } from './BattlePage2'
 import { RacePage } from './RacePage'
 import { sfx } from '../lib/sound'
 
@@ -10,9 +11,9 @@ interface Props {
   onGoCapture: () => void
 }
 
-type Game = null | 'quiz' | 'battle' | 'race'
+type Game = null | 'quiz' | 'battle' | 'battle2' | 'race'
 
-// 「あそぶ」ページ。クイズと バトルの 2つのゲームをえらべる。
+// 「あそぶ」ページ。クイズと バトルの ゲームをえらべる。
 export function PlayPage({ bugs, onGoCapture }: Props) {
   const [game, setGame] = useState<Game>(null)
 
@@ -50,6 +51,28 @@ export function PlayPage({ bugs, onGoCapture }: Props) {
           <p className="sub">あつめた虫で たいせん！</p>
         </header>
         <BattlePage bugs={bugs} onGoCapture={onGoCapture} />
+      </div>
+    )
+  }
+
+  // あたらしい バトル（2たい2・わざ3つ・すばやさ・じょうたいいじょう）
+  if (game === 'battle2') {
+    return (
+      <div className="page play">
+        <button
+          className="btn btn-ghost play-back"
+          onClick={() => {
+            sfx.tap()
+            setGame(null)
+          }}
+        >
+          ← あそぶ に もどる
+        </button>
+        <header className="page-head">
+          <h1>⚔️ むしバトル 2たい2</h1>
+          <p className="sub">わざ3つ・すばやさ・じょうたいいじょう つき！</p>
+        </header>
+        <BattlePage2 bugs={bugs} onGoCapture={onGoCapture} />
       </div>
     )
   }
@@ -97,12 +120,27 @@ export function PlayPage({ bugs, onGoCapture }: Props) {
           className="game-card battle"
           onClick={() => {
             sfx.tap()
-            setGame('battle')
+            setGame('battle2')
           }}
         >
           <span className="game-emoji">⚔️</span>
           <span className="game-title">バトル</span>
-          <span className="game-desc">虫どうしで たいせん！ ひっさつわざで かとう</span>
+          <span className="game-desc">
+            1たい1／2たい2！ わざ3つ・すばやさ・じょうたいいじょう
+          </span>
+        </button>
+        <button
+          className="game-card battle"
+          onClick={() => {
+            sfx.tap()
+            setGame('battle')
+          }}
+        >
+          <span className="game-emoji">🕹️</span>
+          <span className="game-title">バトル（まえのばん）</span>
+          <span className="game-desc">
+            くらべる ため のこしてあります（あとで けします）
+          </span>
         </button>
         <button
           className="game-card race"

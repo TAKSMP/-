@@ -84,3 +84,91 @@ export interface CaptureInput {
   place?: string // みつけたばしょ
   corrected: boolean
 }
+
+// =============================================================
+//  バトル v2（2体2・わざ3つ・すばやさ・状態異常）用の型
+// -------------------------------------------------------------
+//  既存の BattleStats / SpecialMove は のこしたまま 追加する。
+//  → これまでに ほぞんした 図鑑データが こわれない。
+// =============================================================
+
+// じょうたいいじょう
+export type StatusKey =
+  | 'poison' // どく：まいターン ダメージ
+  | 'sleep' // ねむり：2〜4かい こうどうできない
+  | 'paralysis' // まひ：ときどき うごけない＋すばやさダウン
+
+// のうりょくランクを つけられる ステータス
+export type StatKey = 'attack' | 'defense' | 'speed' | 'accuracy' | 'evasion'
+
+// わざの ねらう あいて
+export type MoveTarget =
+  | 'oneFoe' // あいて1ぴき
+  | 'allFoes' // あいて ぜんいん
+  | 'allOthers' // じぶん いがい ぜんいん（みかたも まきこむ）
+  | 'self' // じぶん
+  | 'ally' // みかた1ぴき
+  | 'selfSide' // じぶん がわ ぜんいん
+
+// のうりょく変化の 1つぶん
+export interface StatChange {
+  to: 'foe' | 'self' | 'ally' // だれの のうりょくを かえるか
+  stat: StatKey
+  stage: number // -6〜+6（マイナスで さがる）
+  chance?: number // はつどう かくりつ（0〜1・しょうりゃくで 1）
+}
+
+// ひっさつわざ（v2）。フラグの くみあわせで 40しゅるいの パターンを あらわす。
+export interface SpecialMoveV2 {
+  id: string
+  name: string // わざの名前
+  desc: string // せつめい（かな）
+  kind: 'attack' | 'status' // こうげきわざ / へんかわざ
+  target: MoveTarget
+  power: number // いりょく（へんかわざは 0）
+  accuracy: number | null // めいちゅうりつ 0〜100。null = かならず あたる
+  priority: number // 0がふつう。＋で さきに、−で あとに うごく
+  uses: number // つかえる かいすう
+  emoji?: string // えんしゅつ用
+
+  // --- こうげきの かたち ---
+  hits?: [number, number] // れんぞく こうげき（さいしょう, さいだい）
+  critStage?: number // きゅうしょ ランク 0=ふつう 1,2=でやすい 9=かならず
+  fixedDamage?: number // こていダメージ（power より ゆうせん）
+  chargeTurns?: number // ためる ターンすう
+  hideWhileCharging?: boolean // ためている あいだ すがたを かくす（こうげきが あたらない）
+  delayTurns?: number // なんターンご に あたる
+  rechargeTurns?: number // つかったあと うごけない ターンすう
+
+  // --- じょうきょうで つよくなる ---
+  boostIfLate?: number // あいてより あとに うごいたら いりょく ×
+  boostIfFoeStatus?: number // あいてが じょうたいいじょう なら いりょく ×
+  boostIfSelfStatus?: number // じぶんが じょうたいいじょう なら いりょく ×
+
+  // --- リスクの ある わざ ---
+  recoilRatio?: number // あたえた ダメージの わりあいだけ じぶんも ダメージ
+  hpCostRatio?: number // さいだいHPの わりあいを はらって こうげき
+  drainRatio?: number // あたえた ダメージの わりあいを かいふく
+  counterRatio?: number // このターン うけた ダメージ × ばいがえし
+  counterGuard?: boolean // こうげきを うけたら はんげき する かまえ
+
+  // --- ついか こうか ---
+  inflict?: { status: StatusKey; chance: number } // じょうたいいじょうに する
+  statChanges?: StatChange[] // のうりょく変化
+  stealStats?: boolean // あいての のうりょくを うばう
+  swapStats?: boolean // のうりょくを いれかえる
+  healRatio?: number // さいだいHPの わりあいだけ かいふく
+  cureStatus?: boolean // じょうたいいじょうを なおす
+  restSleep?: boolean // ねむって ぜんかいふく
+  regen?: { ratio: number; turns: number } // まいターン すこしずつ かいふく
+  leech?: { ratio: number; turns: number } // あいてのHPを まいターン すいとる
+}
+
+// バトルステータス（v2）
+export interface BattleStatsV2 {
+  hp: number
+  attack: number
+  defense: number
+  speed: number // ★ あたらしい ステータス
+  moves: SpecialMoveV2[] // ★ さいだい3つ
+}
