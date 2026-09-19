@@ -3,6 +3,7 @@ import type { CaughtBug } from '../types'
 import { QuizPage } from './QuizPage'
 import { BattlePage } from './BattlePage'
 import { BattlePage2 } from './BattlePage2'
+import { StoryPage } from './StoryPage'
 import { RacePage } from './RacePage'
 import { sfx } from '../lib/sound'
 
@@ -11,7 +12,7 @@ interface Props {
   onGoCapture: () => void
 }
 
-type Game = null | 'quiz' | 'battle' | 'battle2' | 'race'
+type Game = null | 'quiz' | 'battle' | 'battle2' | 'story' | 'race'
 
 // 「あそぶ」ページ。クイズと バトルの ゲームをえらべる。
 export function PlayPage({ bugs, onGoCapture }: Props) {
@@ -77,6 +78,28 @@ export function PlayPage({ bugs, onGoCapture }: Props) {
     )
   }
 
+  // ストーリーモード（マップを すすんで ゴールを めざす）
+  if (game === 'story') {
+    return (
+      <div className="page play">
+        <button
+          className="btn btn-ghost play-back"
+          onClick={() => {
+            sfx.tap()
+            setGame(null)
+          }}
+        >
+          ← あそぶ に もどる
+        </button>
+        <header className="page-head">
+          <h1>🗺️ ストーリー</h1>
+          <p className="sub">マップを すすんで ゴールを めざそう！</p>
+        </header>
+        <StoryPage bugs={bugs} onGoCapture={onGoCapture} />
+      </div>
+    )
+  }
+
   if (game === 'race') {
     return (
       <div className="page play">
@@ -127,6 +150,19 @@ export function PlayPage({ bugs, onGoCapture }: Props) {
           <span className="game-title">バトル</span>
           <span className="game-desc">
             1たい1／2たい2！ わざ3つ・すばやさ・じょうたいいじょう
+          </span>
+        </button>
+        <button
+          className="game-card story"
+          onClick={() => {
+            sfx.tap()
+            setGame('story')
+          }}
+        >
+          <span className="game-emoji">🗺️</span>
+          <span className="game-title">ストーリー</span>
+          <span className="game-desc">
+            マップを すすんで ゴールへ！ たおすと レベルアップ
           </span>
         </button>
         <button

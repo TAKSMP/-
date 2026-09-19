@@ -1982,6 +1982,9 @@ input:focus {
 .game-card.battle {
   background: linear-gradient(160deg, #ffe0d6, #ffc4b0);
 }
+.game-card.story {
+  background: #e6dcff;
+}
 .game-card.race {
   background: linear-gradient(160deg, #d6ecff, #a9d3ff);
 }
@@ -3718,4 +3721,315 @@ input:focus {
     font-size: 14px;
     padding: 9px 6px;
   }
+}
+
+/* =========================================================
+   ストーリーモード（マップを すすむ）
+   ========================================================= */
+.story {
+  padding-bottom: 12px;
+}
+.story-lead {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.7;
+  background: rgba(255, 255, 255, 0.75);
+  border-radius: 14px;
+  padding: 8px 10px;
+  margin: 0 0 10px;
+}
+
+/* --- ①虫えらび --- */
+.story-bug-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.story-bug {
+  border: 3px solid transparent;
+  background: var(--card);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 8px;
+  font-family: inherit;
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  min-width: 0;
+}
+.story-bug:active {
+  transform: translateY(2px);
+}
+.story-bug img {
+  width: 76px;
+  height: 76px;
+  border-radius: 16px;
+  object-fit: cover;
+}
+.story-bug-name {
+  font-weight: 900;
+  font-size: 12px;
+  text-align: center;
+  line-height: 1.3;
+}
+.story-bug-lv {
+  font-weight: 900;
+  font-size: 12px;
+  color: #5a4600;
+  background: var(--yellow);
+  border-radius: 999px;
+  padding: 1px 10px;
+}
+.story-bug-stats {
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.8;
+}
+
+/* --- ②マップえらび --- */
+.story-map-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.story-map {
+  border: none;
+  background: var(--card);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 8px;
+  font-family: inherit;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  text-align: left;
+}
+.story-map:active {
+  transform: translateY(2px);
+}
+.story-map-thumb {
+  position: relative;
+  width: 84px;
+  height: 56px;
+  flex: none;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.story-map-body {
+  min-width: 0;
+}
+.story-map-name {
+  display: block;
+  font-weight: 900;
+  font-size: 14px;
+}
+.story-map-sub {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.75;
+}
+
+/* --- ③マップ本体 --- */
+.story-hud {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--card);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 6px 8px;
+  margin-bottom: 8px;
+}
+.story-hud-photo {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  object-fit: cover;
+  flex: none;
+}
+.story-hud-body {
+  flex: 1;
+  min-width: 0;
+}
+.story-hud-name {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+.story-exp {
+  display: block;
+  height: 8px;
+  background: #e6e0cf;
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 3px 0 2px;
+}
+.story-exp-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #ffd23f, #ffb03a);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+.story-hud-sub {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.75;
+}
+.story-hud-back {
+  flex: none;
+  font-size: 18px;
+  padding: 6px 10px;
+}
+.story-notice {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+  background: #fff6d6;
+  border-radius: 12px;
+  padding: 7px 10px;
+}
+
+.story-board {
+  position: relative;
+  width: 100%;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  border: 4px solid #fff;
+}
+.park-scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+/* マスを ならべる うちがわの わく（アイコンが はみ出ないように よゆうを とる） */
+.story-grid {
+  position: absolute;
+  left: 7%;
+  right: 7%;
+  top: 18%;
+  bottom: 8%;
+}
+.story-paths {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.story-cell {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 19%;
+  aspect-ratio: 1;
+  border: 3px solid #fff;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0;
+  cursor: pointer;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.story-cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.story-cell-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+.story-cell-check {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  font-size: 15px;
+  line-height: 1;
+}
+.story-cell.cleared img {
+  filter: grayscale(0.7);
+  opacity: 0.75;
+}
+.story-cell.locked {
+  filter: brightness(0.75) saturate(0.5);
+}
+.story-cell.here {
+  border-color: var(--yellow);
+  box-shadow: 0 0 0 3px rgba(255, 210, 63, 0.8);
+}
+/* じぶんの アイコン（虫の「目」の 絵文字） */
+.story-me {
+  position: absolute;
+  transform: translate(-50%, -115%);
+  font-size: 26px;
+  line-height: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
+  transition: left 0.5s cubic-bezier(0.3, 0.9, 0.4, 1),
+    top 0.5s cubic-bezier(0.3, 0.9, 0.4, 1);
+  z-index: 3;
+}
+.story-me.moving {
+  animation: story-hop 0.5s ease;
+}
+@keyframes story-hop {
+  0%, 100% { transform: translate(-50%, -115%) scale(1); }
+  50% { transform: translate(-50%, -150%) scale(1.15); }
+}
+.story-help {
+  margin: 8px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  opacity: 0.8;
+}
+
+/* --- さいせんの かくにん --- */
+.story-ask h3 {
+  margin: 0 0 6px;
+  font-size: 17px;
+}
+.story-ask p {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.6;
+  margin: 0 0 12px;
+}
+
+/* --- ⑤クリア --- */
+.story-clear {
+  text-align: center;
+  padding: 20px 12px;
+}
+.story-clear-bug {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 12px 0 18px;
+  font-size: 14px;
+  font-weight: 800;
+}
+.story-clear-bug img {
+  width: 76px;
+  height: 76px;
+  border-radius: 18px;
+  object-fit: cover;
+  box-shadow: var(--shadow);
 }
