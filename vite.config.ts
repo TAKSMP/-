@@ -7,5 +7,9 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    // Mac の名前（〜.local）でも つなげるように する。
+    // IPは Wi-Fi が かわると 変わってしまうので、名前で つないだ ほうが
+    // ブラウザの ほぞんデータ（ずかん）も そのまま のこる。
+    allowedHosts: ['.local'],
   },
 })
