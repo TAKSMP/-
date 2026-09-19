@@ -6,8 +6,9 @@
 //  ・倒すと けいけんち が たまり、レベルが あがると つよくなる
 //  ここは けいさんだけ。みため（絵）は StoryPage 側。
 // =============================================================
-import type { CaughtBug } from '../types'
-import { battleStatsV2 } from './battleSetup'
+import type { CaughtBug, SpecialMoveV2 } from '../types'
+import { battleStatsV2, tagsOf, usesFor } from './battleSetup'
+import { MOVE_LIBRARY } from './moveLibrary'
 import { assignEncounters } from '../data/encounters'
 
 const SAVE_KEY = 'chomushi.story.v1'
@@ -224,9 +225,10 @@ export interface StorySave {
   cleared: Record<string, string[]> // マップ → たおした マス
   goal: Record<string, boolean> // マップ → ゴールに ついたか
   seen: Record<string, string[]> // マップ → もう 出会った マス（しゃしんを 見せる）
+  moves?: Record<string, SpecialMoveV2[]> // 虫のID → おぼえなおした わざ3つ
 }
 
-const emptySave = (): StorySave => ({ levels: {}, cleared: {}, goal: {}, seen: {} })
+const emptySave = (): StorySave => ({ levels: {}, cleared: {}, goal: {}, seen: {}, moves: {} })
 
 export function loadStory(): StorySave {
   try {
@@ -238,6 +240,7 @@ export function loadStory(): StorySave {
       cleared: d.cleared ?? {},
       goal: d.goal ?? {},
       seen: d.seen ?? {},
+      moves: d.moves ?? {},
     }
   } catch {
     return emptySave()
@@ -353,13 +356,70 @@ export function resetStage(save: StorySave, stageId: string): StorySave {
 // 虫の レベルを 1に もどす（すすみぐあいは そのまま）
 export function resetLevel(save: StorySave, bugId: string): StorySave {
   const levels = { ...save.levels }
+  const moves = { ...(save.moves ?? {}) }
   delete levels[bugId]
-  return { ...save, levels }
+  delete moves[bugId] // おぼえた わざも もとに もどす
+  return { ...save, levels, moves }
 }
 
 // ぜんぶの虫の レベルを 1に もどす
 export function resetAllLevels(save: StorySave): StorySave {
-  return { ...save, levels: {} }
+  return { ...save, levels: {}, moves: {} }
+}
+
+// -------------------------------------------------------------
+//  わざを おぼえる（レベルが 2あがるごとに 1つ）
+// -------------------------------------------------------------
+export const LEARN_EVERY = 2
+
+// いまの わざ3つ（おぼえなおして いれば そっち）
+export function movesOf(save: StorySave, bug: CaughtBug): SpecialMoveV2[] {
+  return save.moves?.[bug.id] ?? battleStatsV2(bug).moves
+}
+
+export function setMoves(
+  save: StorySave,
+  bugId: string,
+  moves: SpecialMoveV2[],
+): StorySave {
+  return { ...save, moves: { ...(save.moves ?? {}), [bugId]: moves } }
+}
+
+// レベルが あがった とき、わざを おぼえられる レベルを またいだか
+// （またいだ なかで いちばん たかい レベルを かえす）
+export function learnLevelCrossed(before: number, after: number): number | null {
+  for (let lv = after; lv > before; lv--) {
+    if (lv % LEARN_EVERY === 0) return lv
+  }
+  return null
+}
+
+// その虫に にあう、まだ もっていない わざを 1つ えらぶ
+export function newMoveFor(
+  bug: CaughtBug,
+  level: number,
+  known: SpecialMoveV2[],
+): SpecialMoveV2 | null {
+  const knownIds = new Set(known.map((m) => m.id))
+  const knownNames = new Set(known.map((m) => m.name))
+  const tags = tagsOf(bug)
+  let pool = MOVE_LIBRARY.filter(
+    (m) => !knownIds.has(m.id) && !knownNames.has(m.name),
+  )
+  if (pool.length === 0) return null
+  // レベルが ひくいうちは つよすぎる わざは 出さない
+  const maxPower = 40 + level * 14
+  const soft = pool.filter((m) => m.power <= maxPower)
+  if (soft.length > 0) pool = soft
+  const seed = hashStr(`${bug.id}/${level}`)
+  const scored = pool
+    .map((m, i) => ({
+      m,
+      s: m.tags.filter((t) => tags.includes(t)).length * 100 + ((seed >>> (i % 8)) % 37),
+    }))
+    .sort((a, b) => b.s - a.s)
+  const pick = scored[0].m
+  return { ...pick, uses: usesFor(pick) }
 }
 
 // しゃしんを あかす（一度 出会った マス）

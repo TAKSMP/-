@@ -26,10 +26,13 @@ import {
   expToNext,
   isCleared,
   isSeen,
+  learnLevelCrossed,
   levelOf,
   markSeen,
   loadStory,
   markCleared,
+  movesOf,
+  newMoveFor,
   questId,
   questUnlocked,
   QUEST_MAPS,
@@ -39,12 +42,14 @@ import {
   resetLevel,
   resetStage,
   saveStory,
+  setMoves,
   statsWithLevel,
   storyPlaces,
   type StoryCell,
   type StoryStage,
   type StorySave,
 } from '../lib/story'
+import type { SpecialMoveV2 } from '../types'
 
 interface Props {
   bugs: CaughtBug[]
@@ -81,6 +86,11 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   // レベルを もどす かくにん（bugId が '*' なら ぜんぶ）
   const [askLevel, setAskLevel] = useState<{ bugId: string; name: string } | null>(null)
   // レベルアップした ときの「なにが どう かわったか」
+  // あたらしい わざを おぼえる（レベル2ごと）
+  const [learn, setLearn] = useState<{
+    move: SpecialMoveV2
+    current: SpecialMoveV2[]
+  } | null>(null)
   const [levelUp, setLevelUp] = useState<{
     name: string
     photo: string
@@ -126,6 +136,8 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     setAskAgain(null)
     setEncounterCell(null)
     setGoFlash(false)
+    setLearn(null)
+    setLevelUp(null)
     setNotice(null)
   }
 
@@ -143,6 +155,21 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     setNotice(null)
   }
 
+  // あたらしい わざと とりかえる
+  function swapMove(index: number) {
+    if (!myBug || !learn) return
+    sfx.special('attackUp')
+    const next = setMoves(
+      save,
+      myBug.id,
+      learn.current.map((m, i) => (i === index ? learn.move : m)),
+    )
+    setSave(next)
+    saveStory(next)
+    setNotice(`✨ 「${learn.move.name}」を おぼえた！`)
+    setLearn(null)
+  }
+
   // 虫の レベルを 1に もどす
   function doResetLevel(bugId: string) {
     const next = bugId === '*' ? resetAllLevels(save) : resetLevel(save, bugId)
@@ -150,6 +177,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     saveStory(next)
     setAskLevel(null)
     setLevelUp(null)
+    setLearn(null)
     sfx.tap()
   }
 
@@ -235,7 +263,13 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     if (!enemy) return
     const myLv = levelOf(save, myBug.id).level
     const enemyLv = cell.level ?? 1
-    const me = makeFighter(myBug, statsWithLevel(myBug, myLv), 'me0', 'me', mainPhoto(myBug))
+    const me = makeFighter(
+      myBug,
+      { ...statsWithLevel(myBug, myLv), moves: movesOf(save, myBug) },
+      'me0',
+      'me',
+      mainPhoto(myBug),
+    )
     const foe = makeFighter(enemy, statsWithLevel(enemy, enemyLv), 'foe0', 'foe', mainPhoto(enemy))
     setFighters([me, foe])
     setBattleCell(cell)
@@ -280,6 +314,13 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
             ],
           })
           setTimeout(() => sfx.badge(), 200)
+          // レベルが 2あがる ごとに、あたらしい わざを 1つ おぼえられる
+          const learnLv = learnLevelCrossed(res.before.level, res.after.level)
+          if (learnLv !== null) {
+            const cur = movesOf(next, myBug)
+            const nm = newMoveFor(myBug, learnLv, cur)
+            if (nm) setLearn({ move: nm, current: cur })
+          }
         }
       }
       setSave(next)
@@ -317,6 +358,49 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
             やめる
           </button>
         </div>
+      </div>
+    </div>
+  )
+
+  const moveLabel = (m: SpecialMoveV2) =>
+    m.kind === 'attack' ? `いりょく${m.power}` : 'へんかわざ'
+
+  const learnModal = learn && !levelUp && (
+    <div className="modal-backdrop">
+      <div className="modal story-learn" onClick={(e) => e.stopPropagation()}>
+        <div className="story-levelup-emoji">✨</div>
+        <h3>あたらしい わざを おぼえられる！</h3>
+        <div className="story-learn-new">
+          <span className="story-learn-emoji">{learn.move.emoji ?? '✨'}</span>
+          <span className="story-learn-name">{learn.move.name}</span>
+          <span className="story-learn-sub">
+            {moveLabel(learn.move)}／{learn.move.uses}かい つかえる
+          </span>
+          <p className="story-learn-desc">{learn.move.desc}</p>
+        </div>
+        <p className="story-learn-q">どの わざと とりかえる？</p>
+        <div className="story-learn-list">
+          {learn.current.map((m, i) => (
+            <button key={m.id + i} className="story-learn-old" onClick={() => swapMove(i)}>
+              <span className="story-learn-old-name">
+                {m.emoji ?? '✨'} {m.name}
+              </span>
+              <span className="story-learn-old-sub">
+                {moveLabel(m)}／{m.uses}かい
+              </span>
+            </button>
+          ))}
+        </div>
+        <button
+          className="btn btn-big"
+          onClick={() => {
+            sfx.tap()
+            setNotice('いまの わざの ままに した。')
+            setLearn(null)
+          }}
+        >
+          おぼえない
+        </button>
       </div>
     </div>
   )
@@ -797,6 +881,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
         )}
         {resetModal}
         {levelUpModal}
+        {learnModal}
       </div>
     )
   }
