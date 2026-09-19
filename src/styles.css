@@ -4228,3 +4228,99 @@ input:focus {
   margin-top: 12px;
   font-size: 13px;
 }
+
+/* --- レベルアップの おしらせ --- */
+.story-levelup {
+  text-align: center;
+}
+.story-levelup-emoji {
+  font-size: 46px;
+  line-height: 1;
+  animation: lvup-pop 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.5);
+}
+@keyframes lvup-pop {
+  0% { transform: scale(0.3) rotate(-20deg); opacity: 0; }
+  60% { transform: scale(1.25) rotate(8deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); }
+}
+.story-levelup h3 {
+  margin: 4px 0 12px;
+  font-size: 20px;
+}
+.story-levelup-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.6;
+  text-align: left;
+}
+.story-levelup-head img {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  object-fit: cover;
+  box-shadow: var(--shadow);
+}
+.story-levelup-new {
+  color: #e8890b;
+  font-size: 17px;
+}
+.story-arrow {
+  color: #9aa88a;
+  font-size: 11px;
+}
+.story-statlist {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.story-statlist li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  border-bottom: 2px dashed rgba(0, 0, 0, 0.07);
+}
+.story-statlist li:last-child {
+  border-bottom: none;
+}
+.story-statlist li.up {
+  background: #fff8dd;
+}
+.story-stat-name {
+  flex: none;
+}
+.story-stat-val {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.story-stat-val b {
+  font-size: 15px;
+}
+.story-stat-up {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 900;
+  color: #fff;
+  background: #7cc36a;
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+.story-stat-same {
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 700;
+  color: #9aa88a;
+}

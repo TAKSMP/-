@@ -80,6 +80,14 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   const [askReset, setAskReset] = useState<{ id: string; title: string } | null>(null)
   // レベルを もどす かくにん（bugId が '*' なら ぜんぶ）
   const [askLevel, setAskLevel] = useState<{ bugId: string; name: string } | null>(null)
+  // レベルアップした ときの「なにが どう かわったか」
+  const [levelUp, setLevelUp] = useState<{
+    name: string
+    photo: string
+    fromLv: number
+    toLv: number
+    rows: { label: string; emoji: string; from: number; to: number }[]
+  } | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const moveTimer = useRef<number | null>(null)
 
@@ -141,6 +149,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     setSave(next)
     saveStory(next)
     setAskLevel(null)
+    setLevelUp(null)
     sfx.tap()
   }
 
@@ -254,7 +263,24 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
         const res = addExp(next, myBug.id, gain)
         next = res.save
         msg = `🎉 かった！ +${gain} けいけんち`
-        if (res.levelUps > 0) msg += `／⭐ レベル ${res.after.level} に あがった！`
+        if (res.levelUps > 0) {
+          // レベルが あがったら、ステータスが どう かわったかを 見せる
+          const a = statsWithLevel(myBug, res.before.level)
+          const b = statsWithLevel(myBug, res.after.level)
+          setLevelUp({
+            name: myBug.name,
+            photo: mainPhoto(myBug),
+            fromLv: res.before.level,
+            toLv: res.after.level,
+            rows: [
+              { label: 'たいりょく', emoji: '❤️', from: a.hp, to: b.hp },
+              { label: 'こうげき', emoji: '⚔️', from: a.attack, to: b.attack },
+              { label: 'ぼうぎょ', emoji: '🛡️', from: a.defense, to: b.defense },
+              { label: 'すばやさ', emoji: '⚡', from: a.speed, to: b.speed },
+            ],
+          })
+          setTimeout(() => sfx.badge(), 200)
+        }
       }
       setSave(next)
       saveStory(next)
@@ -291,6 +317,47 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
             やめる
           </button>
         </div>
+      </div>
+    </div>
+  )
+
+  const levelUpModal = levelUp && (
+    <div className="modal-backdrop" onClick={() => setLevelUp(null)}>
+      <div className="modal story-levelup" onClick={(e) => e.stopPropagation()}>
+        <div className="story-levelup-emoji">⭐</div>
+        <h3>レベルアップ！</h3>
+        <div className="story-levelup-head">
+          <img src={levelUp.photo} alt={levelUp.name} />
+          <span>
+            <b>{levelUp.name}</b>
+            <br />
+            Lv {levelUp.fromLv} <span className="story-arrow">▶</span>{' '}
+            <b className="story-levelup-new">Lv {levelUp.toLv}</b>
+          </span>
+        </div>
+        <ul className="story-statlist">
+          {levelUp.rows.map((r) => {
+            const up = r.to - r.from
+            return (
+              <li key={r.label} className={up > 0 ? 'up' : ''}>
+                <span className="story-stat-name">
+                  {r.emoji} {r.label}
+                </span>
+                <span className="story-stat-val">
+                  {r.from} <span className="story-arrow">▶</span> <b>{r.to}</b>
+                  {up > 0 ? (
+                    <em className="story-stat-up">+{up}</em>
+                  ) : (
+                    <em className="story-stat-same">かわらず</em>
+                  )}
+                </span>
+              </li>
+            )
+          })}
+        </ul>
+        <button className="btn btn-big btn-primary" onClick={() => setLevelUp(null)}>
+          つよくなった！ 💪
+        </button>
       </div>
     </div>
   )
@@ -729,6 +796,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
           </div>
         )}
         {resetModal}
+        {levelUpModal}
       </div>
     )
   }
