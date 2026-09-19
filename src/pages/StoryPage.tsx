@@ -1,10 +1,10 @@
 // =============================================================
 //  ストーリーモード
 // -------------------------------------------------------------
-//  ①つかう虫を えらぶ → ②ばしょ（マップ）を えらぶ
-//  → ③マップを 1マスずつ すすむ → ④マスの虫と バトル
-//  → ⑤ゴールで ステージクリア
-//  たおすと けいけんち。レベルが あがると つよくなる。
+//  ①つかう虫を えらぶ（ずかんと おなじ もくじ）
+//  ②マップを えらぶ … 「ばしょ」から／「10マップ」から
+//  ③マップを 1マスずつ すすむ → ④マスの虫と バトル
+//  ⑤ゴールで ステージクリア
 // =============================================================
 import { useEffect, useRef, useState } from 'react'
 import type { CaughtBug } from '../types'
@@ -14,18 +14,30 @@ import { makeFighter, type Fighter } from '../lib/battleEngine'
 import { orderEmoji } from '../data/orders'
 import { ParkScene, parkName } from '../components/ParkScene'
 import { BattleStage, type BattleResult } from '../components/BattleStage'
+import { BugPicker } from '../components/BugPicker'
+import { findEncounter } from '../data/encounters'
 import { sfx } from '../lib/sound'
 import {
   addExp,
+  buildQuestStage,
   buildStage,
   currentIndex,
   expForWin,
   expToNext,
   isCleared,
+  isSeen,
   levelOf,
+  markSeen,
   loadStory,
   markCleared,
+  questId,
+  questUnlocked,
+  QUEST_MAPS,
+  QUEST_PER_MAP,
   reachableIndex,
+  resetAllLevels,
+  resetLevel,
+  resetStage,
   saveStory,
   statsWithLevel,
   storyPlaces,
@@ -39,7 +51,8 @@ interface Props {
   onGoCapture: () => void
 }
 
-type Phase = 'pickBug' | 'pickMap' | 'map' | 'battle' | 'clear'
+type Phase = 'pickBug' | 'pickMap' | 'map' | 'encounter' | 'battle' | 'clear'
+type MapMode = 'place' | 'quest'
 
 // マスの まんなかの いち（％）
 function cellPos(cell: StoryCell, stage: StoryStage) {
@@ -51,15 +64,22 @@ function cellPos(cell: StoryCell, stage: StoryStage) {
 
 export function StoryPage({ bugs, onGoCapture }: Props) {
   const [phase, setPhase] = useState<Phase>('pickBug')
+  const [mapMode, setMapMode] = useState<MapMode>('quest')
   const [myBug, setMyBug] = useState<CaughtBug | null>(null)
   const [stage, setStage] = useState<StoryStage | null>(null)
   const [save, setSave] = useState<StorySave>(() => loadStory())
   const [pos, setPos] = useState(0)
   const [moving, setMoving] = useState(false)
   const [battleCell, setBattleCell] = useState<StoryCell | null>(null)
+  // であいの おはなし
+  const [encounterCell, setEncounterCell] = useState<StoryCell | null>(null)
+  const [goFlash, setGoFlash] = useState(false)
   const [fighters, setFighters] = useState<Fighter[] | null>(null)
   const [battleKey, setBattleKey] = useState(0)
   const [askAgain, setAskAgain] = useState<StoryCell | null>(null)
+  const [askReset, setAskReset] = useState<{ id: string; title: string } | null>(null)
+  // レベルを もどす かくにん（bugId が '*' なら ぜんぶ）
+  const [askLevel, setAskLevel] = useState<{ bugId: string; name: string } | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const moveTimer = useRef<number | null>(null)
 
@@ -96,6 +116,8 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     setBattleCell(null)
     setFighters(null)
     setAskAgain(null)
+    setEncounterCell(null)
+    setGoFlash(false)
     setNotice(null)
   }
 
@@ -105,41 +127,53 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     setPhase('pickMap')
   }
 
-  function pickMap(place: string) {
+  function openStage(st: StoryStage) {
     sfx.tap()
-    const st = buildStage(bugs, place)
     setStage(st)
-    // まえの つづきから（たおしつづけた ところまで）
     setPos(currentIndex(save, st))
     setPhase('map')
     setNotice(null)
   }
 
+  // 虫の レベルを 1に もどす
+  function doResetLevel(bugId: string) {
+    const next = bugId === '*' ? resetAllLevels(save) : resetLevel(save, bugId)
+    setSave(next)
+    saveStory(next)
+    setAskLevel(null)
+    sfx.tap()
+  }
+
+  // そのマップの すすみぐあいを まっさらに する
+  function doReset(id: string) {
+    const next = resetStage(save, id)
+    setSave(next)
+    saveStory(next)
+    setAskReset(null)
+    sfx.tap()
+    if (stage && stage.id === id) setPos(0)
+  }
+
   // ── マスを タップ
   function tapCell(cell: StoryCell) {
     if (!stage || moving) return
-    // いま いる マスを もう一度 → さいせん を きく
     if (cell.index === pos) {
       if (cell.kind !== 'battle') return
-      if (isCleared(save, stage.place, cell)) {
+      if (isCleared(save, stage.id, cell)) {
         sfx.tap()
         setAskAgain(cell)
       } else {
-        // まだ たおしていない敵の マスに いる ＝ もう一度 いどむ
         sfx.tap()
         startBattle(cell)
       }
       return
     }
-    // となりの マスだけ うごける
     if (Math.abs(cell.index - pos) !== 1) {
       sfx.error()
       setNotice('となりの マスに しか うごけないよ')
       return
     }
-    // まだ たおしていない虫が いる マスより さきへは いけない
-    const maxReach = reachableIndex(save, stage)
-    if (cell.index > maxReach) {
+    if (cell.index > reachableIndex(save, stage)) {
       sfx.error()
       setNotice('まだ ここまでは いけないよ')
       return
@@ -148,7 +182,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     moveTo(cell)
   }
 
-  // 1マスぶん うごく（アイコンが すすむ あいだ まつ）
+  // 1マスぶん うごく
   function moveTo(cell: StoryCell) {
     if (!stage) return
     sfx.tap()
@@ -160,18 +194,27 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     }, 520)
   }
 
-  // マスに ついた ときの しょり
   function arrive(cell: StoryCell) {
     if (!stage) return
     if (cell.kind === 'goal') {
-      const next = markCleared(save, stage.place, cell)
+      const next = markCleared(save, stage.id, cell)
       setSave(next)
       saveStory(next)
       sfx.win()
       setPhase('clear')
       return
     }
-    if (cell.kind === 'battle' && !isCleared(save, stage.place, cell)) {
+    if (cell.kind === 'battle' && !isCleared(save, stage.id, cell)) {
+      // はじめて 出会う虫は おはなし → しゃしんが あかされる → バトル
+      if (!isSeen(save, stage.id, cell)) {
+        const next = markSeen(save, stage.id, cell)
+        setSave(next)
+        saveStory(next)
+        setEncounterCell(cell)
+        setGoFlash(false)
+        setPhase('encounter')
+        return
+      }
       startBattle(cell)
     }
   }
@@ -181,13 +224,16 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     if (!myBug || !stage || !cell.bugId) return
     const enemy = bugs.find((b) => b.id === cell.bugId)
     if (!enemy) return
-    const lv = levelOf(save, myBug.id).level
-    const me = makeFighter(myBug, statsWithLevel(myBug, lv), 'me0', 'me', mainPhoto(myBug))
-    const foe = makeFighter(enemy, battleStatsV2(enemy), 'foe0', 'foe', mainPhoto(enemy))
+    const myLv = levelOf(save, myBug.id).level
+    const enemyLv = cell.level ?? 1
+    const me = makeFighter(myBug, statsWithLevel(myBug, myLv), 'me0', 'me', mainPhoto(myBug))
+    const foe = makeFighter(enemy, statsWithLevel(enemy, enemyLv), 'foe0', 'foe', mainPhoto(enemy))
     setFighters([me, foe])
     setBattleCell(cell)
     setBattleKey((k) => k + 1)
     setAskAgain(null)
+    setEncounterCell(null)
+    setGoFlash(false)
     setPhase('battle')
   }
 
@@ -196,13 +242,15 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     if (!myBug || !stage || !battleCell) return
     if (r.winner === 'me') {
       const enemy = bugs.find((b) => b.id === battleCell.bugId)
-      const first = !isCleared(save, stage.place, battleCell)
-      let next = markCleared(save, stage.place, battleCell)
+      const first = !isCleared(save, stage.id, battleCell)
+      let next = markCleared(save, stage.id, battleCell)
       let msg = '🎉 かった！'
       if (enemy) {
         const lv = levelOf(next, myBug.id).level
-        // 2かいめ いこうは けいけんちが はんぶん
-        const gain = Math.max(1, Math.round(expForWin(enemy, lv) * (first ? 1 : 0.5)))
+        const gain = Math.max(
+          1,
+          Math.round(expForWin(enemy, lv, battleCell.level ?? 1) * (first ? 1 : 0.5)),
+        )
         const res = addExp(next, myBug.id, gain)
         next = res.save
         msg = `🎉 かった！ +${gain} けいけんち`
@@ -212,8 +260,6 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
       saveStory(next)
       setNotice(msg)
     } else {
-      // まけたら ひとつ まえの（たおしずみの）マスに もどる。
-      // そのままだと 敵マスの 上に 立ったままで うごけなくなる。
       setPos(currentIndex(save, stage))
       setNotice('😢 まけちゃった… レベルを あげて もういちど！')
     }
@@ -227,7 +273,55 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   const myLevel = myBug ? levelOf(save, myBug.id) : { level: 1, exp: 0 }
   const need = expToNext(myLevel.level)
 
-  // ① 虫えらび
+  // リセットの かくにん（どの がめんでも 出す）
+  const resetModal = askReset && (
+    <div className="modal-backdrop" onClick={() => setAskReset(null)}>
+      <div className="modal story-ask" onClick={(e) => e.stopPropagation()}>
+        <h3>すすみぐあいを リセット する？</h3>
+        <p>
+          「{askReset.title}」を さいしょから やりなおします。
+          <br />
+          虫の レベルは そのままです。
+        </p>
+        <div className="battle-result-actions">
+          <button className="btn btn-big btn-primary" onClick={() => doReset(askReset.id)}>
+            リセットする 🔄
+          </button>
+          <button className="btn btn-big" onClick={() => setAskReset(null)}>
+            やめる
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+
+  const levelModal = askLevel && (
+    <div className="modal-backdrop" onClick={() => setAskLevel(null)}>
+      <div className="modal story-ask" onClick={(e) => e.stopPropagation()}>
+        <h3>レベルを 1に もどす？</h3>
+        <p>
+          {askLevel.bugId === '*'
+            ? 'ぜんぶの虫の レベルと けいけんちが 1に もどります。'
+            : `「${askLevel.name}」の レベルと けいけんちが 1に もどります。`}
+          <br />
+          マップの すすみぐあいは そのままです。
+        </p>
+        <div className="battle-result-actions">
+          <button
+            className="btn btn-big btn-primary"
+            onClick={() => doResetLevel(askLevel.bugId)}
+          >
+            もどす 🔄
+          </button>
+          <button className="btn btn-big" onClick={() => setAskLevel(null)}>
+            やめる
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+
+  // ① 虫えらび（ずかんと おなじ もくじ）
   if (phase === 'pickBug') {
     return (
       <div className="story">
@@ -235,22 +329,48 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
         <p className="story-lead">
           えらんだ虫で マップを すすむよ。たおすと <b>レベル</b> が あがって つよくなる！
         </p>
-        <div className="story-bug-grid">
-          {bugs.map((b) => {
+        <BugPicker
+          bugs={bugs}
+          onPick={pickBug}
+          renderCard={(b) => {
             const lv = levelOf(save, b.id)
             const s = battleStatsV2(b)
             return (
-              <button key={b.id} className="story-bug" onClick={() => pickBug(b)}>
+              <div className="story-bug">
                 <img src={mainPhoto(b)} alt={b.name} />
                 <span className="story-bug-name">{b.name}</span>
                 <span className="story-bug-lv">Lv {lv.level}</span>
                 <span className="story-bug-stats">
                   ❤️{s.hp} ⚔️{s.attack} 🛡️{s.defense} ⚡{s.speed}
                 </span>
-              </button>
+                {(lv.level > 1 || lv.exp > 0) && (
+                  <button
+                    className="story-lv-reset"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      sfx.tap()
+                      setAskLevel({ bugId: b.id, name: b.name })
+                    }}
+                  >
+                    🔄 Lvを もどす
+                  </button>
+                )}
+              </div>
             )
-          })}
-        </div>
+          }}
+        />
+        {Object.keys(save.levels).length > 0 && (
+          <button
+            className="btn btn-ghost story-lv-reset-all"
+            onClick={() => {
+              sfx.tap()
+              setAskLevel({ bugId: '*', name: '' })
+            }}
+          >
+            🔄 ぜんぶの虫の レベルを もどす
+          </button>
+        )}
+        {levelModal}
       </div>
     )
   }
@@ -260,41 +380,167 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     return (
       <div className="story">
         <h2 className="battle-step-title">② マップを えらぼう</h2>
-        <p className="story-lead">
-          マップは <b>「みつけたばしょ」</b>。そこで みつけた虫が てきに なるよ。
-        </p>
-        {places.length === 0 ? (
-          <p className="pick-so-far">
-            まだ「みつけたばしょ」が ないみたい。ずかんで ばしょを 書くと マップが ふえるよ。
-          </p>
+        <div className="foe-mode">
+          <button
+            className={'chip' + (mapMode === 'quest' ? ' on' : '')}
+            onClick={() => { sfx.tap(); setMapMode('quest') }}
+          >
+            🏞️ 10マップ
+          </button>
+          <button
+            className={'chip' + (mapMode === 'place' ? ' on' : '')}
+            onClick={() => { sfx.tap(); setMapMode('place') }}
+          >
+            📍 みつけたばしょ
+          </button>
+        </div>
+
+        {mapMode === 'quest' ? (
+          <>
+            <p className="story-lead">
+              あつめた虫 ぜんいんが あいて。1マップ {QUEST_PER_MAP}ひき、
+              すすむほど <b>つよい虫・たかいレベル</b> が 出てくるよ。
+            </p>
+            <div className="story-map-list">
+              {Array.from({ length: QUEST_MAPS }, (_, i) => {
+                const id = questId(i)
+                const open = questUnlocked(save, i)
+                const st = buildQuestStage(bugs, i)
+                const done = (save.cleared[id] ?? []).length
+                const goal = !!save.goal[id]
+                const maxLv = Math.max(...st.cells.map((c) => c.level ?? 0))
+                return (
+                  <div key={id} className={'story-map-row' + (open ? '' : ' locked')}>
+                    <button
+                      className="story-map"
+                      disabled={!open}
+                      onClick={() => openStage(st)}
+                    >
+                      <span className="story-map-thumb">
+                        <ParkScene index={st.sceneIndex} fit="meet" />
+                        {!open && <span className="story-map-lock">🔒</span>}
+                      </span>
+                      <span className="story-map-body">
+                        <span className="story-map-name">
+                          {goal && '🏆 '}
+                          {st.title}
+                        </span>
+                        <span className="story-map-sub">
+                          {parkName(st.sceneIndex)}／てき {QUEST_PER_MAP}ひき（さいだい Lv{maxLv}）
+                        </span>
+                        <span className="story-map-sub">
+                          {open ? `たおした ${done}／${QUEST_PER_MAP}` : 'まえの ステージを クリアすると あくよ'}
+                        </span>
+                      </span>
+                    </button>
+                    {open && (done > 0 || goal) && (
+                      <button
+                        className="story-reset"
+                        onClick={() => { sfx.tap(); setAskReset({ id, title: st.title }) }}
+                        title="すすみぐあいを リセット"
+                      >
+                        🔄
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </>
         ) : (
-          <div className="story-map-list">
-            {places.map((p) => {
-              const st = buildStage(bugs, p.place)
-              const done = (save.cleared[p.place] ?? []).length
-              const goal = !!save.goal[p.place]
-              return (
-                <button key={p.place} className="story-map" onClick={() => pickMap(p.place)}>
-                  <span className="story-map-thumb">
-                    <ParkScene index={st.sceneIndex} fit="meet" />
-                  </span>
-                  <span className="story-map-body">
-                    <span className="story-map-name">
-                      {goal && '🏆 '}
-                      {p.place}
-                    </span>
-                    <span className="story-map-sub">
-                      {parkName(st.sceneIndex)}／てき {p.count}ひき（たおした {done}）
-                    </span>
-                  </span>
-                </button>
-              )
-            })}
-          </div>
+          <>
+            <p className="story-lead">
+              マップは <b>「みつけたばしょ」</b>。そこで みつけた虫が てきに なるよ。
+            </p>
+            {places.length === 0 ? (
+              <p className="pick-so-far">
+                まだ「みつけたばしょ」が ないみたい。ずかんで ばしょを 書くと マップが ふえるよ。
+              </p>
+            ) : (
+              <div className="story-map-list">
+                {places.map((p) => {
+                  const st = buildStage(bugs, p.place)
+                  const done = (save.cleared[st.id] ?? []).length
+                  const goal = !!save.goal[st.id]
+                  return (
+                    <div key={p.place} className="story-map-row">
+                      <button className="story-map" onClick={() => openStage(st)}>
+                        <span className="story-map-thumb">
+                          <ParkScene index={st.sceneIndex} fit="meet" />
+                        </span>
+                        <span className="story-map-body">
+                          <span className="story-map-name">
+                            {goal && '🏆 '}
+                            {p.place}
+                          </span>
+                          <span className="story-map-sub">
+                            {parkName(st.sceneIndex)}／てき {p.count}ひき（たおした {done}）
+                          </span>
+                        </span>
+                      </button>
+                      {(done > 0 || goal) && (
+                        <button
+                          className="story-reset"
+                          onClick={() => { sfx.tap(); setAskReset({ id: st.id, title: p.place }) }}
+                          title="すすみぐあいを リセット"
+                        >
+                          🔄
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </>
         )}
         <button className="btn btn-ghost battle-back" onClick={reset}>
           ← 虫を えらびなおす
         </button>
+        {resetModal}
+      </div>
+    )
+  }
+
+  // ③.5 であいの おはなし
+  if (phase === 'encounter' && stage && encounterCell) {
+    const enemy = bugs.find((b) => b.id === encounterCell.bugId)
+    const enc = findEncounter(encounterCell.encounterId)
+    const lv = encounterCell.level ?? 1
+    return (
+      <div className="story-encounter">
+        <ParkScene index={stage.sceneIndex} />
+        <div className="story-enc-inner">
+          <div className="story-enc-emoji">{enc?.emoji ?? '❗'}</div>
+          <p className="story-enc-text">
+            {enc && enemy ? enc.text(enemy.name) : 'てきが あらわれた！'}
+          </p>
+          {enemy && (
+            <div className="story-enc-bug">
+              <img src={mainPhoto(enemy)} alt={enemy.name} />
+              <span className="story-enc-name">
+                {enemy.name}
+                {lv > 1 && <b> Lv{lv}</b>}
+              </span>
+            </div>
+          )}
+          <button
+            className="btn btn-big btn-primary story-enc-go"
+            onClick={() => {
+              if (goFlash) return
+              setGoFlash(true)
+              sfx.battleStart()
+              window.setTimeout(() => startBattle(encounterCell), 950)
+            }}
+          >
+            バトル かいし ⚔️
+          </button>
+        </div>
+        {goFlash && (
+          <div className="story-go">
+            <span>バトル かいし！</span>
+          </div>
+        )}
       </div>
     )
   }
@@ -321,11 +567,13 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
 
   // ⑤ クリア
   if (phase === 'clear' && stage && myBug) {
+    const questIndex = stage.kind === 'quest' ? Number(stage.id.split(':')[1]) : -1
+    const hasNext = questIndex >= 0 && questIndex + 1 < QUEST_MAPS
     return (
       <div className="story-clear">
         <div className="battle-result-emoji">🏆</div>
         <h2>ステージクリア！</h2>
-        <p className="battle-result-sub">{stage.place}</p>
+        <p className="battle-result-sub">{stage.title}</p>
         <div className="story-clear-bug">
           <img src={mainPhoto(myBug)} alt={myBug.name} />
           <div>
@@ -335,11 +583,19 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
           </div>
         </div>
         <div className="battle-result-actions">
-          <button className="btn btn-big btn-primary" onClick={() => setPhase('pickMap')}>
+          {hasNext && (
+            <button
+              className="btn btn-big btn-primary"
+              onClick={() => openStage(buildQuestStage(bugs, questIndex + 1))}
+            >
+              つぎの ステージへ ▶
+            </button>
+          )}
+          <button className="btn btn-big" onClick={() => setPhase('pickMap')}>
             べつの マップへ 🗺️
           </button>
           <button className="btn btn-big" onClick={reset}>
-            さいしょから ⚔️
+            虫を えらびなおす ⚔️
           </button>
         </div>
       </div>
@@ -353,7 +609,6 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     const mePos = cellPos(me, stage)
     return (
       <div className="story">
-        {/* うえの おび：じぶんの虫と レベル */}
         <div className="story-hud">
           <img className="story-hud-photo" src={mainPhoto(myBug)} alt={myBug.name} />
           <div className="story-hud-body">
@@ -361,10 +616,22 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
               {myBug.name} <b>Lv {myLevel.level}</b>
             </span>
             <span className="story-exp">
-              <span className="story-exp-fill" style={{ width: `${Math.min(100, (myLevel.exp / need) * 100)}%` }} />
+              <span
+                className="story-exp-fill"
+                style={{ width: `${Math.min(100, (myLevel.exp / need) * 100)}%` }}
+              />
             </span>
-            <span className="story-hud-sub">けいけんち {myLevel.exp}/{need}</span>
+            <span className="story-hud-sub">
+              {stage.title}／けいけんち {myLevel.exp}/{need}
+            </span>
           </div>
+          <button
+            className="btn btn-ghost story-hud-back"
+            onClick={() => { sfx.tap(); setAskReset({ id: stage.id, title: stage.title }) }}
+            title="このマップを リセット"
+          >
+            🔄
+          </button>
           <button className="btn btn-ghost story-hud-back" onClick={() => setPhase('pickMap')}>
             🗺️
           </button>
@@ -372,67 +639,69 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
 
         {notice && <p className="story-notice">{notice}</p>}
 
-        {/* マップ本体 */}
-        <div
-          className="story-board"
-          style={{ aspectRatio: `${stage.cols} / ${stage.rows}` }}
-        >
+        <div className="story-board" style={{ aspectRatio: `${stage.cols} / ${stage.rows}` }}>
           <ParkScene index={stage.sceneIndex} />
 
           <div className="story-grid">
-          {/* マスを つなぐ みち */}
-          <svg className="story-paths" viewBox="0 0 100 100" preserveAspectRatio="none">
-            {stage.cells.slice(0, -1).map((c, i) => {
-              const a = cellPos(c, stage)
-              const b = cellPos(stage.cells[i + 1], stage)
+            <svg className="story-paths" viewBox="0 0 100 100" preserveAspectRatio="none">
+              {stage.cells.slice(0, -1).map((c, i) => {
+                const a = cellPos(c, stage)
+                const b = cellPos(stage.cells[i + 1], stage)
+                return (
+                  <line
+                    key={i}
+                    x1={a.left} y1={a.top} x2={b.left} y2={b.top}
+                    stroke="#f3e6bd" strokeWidth="5" strokeLinecap="round"
+                  />
+                )
+              })}
+            </svg>
+
+            {stage.cells.map((cell) => {
+              const p = cellPos(cell, stage)
+              const cleared = isCleared(save, stage.id, cell)
+              const enemy = cell.bugId ? bugs.find((b) => b.id === cell.bugId) : null
+              const locked = cell.index > maxReach
               return (
-                <line
-                  key={i}
-                  x1={a.left} y1={a.top} x2={b.left} y2={b.top}
-                  stroke="#f3e6bd" strokeWidth="5" strokeLinecap="round"
-                />
+                <button
+                  key={cell.index}
+                  className={
+                    'story-cell' +
+                    (cleared ? ' cleared' : '') +
+                    (locked ? ' locked' : '') +
+                    (cell.index === pos ? ' here' : '')
+                  }
+                  style={{ left: `${p.left}%`, top: `${p.top}%` }}
+                  onClick={() => tapCell(cell)}
+                  aria-label={
+                    enemy && isSeen(save, stage.id, cell) ? enemy.name : cell.kind
+                  }
+                >
+                  {cell.kind === 'start' && <span className="story-cell-icon">🏠</span>}
+                  {cell.kind === 'goal' && <span className="story-cell-icon">🏰</span>}
+                  {enemy &&
+                    (isSeen(save, stage.id, cell) ? (
+                      <>
+                        <img src={mainPhoto(enemy)} alt={enemy.name} />
+                        {(cell.level ?? 1) > 1 && (
+                          <span className="story-cell-lv">Lv{cell.level}</span>
+                        )}
+                        {cleared && <span className="story-cell-check">✅</span>}
+                      </>
+                    ) : (
+                      // まだ 出会っていない マスは かくしておく
+                      <span className="story-cell-icon hidden-cell">？</span>
+                    ))}
+                </button>
               )
             })}
-          </svg>
 
-          {/* マス */}
-          {stage.cells.map((cell) => {
-            const p = cellPos(cell, stage)
-            const cleared = isCleared(save, stage.place, cell)
-            const enemy = cell.bugId ? bugs.find((b) => b.id === cell.bugId) : null
-            const locked = cell.index > maxReach
-            return (
-              <button
-                key={cell.index}
-                className={
-                  'story-cell' +
-                  (cleared ? ' cleared' : '') +
-                  (locked ? ' locked' : '') +
-                  (cell.index === pos ? ' here' : '')
-                }
-                style={{ left: `${p.left}%`, top: `${p.top}%` }}
-                onClick={() => tapCell(cell)}
-                aria-label={enemy ? enemy.name : cell.kind}
-              >
-                {cell.kind === 'start' && <span className="story-cell-icon">🏠</span>}
-                {cell.kind === 'goal' && <span className="story-cell-icon">🏰</span>}
-                {enemy && (
-                  <>
-                    <img src={mainPhoto(enemy)} alt={enemy.name} />
-                    {cleared && <span className="story-cell-check">✅</span>}
-                  </>
-                )}
-              </button>
-            )
-          })}
-
-          {/* じぶん（虫の「目」の アイコン） */}
-          <span
-            className={'story-me' + (moving ? ' moving' : '')}
-            style={{ left: `${mePos.left}%`, top: `${mePos.top}%` }}
-          >
-            {orderEmoji(myBug.order)}
-          </span>
+            <span
+              className={'story-me' + (moving ? ' moving' : '')}
+              style={{ left: `${mePos.left}%`, top: `${mePos.top}%` }}
+            >
+              {orderEmoji(myBug.order)}
+            </span>
           </div>
         </div>
 
@@ -440,7 +709,6 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
           となりの マスを タップして すすもう。まだ たおしていない虫の マスに はいると バトル！
         </p>
 
-        {/* もういちど たたかう？ */}
         {askAgain && (
           <div className="modal-backdrop" onClick={() => setAskAgain(null)}>
             <div className="modal story-ask" onClick={(e) => e.stopPropagation()}>
@@ -460,11 +728,11 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
             </div>
           </div>
         )}
+        {resetModal}
       </div>
     )
   }
 
-  // ここには こない（ほけん）
   return (
     <div className="story">
       <button className="btn btn-big" onClick={reset}>さいしょから</button>

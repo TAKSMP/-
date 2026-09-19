@@ -4033,3 +4033,198 @@ input:focus {
   object-fit: cover;
   box-shadow: var(--shadow);
 }
+
+/* --- ストーリー：マップ一覧の リセットボタン・ロック・敵レベル --- */
+.story-map-row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+.story-map-row .story-map {
+  flex: 1;
+  min-width: 0;
+}
+.story-map-row.locked .story-map {
+  opacity: 0.55;
+}
+.story-map:disabled {
+  cursor: default;
+}
+.story-map-lock {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  background: rgba(0, 0, 0, 0.25);
+}
+.story-reset {
+  flex: none;
+  width: 44px;
+  border: none;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: var(--shadow);
+  font-size: 18px;
+  cursor: pointer;
+}
+.story-reset:active {
+  transform: translateY(2px);
+}
+.story-cell-lv {
+  position: absolute;
+  left: -2px;
+  top: -2px;
+  font-size: 9px;
+  font-weight: 900;
+  color: #fff;
+  background: #e86a5c;
+  border-radius: 999px;
+  padding: 1px 5px;
+  line-height: 1.3;
+}
+/* もくじの カードの 中に 入れる ストーリー用カード */
+.statcard-btn .story-bug {
+  background: var(--card);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+/* --- ストーリー：であいの おはなし --- */
+.story-cell-icon.hidden-cell {
+  font-size: 26px;
+  font-weight: 900;
+  color: #7a6a4a;
+}
+.story-encounter {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 4px solid #fff;
+  box-shadow: var(--shadow);
+  min-height: 420px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.story-enc-inner {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  padding: 18px 14px;
+  text-align: center;
+  animation: enc-in 0.45s ease;
+}
+@keyframes enc-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.story-enc-emoji {
+  font-size: 44px;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+.story-enc-text {
+  background: rgba(255, 255, 255, 0.94);
+  border-radius: 16px;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.9;
+  text-align: left;
+  margin: 0 0 14px;
+  box-shadow: var(--shadow);
+}
+.story-enc-bug {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  animation: enc-pop 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.4);
+}
+@keyframes enc-pop {
+  0% { opacity: 0; transform: scale(0.3) rotate(-12deg); }
+  60% { opacity: 1; transform: scale(1.12) rotate(3deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+.story-enc-bug img {
+  width: 120px;
+  height: 120px;
+  border-radius: 24px;
+  object-fit: cover;
+  border: 4px solid #fff;
+  box-shadow: var(--shadow);
+}
+.story-enc-name {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-weight: 900;
+  font-size: 14px;
+  box-shadow: var(--shadow);
+}
+.story-enc-name b {
+  color: #e86a5c;
+}
+.story-enc-go {
+  width: 100%;
+}
+/* 「バトル かいし！」の えんしゅつ */
+.story-go {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(30, 40, 20, 0.55);
+  animation: go-bg 0.95s ease forwards;
+}
+.story-go span {
+  font-size: 30px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 3px 0 #3f7a30, 0 6px 14px rgba(0, 0, 0, 0.5);
+  animation: go-text 0.95s cubic-bezier(0.2, 0.9, 0.3, 1.4);
+}
+@keyframes go-bg {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  100% { opacity: 1; }
+}
+@keyframes go-text {
+  0% { transform: scale(0.4) rotate(-8deg); opacity: 0; }
+  35% { transform: scale(1.25) rotate(3deg); opacity: 1; }
+  55% { transform: scale(1) rotate(0); }
+  100% { transform: scale(1.05); }
+}
+
+/* --- 虫の レベルを もどす ボタン --- */
+.story-lv-reset {
+  margin-top: 4px;
+  border: none;
+  background: #fff1f0;
+  color: #b4453a;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.story-lv-reset:active {
+  transform: translateY(1px);
+}
+.story-lv-reset-all {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  font-size: 13px;
+}
