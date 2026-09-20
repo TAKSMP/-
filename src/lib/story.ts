@@ -251,10 +251,18 @@ export interface StorySave {
   goal: Record<string, boolean> // マップ → ゴールに ついたか
   seen: Record<string, string[]> // マップ → もう 出会った マス（しゃしんを 見せる）
   moves?: Record<string, SpecialMoveV2[]> // 虫のID → おぼえなおした わざ3つ
-  party?: Record<string, string[]> // マップ → なかまに した虫のID
+  party?: Record<string, string[]> // （ふるい形）マップごとの なかま
+  cage?: string[] // むしかご：なかまに した虫の ID（ずっと のこる）
 }
 
-const emptySave = (): StorySave => ({ levels: {}, cleared: {}, goal: {}, seen: {}, moves: {}, party: {} })
+const emptySave = (): StorySave => ({
+  levels: {},
+  cleared: {},
+  goal: {},
+  seen: {},
+  moves: {},
+  cage: [],
+})
 
 export function loadStory(): StorySave {
   try {
@@ -267,7 +275,10 @@ export function loadStory(): StorySave {
       goal: d.goal ?? {},
       seen: d.seen ?? {},
       moves: d.moves ?? {},
-      party: d.party ?? {},
+      // ふるい形（マップごとの なかま）は むしかごに まとめて ひきつぐ
+      cage:
+        d.cage ??
+        Array.from(new Set(Object.values(d.party ?? {}).flat())),
     }
   } catch {
     return emptySave()
@@ -374,12 +385,11 @@ export function resetStage(save: StorySave, stageId: string): StorySave {
   const cleared = { ...save.cleared }
   const goal = { ...save.goal }
   const seen = { ...save.seen }
-  const party = { ...(save.party ?? {}) }
   delete cleared[stageId]
   delete goal[stageId]
   delete seen[stageId]
-  delete party[stageId] // なかまも いなくなる
-  return { ...save, cleared, goal, seen, party }
+  // むしかごの なかまは のこる（マップの すすみぐあいだけ もどす）
+  return { ...save, cleared, goal, seen }
 }
 
 // 虫の レベルを 1に もどす（すすみぐあいは そのまま）
@@ -426,24 +436,16 @@ export function movesOf(
 //  なかま（ステージの なかだけ いっしょに たたかう）
 // -------------------------------------------------------------
 export const RECRUIT_CHANCE = 0.25 // たおした あと なかまに なりたがる かくりつ
-export const MAX_PARTY = 1 // つれて あるける なかまの かず
 
-export function partyOf(save: StorySave, stageId: string): string[] {
-  return save.party?.[stageId] ?? []
+// むしかごの なかま（ずっと のこる）
+export function cageOf(save: StorySave): string[] {
+  return save.cage ?? []
 }
 
-export function addParty(
-  save: StorySave,
-  stageId: string,
-  bugId: string,
-  level: number,
-): StorySave {
-  const list = partyOf(save, stageId)
-  if (list.includes(bugId)) return save
-  const next: StorySave = {
-    ...save,
-    party: { ...(save.party ?? {}), [stageId]: [...list, bugId].slice(-MAX_PARTY) },
-  }
+// なかまに する（むしかごに いれる）
+export function addToCage(save: StorySave, bugId: string, level: number): StorySave {
+  if (cageOf(save).includes(bugId)) return save
+  const next: StorySave = { ...save, cage: [...cageOf(save), bugId] }
   // たたかった ときの レベルを ひきつぐ（はじめてなら）
   if (!next.levels[bugId]) {
     next.levels = { ...next.levels, [bugId]: { level: Math.max(1, level), exp: 0 } }
@@ -451,14 +453,9 @@ export function addParty(
   return next
 }
 
-export function removeParty(save: StorySave, stageId: string, bugId: string): StorySave {
-  return {
-    ...save,
-    party: {
-      ...(save.party ?? {}),
-      [stageId]: partyOf(save, stageId).filter((id) => id !== bugId),
-    },
-  }
+// にがす（むしかごから 出す）
+export function releaseFromCage(save: StorySave, bugId: string): StorySave {
+  return { ...save, cage: cageOf(save).filter((id) => id !== bugId) }
 }
 
 export function setMoves(

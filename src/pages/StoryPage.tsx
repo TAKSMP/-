@@ -19,8 +19,9 @@ import { findEncounter } from '../data/encounters'
 import { sfx } from '../lib/sound'
 import {
   addExp,
-  addParty,
+  addToCage,
   allMovesOf,
+  cageOf,
   buildQuestStage,
   buildStage,
   currentIndex,
@@ -36,14 +37,13 @@ import {
   moveSlots,
   movesOf,
   newMoveFor,
-  partyOf,
   questId,
   questUnlocked,
   QUEST_MAPS,
   QUEST_PER_MAP,
   reachableIndex,
   RECRUIT_CHANCE,
-  MAX_PARTY,
+  releaseFromCage,
   resetAllLevels,
   resetLevel,
   resetStage,
@@ -62,7 +62,7 @@ interface Props {
   onGoCapture: () => void
 }
 
-type Phase = 'pickBug' | 'pickMap' | 'map' | 'encounter' | 'battle' | 'clear'
+type Phase = 'pickBug' | 'pickMap' | 'map' | 'encounter' | 'party' | 'battle' | 'clear'
 type MapMode = 'place' | 'quest'
 
 // マスの まんなかの いち（％）
@@ -100,6 +100,11 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   } | null>(null)
   // たおした虫が なかまに なりたがっている
   const [recruit, setRecruit] = useState<{ bug: CaughtBug; level: number } | null>(null)
+  // むしかご：つれていく なかま（この バトルだけ）
+  const [companionId, setCompanionId] = useState<string | null>(null)
+  const [pendingCell, setPendingCell] = useState<StoryCell | null>(null)
+  const [cageOpen, setCageOpen] = useState(false)
+  const [askRelease, setAskRelease] = useState<string | null>(null)
   const [levelUp, setLevelUp] = useState<{
     name: string
     photo: string
@@ -148,6 +153,9 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     setLearn(null)
     setLevelUp(null)
     setRecruit(null)
+    setCompanionId(null)
+    setPendingCell(null)
+    setCageOpen(false)
     setNotice(null)
   }
 
@@ -181,14 +189,25 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     setLearn(null)
   }
 
+  // むしかごから にがす
+  function doRelease(bugId: string) {
+    const b = bugs.find((x) => x.id === bugId)
+    sfx.dodge()
+    const next = releaseFromCage(save, bugId)
+    setSave(next)
+    saveStory(next)
+    if (companionId === bugId) setCompanionId(null)
+    setNotice(b ? `👋 ${b.name} を にがして あげた。` : null)
+  }
+
   // なかまに する
   function doRecruit() {
     if (!stage || !recruit) return
     sfx.discover()
-    const next = addParty(save, stage.id, recruit.bug.id, recruit.level)
+    const next = addToCage(save, recruit.bug.id, recruit.level)
     setSave(next)
     saveStory(next)
-    setNotice(`🤝 ${recruit.bug.name} が なかまに なった！`)
+    setNotice(`🤝 ${recruit.bug.name} が むしかごに なかま入り！`)
     setRecruit(null)
   }
 
@@ -201,6 +220,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     setLevelUp(null)
     setLearn(null)
     setRecruit(null)
+    setPendingCell(null)
     sfx.tap()
   }
 
@@ -224,7 +244,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
         setAskAgain(cell)
       } else {
         sfx.tap()
-        startBattle(cell)
+        beginBattle(cell)
       }
       return
     }
@@ -275,7 +295,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
         setPhase('encounter')
         return
       }
-      startBattle(cell)
+      beginBattle(cell)
     }
   }
 
@@ -284,8 +304,19 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     return { ...statsWithLevel(bug, level), moves: movesOf(save, bug, level) }
   }
 
+  // ── むしかごに なかまが いれば、つれていくか きいてから バトル
+  function beginBattle(cell: StoryCell) {
+    if (cageOf(save).length === 0) {
+      startBattle(cell, null)
+      return
+    }
+    setPendingCell(cell)
+    setGoFlash(false)
+    setPhase('party')
+  }
+
   // ── バトルを はじめる
-  function startBattle(cell: StoryCell) {
+  function startBattle(cell: StoryCell, companion: string | null) {
     if (!myBug || !stage || !cell.bugId) return
     const enemy = bugs.find((b) => b.id === cell.bugId)
     if (!enemy) return
@@ -294,13 +325,12 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     const mine: Fighter[] = [
       makeFighter(myBug, statsFor(myBug, myLv), 'me0', 'me', mainPhoto(myBug)),
     ]
-    partyOf(save, stage.id).forEach((id, i) => {
-      const b = bugs.find((x) => x.id === id)
-      if (!b) return
+    const buddy = companion ? bugs.find((x) => x.id === companion) : null
+    if (buddy) {
       mine.push(
-        makeFighter(b, statsFor(b, levelOf(save, b.id).level), `me${i + 1}`, 'me', mainPhoto(b)),
+        makeFighter(buddy, statsFor(buddy, levelOf(save, buddy.id).level), 'me1', 'me', mainPhoto(buddy)),
       )
-    })
+    }
     // てき（さきの ステージでは なかまを つれてくる）
     const foes: Fighter[] = [
       makeFighter(enemy, statsFor(enemy, cell.level ?? 1), 'foe0', 'foe', mainPhoto(enemy)),
@@ -312,6 +342,8 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
       )
     }
     setFighters([...mine, ...foes])
+    setCompanionId(companion)
+    setPendingCell(null)
     setBattleCell(cell)
     setBattleKey((k) => k + 1)
     setAskAgain(null)
@@ -337,13 +369,12 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
         const res = addExp(next, myBug.id, gain)
         next = res.save
         msg = `🎉 かった！ +${gain} けいけんち`
-        // なかまにも おなじ けいけんち
-        for (const id of partyOf(next, stage.id)) {
-          const pb = bugs.find((x) => x.id === id)
-          if (!pb) continue
-          const pr = addExp(next, id, gain)
+        // つれていった なかまにも おなじ けいけんち
+        const buddy = companionId ? bugs.find((x) => x.id === companionId) : null
+        if (buddy) {
+          const pr = addExp(next, buddy.id, gain)
           next = pr.save
-          if (pr.levelUps > 0) msg += `／🤝 ${pb.name} は Lv${pr.after.level}！`
+          if (pr.levelUps > 0) msg += `／🤝 ${buddy.name} は Lv${pr.after.level}！`
         }
         if (res.levelUps > 0) {
           // レベルが あがったら、ステータスが どう かわったかを 見せる
@@ -384,8 +415,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
       if (
         enemy &&
         enemy.id !== myBug.id &&
-        partyOf(next, stage.id).length < MAX_PARTY &&
-        !partyOf(next, stage.id).includes(enemy.id) &&
+        !cageOf(next).includes(enemy.id) &&
         Math.random() < RECRUIT_CHANCE
       ) {
         setRecruit({ bug: enemy, level: battleCell.level ?? 1 })
@@ -483,6 +513,52 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
             </button>
           </>
         )}
+      </div>
+    </div>
+  )
+
+  const cageList = cageOf(save)
+    .map((id) => bugs.find((b) => b.id === id))
+    .filter((b): b is CaughtBug => !!b)
+
+  const cageModal = cageOpen && (
+    <div className="modal-backdrop" onClick={() => setCageOpen(false)}>
+      <div className="modal story-cage" onClick={(e) => e.stopPropagation()}>
+        <h3>🧺 むしかご</h3>
+        {cageList.length === 0 ? (
+          <p className="story-recruit-sub">
+            まだ なかまが いないよ。バトルで たおした虫が ときどき なかまに なりたがるんだ。
+          </p>
+        ) : (
+          <ul className="story-cage-list">
+            {cageList.map((b) => (
+              <li key={b.id}>
+                <img src={mainPhoto(b)} alt={b.name} />
+                <span className="story-cage-name">
+                  {b.name}
+                  <b>Lv {levelOf(save, b.id).level}</b>
+                </span>
+                {askRelease === b.id ? (
+                  <span className="story-cage-confirm">
+                    <button className="story-cage-yes" onClick={() => { doRelease(b.id); setAskRelease(null) }}>
+                      にがす
+                    </button>
+                    <button className="story-cage-no" onClick={() => setAskRelease(null)}>
+                      やめる
+                    </button>
+                  </span>
+                ) : (
+                  <button className="story-cage-free" onClick={() => { sfx.tap(); setAskRelease(b.id) }}>
+                    👋 にがす
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        <button className="btn btn-big btn-primary" onClick={() => { sfx.tap(); setCageOpen(false); setAskRelease(null) }}>
+          とじる
+        </button>
       </div>
     </div>
   )
@@ -759,10 +835,19 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
             )}
           </>
         )}
+        {cageOf(save).length > 0 && (
+          <button
+            className="btn btn-ghost story-cage-open"
+            onClick={() => { sfx.tap(); setCageOpen(true) }}
+          >
+            🧺 むしかご（{cageOf(save).length}ひき）を みる
+          </button>
+        )}
         <button className="btn btn-ghost battle-back" onClick={reset}>
           ← 虫を えらびなおす
         </button>
         {resetModal}
+        {cageModal}
       </div>
     )
   }
@@ -795,10 +880,58 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
               if (goFlash) return
               setGoFlash(true)
               sfx.battleStart()
-              window.setTimeout(() => startBattle(encounterCell), 950)
+              window.setTimeout(() => beginBattle(encounterCell), 950)
             }}
           >
             バトル かいし ⚔️
+          </button>
+        </div>
+        {goFlash && (
+          <div className="story-go">
+            <span>バトル かいし！</span>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // ③.7 なかまを つれていく？
+  if (phase === 'party' && stage && pendingCell) {
+    const enemy = bugs.find((b) => b.id === pendingCell.bugId)
+    const foeAlly = pendingCell.allyBugId ? bugs.find((b) => b.id === pendingCell.allyBugId) : null
+    const start = (id: string | null) => {
+      if (goFlash) return
+      setGoFlash(true)
+      sfx.battleStart()
+      window.setTimeout(() => startBattle(pendingCell, id), 950)
+    }
+    return (
+      <div className="story-encounter">
+        <ParkScene index={stage.sceneIndex} />
+        <div className="story-enc-inner">
+          <p className="story-party-foe">
+            あいて：<b>{enemy?.name}</b>
+            {(pendingCell.level ?? 1) > 1 && ` Lv${pendingCell.level}`}
+            {foeAlly && <> と <b>{foeAlly.name}</b></>}
+          </p>
+          <h3 className="story-party-title">なかまを つれていく？</h3>
+          <div className="story-party-list">
+            {cageList.map((b) => (
+              <button key={b.id} className="story-party-pick" onClick={() => start(b.id)}>
+                <img src={mainPhoto(b)} alt={b.name} />
+                <span className="story-party-name">{b.name}</span>
+                <span className="story-party-lv">Lv {levelOf(save, b.id).level}</span>
+              </button>
+            ))}
+          </div>
+          <button className="btn btn-big btn-primary story-enc-go" onClick={() => start(null)}>
+            ひとりで いく 🐛
+          </button>
+          <button
+            className="btn btn-ghost battle-back"
+            onClick={() => { sfx.tap(); setPendingCell(null); setPhase('map') }}
+          >
+            ← もどる
           </button>
         </div>
         {goFlash && (
@@ -891,16 +1024,15 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
               {stage.title}／けいけんち {myLevel.exp}/{need}
             </span>
           </div>
-          {partyOf(save, stage.id).map((id) => {
-            const pb = bugs.find((x) => x.id === id)
-            if (!pb) return null
-            return (
-              <span key={id} className="story-party" title={`${pb.name}（なかま）`}>
-                <img src={mainPhoto(pb)} alt={pb.name} />
-                <b>Lv{levelOf(save, id).level}</b>
-              </span>
-            )
-          })}
+          {cageOf(save).length > 0 && (
+            <button
+              className="btn btn-ghost story-hud-back story-cage-btn"
+              onClick={() => { sfx.tap(); setCageOpen(true) }}
+              title="むしかご"
+            >
+              🧺<b>{cageOf(save).length}</b>
+            </button>
+          )}
           <button
             className="btn btn-ghost story-hud-back"
             onClick={() => { sfx.tap(); setAskReset({ id: stage.id, title: stage.title }) }}
@@ -994,7 +1126,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
                 （けいけんちは はんぶん）
               </p>
               <div className="battle-result-actions">
-                <button className="btn btn-big btn-primary" onClick={() => startBattle(askAgain)}>
+                <button className="btn btn-big btn-primary" onClick={() => beginBattle(askAgain)}>
                   たたかう ⚔️
                 </button>
                 <button className="btn btn-big" onClick={() => setAskAgain(null)}>
@@ -1008,6 +1140,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
         {levelUpModal}
         {learnModal}
         {recruitModal}
+        {cageModal}
       </div>
     )
   }

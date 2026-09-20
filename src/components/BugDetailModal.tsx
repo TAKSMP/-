@@ -25,6 +25,8 @@ import {
 } from '../lib/battle'
 import { StarRating } from './StarRating'
 import { sfx } from '../lib/sound'
+import { ImageCropper } from './ImageCropper'
+import { compressImage } from '../lib/image'
 
 interface Props {
   bug: CaughtBug | null
@@ -83,6 +85,8 @@ export function BugDetailModal({
   const [battleNote, setBattleNote] = useState('')
   // ひょうじモードで バトルステータスをひらくか
   const [showBattle, setShowBattle] = useState(false)
+  // きりとり中の しゃしん（id）
+  const [cropId, setCropId] = useState<string | null>(null)
 
   // ひらいている虫が変わったら、編集モードはリセットする。
   // （別の虫を開いたのに、前の虫の入力内容が残って上書きされるのを防ぐ）
@@ -90,6 +94,7 @@ export function BugDetailModal({
   useEffect(() => {
     setEditing(false)
     setShowBattle(false)
+    setCropId(null)
   }, [bugId])
 
   if (!bug) return null
@@ -606,7 +611,7 @@ export function BugDetailModal({
                 📸 とった しゃしん（{captures.length}まい）
               </div>
               <p className="history-hint">
-                しゃしんを タップすると メイン画像に。日づけは 写真ごとに なおせるよ。
+                しゃしんを タップすると メイン画像に。日づけと きりとりは 写真ごとに なおせるよ。
               </p>
               <div className="history-grid">
                 {captures.map((c) => {
@@ -630,6 +635,17 @@ export function BugDetailModal({
                           <span className="history-badge">メイン</span>
                         )}
                       </button>
+                      {onUpdate && (
+                        <button
+                          className="history-crop"
+                          onClick={() => {
+                            sfx.tap()
+                            setCropId(c.id)
+                          }}
+                        >
+                          ✂️ きりとる
+                        </button>
+                      )}
                       <input
                         type="date"
                         className="history-date-input"
@@ -677,6 +693,21 @@ export function BugDetailModal({
           <option value="はなばたけ" />
         </datalist>
       </div>
+
+      {/* しゃしんの きりとり */}
+      {cropId && onUpdate && (
+        <ImageCropper
+          src={bug.captures.find((c) => c.id === cropId)?.photo ?? ''}
+          onCancel={() => setCropId(null)}
+          onDone={async (cut) => {
+            const id = cropId
+            setCropId(null)
+            // きりとった あと、ほぞん用に ちぢめる
+            const small = await compressImage(cut)
+            onUpdate(bug.id, { capturePhoto: { id, photo: small } })
+          }}
+        />
+      )}
     </div>
   )
 }

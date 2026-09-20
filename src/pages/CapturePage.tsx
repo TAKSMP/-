@@ -18,6 +18,7 @@ import { INSECT_ORDERS } from '../data/orders'
 import { StarRating } from '../components/StarRating'
 import { Confetti } from '../components/Confetti'
 import { CameraCapture } from '../components/CameraCapture'
+import { ImageCropper } from '../components/ImageCropper'
 import { sfx } from '../lib/sound'
 
 type Phase = 'empty' | 'result'
@@ -33,6 +34,9 @@ interface Props {
 export function CapturePage({ onSaved, pastPlaces }: Props) {
   const [phase, setPhase] = useState<Phase>('empty')
   const [photo, setPhoto] = useState<string>('')
+  // きりとり用に、ちぢめる まえの しゃしんも とっておく（画しつの ため）
+  const [srcPhoto, setSrcPhoto] = useState<string>('')
+  const [cropOpen, setCropOpen] = useState(false)
   const [editing, setEditing] = useState(false)
   const [confetti, setConfetti] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -60,6 +64,8 @@ export function CapturePage({ onSaved, pastPlaces }: Props) {
   function reset() {
     setPhase('empty')
     setPhoto('')
+    setSrcPhoto('')
+    setCropOpen(false)
     setEditing(false)
     setSaved(false)
     setMerged(false)
@@ -85,6 +91,7 @@ export function CapturePage({ onSaved, pastPlaces }: Props) {
     // 保存・送信まえに小さく圧縮（容量オーバー防止）
     const small = await compressImage(dataUrl)
     setPhoto(small)
+    setSrcPhoto(dataUrl)
     setName('')
     setOrder('')
     setRarity(3)
@@ -286,6 +293,35 @@ export function CapturePage({ onSaved, pastPlaces }: Props) {
         <div className="result">
           <div className="result-photo">
             <img src={photo} alt={name || 'よみこんだ虫'} />
+          </div>
+          <div className="photo-actions">
+            <button
+              className="photo-act"
+              onClick={() => {
+                sfx.tap()
+                setCropOpen(true)
+              }}
+            >
+              ✂️ きりとる
+            </button>
+            <button
+              className="photo-act"
+              onClick={() => {
+                sfx.tap()
+                fileRef.current?.click()
+              }}
+            >
+              🖼 えらびなおす
+            </button>
+            <button
+              className="photo-act"
+              onClick={() => {
+                sfx.tap()
+                setCameraOpen(true)
+              }}
+            >
+              📸 とりなおす
+            </button>
           </div>
 
           <div className="result-card">
@@ -563,6 +599,18 @@ export function CapturePage({ onSaved, pastPlaces }: Props) {
           e.target.value = ''
         }}
       />
+
+      {cropOpen && (photo || srcPhoto) && (
+        <ImageCropper
+          src={srcPhoto || photo}
+          onCancel={() => setCropOpen(false)}
+          onDone={async (cut) => {
+            setCropOpen(false)
+            // きりとった あと、ほぞん用に ちぢめる（もとの しゃしんは のこす）
+            setPhoto(await compressImage(cut))
+          }}
+        />
+      )}
 
       {cameraOpen && (
         <CameraCapture

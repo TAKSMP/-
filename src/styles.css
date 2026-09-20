@@ -4509,3 +4509,384 @@ input:focus {
   line-height: 1.6;
   margin: 0 0 14px;
 }
+
+/* --- むしかご --- */
+.story-cage-btn b {
+  font-size: 11px;
+  margin-left: 1px;
+}
+.story-cage-open {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  font-size: 13px;
+}
+.story-cage h3 {
+  margin: 0 0 10px;
+  font-size: 18px;
+  text-align: center;
+}
+.story-cage-list {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.story-cage-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.75);
+  border-radius: 14px;
+  padding: 6px 8px;
+}
+.story-cage-list img {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  object-fit: cover;
+  flex: none;
+}
+.story-cage-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 900;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.story-cage-name b {
+  display: block;
+  font-size: 12px;
+  color: #e8890b;
+}
+.story-cage-free,
+.story-cage-yes,
+.story-cage-no {
+  flex: none;
+  border: none;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.story-cage-free {
+  background: #fff1f0;
+  color: #b4453a;
+}
+.story-cage-confirm {
+  display: flex;
+  gap: 4px;
+  flex: none;
+}
+.story-cage-yes {
+  background: var(--danger);
+  color: #fff;
+}
+.story-cage-no {
+  background: #eee;
+  color: var(--ink);
+}
+
+/* --- なかまを つれていく？ --- */
+.story-party-foe {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 12px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 800;
+  margin: 0 0 10px;
+}
+.story-party-title {
+  margin: 0 0 10px;
+  font-size: 18px;
+  text-shadow: 0 2px 0 #fff, 0 -2px 0 #fff, 2px 0 0 #fff, -2px 0 0 #fff;
+}
+.story-party-list {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  margin-bottom: 12px;
+}
+.story-party-pick {
+  flex: none;
+  width: 92px;
+  border: 3px solid #fff;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 6px;
+  font-family: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.story-party-pick:active {
+  transform: translateY(2px);
+}
+.story-party-pick img {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  object-fit: cover;
+}
+.story-party-name {
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.25;
+  text-align: center;
+}
+.story-party-lv {
+  font-size: 10px;
+  font-weight: 900;
+  color: #5a4600;
+  background: var(--yellow);
+  border-radius: 999px;
+  padding: 0 8px;
+}
+
+/* --- しゃしんの きりとり --- */
+.photo-actions {
+  display: flex;
+  gap: 6px;
+  margin: 8px 0 10px;
+}
+.photo-act {
+  flex: 1;
+  border: none;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  border-radius: 14px;
+  padding: 9px 4px;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 12px;
+  color: var(--ink);
+  cursor: pointer;
+}
+.photo-act:active {
+  transform: translateY(2px);
+}
+.history-crop {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  border: none;
+  background: #eef6ff;
+  color: #2f5a7a;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 10px;
+  padding: 4px 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.cropper h3 {
+  margin: 0 0 6px;
+  font-size: 18px;
+  text-align: center;
+}
+.cropper-hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.6;
+  text-align: center;
+  opacity: 0.85;
+}
+.cropper-box {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #2f3a24;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}
+.cropper-box:active {
+  cursor: grabbing;
+}
+.cropper-img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  max-width: none;
+  pointer-events: none;
+  display: block;
+}
+.cropper-frame {
+  position: absolute;
+  inset: 0;
+  border: 3px dashed rgba(255, 255, 255, 0.9);
+  border-radius: 18px;
+  pointer-events: none;
+}
+.cropper-zoom {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0;
+}
+.cropper-zoom input[type='range'] {
+  flex: 1;
+  accent-color: var(--green);
+}
+.cropper-zoom-btn {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  font-size: 18px;
+  cursor: pointer;
+}
+.cropper-zoom-btn:active {
+  transform: translateY(2px);
+}
+
+/* --- ひっさつわざリスト --- */
+.settings-dex {
+  border-top: 3px dashed rgba(0, 0, 0, 0.1);
+  padding-top: 16px;
+  margin-top: 4px;
+}
+.settings-dex h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+.settings-dex p {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.6;
+  margin: 0 0 10px;
+  opacity: 0.85;
+}
+.settings-dex-btn {
+  width: 100%;
+}
+.movedex {
+  max-width: 460px;
+}
+.movedex-count {
+  text-align: center;
+  font-weight: 900;
+  font-size: 14px;
+  margin: 0 0 4px;
+}
+.movedex-count b {
+  color: var(--green-deep);
+  font-size: 18px;
+}
+.movedex-hint {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.8;
+  margin: 0 0 10px;
+}
+.movedex-tabs {
+  margin-bottom: 10px;
+}
+.movedex-tabs .chip {
+  font-size: 11px;
+  padding: 6px 8px;
+}
+.movedex-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.movedex-row {
+  width: 100%;
+  border: none;
+  background: var(--card);
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-family: inherit;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  text-align: left;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.06);
+}
+.movedex-list li.unknown .movedex-row {
+  background: #eceadf;
+  color: #9a9484;
+  cursor: default;
+}
+.movedex-no {
+  flex: none;
+  font-size: 10px;
+  font-weight: 900;
+  opacity: 0.6;
+  min-width: 38px;
+}
+.movedex-emoji {
+  flex: none;
+  font-size: 16px;
+}
+.movedex-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 900;
+  font-size: 13px;
+}
+.movedex-power {
+  flex: none;
+  font-size: 10px;
+  font-weight: 800;
+  opacity: 0.75;
+}
+.movedex-arrow {
+  flex: none;
+  font-size: 10px;
+  opacity: 0.6;
+}
+.movedex-detail {
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 0 0 12px 12px;
+  margin: -4px 4px 0;
+  padding: 8px 10px;
+}
+.movedex-desc {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+.movedex-spec {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 10px;
+}
+.movedex-spec > div {
+  display: flex;
+  gap: 5px;
+  font-size: 11px;
+}
+.movedex-spec dt {
+  font-weight: 900;
+  opacity: 0.6;
+  flex: none;
+}
+.movedex-spec dd {
+  margin: 0;
+  font-weight: 800;
+}

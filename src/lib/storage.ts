@@ -10,6 +10,7 @@ export interface BugPatch {
   fact?: string
   mainPlace?: string // メイン写真の「みつけたばしょ」
   captureDate?: { id: string; caughtAt: number } // 写真1枚ごとの「みつけた日」
+  capturePhoto?: { id: string; photo: string } // 写真1枚ごとの 画像（きりとり）
   battle?: BattleStats // バトル用ステータス
 }
 
@@ -362,6 +363,11 @@ export function updateBug(bugId: string, patch: BugPatch): CaughtBug[] {
       // 指定した写真1枚だけの日付をなおす（ほかの写真はそのまま）
       const { id, caughtAt } = patch.captureDate
       captures = captures.map((c) => (c.id === id ? { ...c, caughtAt } : c))
+    }
+    if (patch.capturePhoto) {
+      // 指定した写真1枚だけを きりとった画像に さしかえる
+      const { id, photo } = patch.capturePhoto
+      captures = captures.map((c) => (c.id === id ? { ...c, photo } : c))
     }
     next.captures = captures
 

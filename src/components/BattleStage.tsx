@@ -25,6 +25,7 @@ import { BASIC_ATTACK } from '../lib/moveLibrary'
 import { Confetti } from './Confetti'
 import { ParkScene } from './ParkScene'
 import { sfx } from '../lib/sound'
+import { markMovesSeen } from '../lib/moveDex'
 
 // -------------------------------------------------------------
 //  たいりょくゲージ
@@ -245,9 +246,13 @@ export function BattleStage({
     })(),
   )
 
-  // はじまりの音
+  // はじまりの音。じぶんの わざは がめんに 出るので「見た」ことに する
   useEffect(() => {
     sfx.battleStart()
+    markMovesSeen(
+      fighters.filter((f) => f.side === 'me').flatMap((f) => f.moves.map((m) => m.id)),
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // ログを いちばん下へ
@@ -371,6 +376,8 @@ export function BattleStage({
 
     if (cue.moveName) {
       const m = moveMapRef.current.get(cue.moveName)
+      // つかわれた わざを わざリストに きろく
+      if (m) markMovesSeen([m.id])
       sfx.special(m ? soundKind(m) : 'other')
     } else if (cue.dodge) {
       sfx.dodge()
