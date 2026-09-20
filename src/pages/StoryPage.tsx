@@ -19,6 +19,8 @@ import { findEncounter } from '../data/encounters'
 import { sfx } from '../lib/sound'
 import {
   addExp,
+  addParty,
+  allMovesOf,
   buildQuestStage,
   buildStage,
   currentIndex,
@@ -31,13 +33,17 @@ import {
   markSeen,
   loadStory,
   markCleared,
+  moveSlots,
   movesOf,
   newMoveFor,
+  partyOf,
   questId,
   questUnlocked,
   QUEST_MAPS,
   QUEST_PER_MAP,
   reachableIndex,
+  RECRUIT_CHANCE,
+  MAX_PARTY,
   resetAllLevels,
   resetLevel,
   resetStage,
@@ -90,7 +96,10 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   const [learn, setLearn] = useState<{
     move: SpecialMoveV2
     current: SpecialMoveV2[]
+    forcedIndex: number | null // わくが ふえた ときは えらばずに ついか
   } | null>(null)
+  // たおした虫が なかまに なりたがっている
+  const [recruit, setRecruit] = useState<{ bug: CaughtBug; level: number } | null>(null)
   const [levelUp, setLevelUp] = useState<{
     name: string
     photo: string
@@ -138,6 +147,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     setGoFlash(false)
     setLearn(null)
     setLevelUp(null)
+    setRecruit(null)
     setNotice(null)
   }
 
@@ -159,15 +169,27 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   function swapMove(index: number) {
     if (!myBug || !learn) return
     sfx.special('attackUp')
+    const all = allMovesOf(save, myBug)
     const next = setMoves(
       save,
       myBug.id,
-      learn.current.map((m, i) => (i === index ? learn.move : m)),
+      all.map((m, i) => (i === index ? learn.move : m)),
     )
     setSave(next)
     saveStory(next)
     setNotice(`✨ 「${learn.move.name}」を おぼえた！`)
     setLearn(null)
+  }
+
+  // なかまに する
+  function doRecruit() {
+    if (!stage || !recruit) return
+    sfx.discover()
+    const next = addParty(save, stage.id, recruit.bug.id, recruit.level)
+    setSave(next)
+    saveStory(next)
+    setNotice(`🤝 ${recruit.bug.name} が なかまに なった！`)
+    setRecruit(null)
   }
 
   // 虫の レベルを 1に もどす
@@ -178,6 +200,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     setAskLevel(null)
     setLevelUp(null)
     setLearn(null)
+    setRecruit(null)
     sfx.tap()
   }
 
@@ -256,22 +279,39 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     }
   }
 
+  // レベルぶんの ステータス＋つかえる わざ
+  function statsFor(bug: CaughtBug, level: number) {
+    return { ...statsWithLevel(bug, level), moves: movesOf(save, bug, level) }
+  }
+
   // ── バトルを はじめる
   function startBattle(cell: StoryCell) {
     if (!myBug || !stage || !cell.bugId) return
     const enemy = bugs.find((b) => b.id === cell.bugId)
     if (!enemy) return
     const myLv = levelOf(save, myBug.id).level
-    const enemyLv = cell.level ?? 1
-    const me = makeFighter(
-      myBug,
-      { ...statsWithLevel(myBug, myLv), moves: movesOf(save, myBug) },
-      'me0',
-      'me',
-      mainPhoto(myBug),
-    )
-    const foe = makeFighter(enemy, statsWithLevel(enemy, enemyLv), 'foe0', 'foe', mainPhoto(enemy))
-    setFighters([me, foe])
+    // じぶん＋なかま
+    const mine: Fighter[] = [
+      makeFighter(myBug, statsFor(myBug, myLv), 'me0', 'me', mainPhoto(myBug)),
+    ]
+    partyOf(save, stage.id).forEach((id, i) => {
+      const b = bugs.find((x) => x.id === id)
+      if (!b) return
+      mine.push(
+        makeFighter(b, statsFor(b, levelOf(save, b.id).level), `me${i + 1}`, 'me', mainPhoto(b)),
+      )
+    })
+    // てき（さきの ステージでは なかまを つれてくる）
+    const foes: Fighter[] = [
+      makeFighter(enemy, statsFor(enemy, cell.level ?? 1), 'foe0', 'foe', mainPhoto(enemy)),
+    ]
+    const foeAlly = cell.allyBugId ? bugs.find((b) => b.id === cell.allyBugId) : null
+    if (foeAlly) {
+      foes.push(
+        makeFighter(foeAlly, statsFor(foeAlly, cell.allyLevel ?? 1), 'foe1', 'foe', mainPhoto(foeAlly)),
+      )
+    }
+    setFighters([...mine, ...foes])
     setBattleCell(cell)
     setBattleKey((k) => k + 1)
     setAskAgain(null)
@@ -297,6 +337,14 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
         const res = addExp(next, myBug.id, gain)
         next = res.save
         msg = `🎉 かった！ +${gain} けいけんち`
+        // なかまにも おなじ けいけんち
+        for (const id of partyOf(next, stage.id)) {
+          const pb = bugs.find((x) => x.id === id)
+          if (!pb) continue
+          const pr = addExp(next, id, gain)
+          next = pr.save
+          if (pr.levelUps > 0) msg += `／🤝 ${pb.name} は Lv${pr.after.level}！`
+        }
         if (res.levelUps > 0) {
           // レベルが あがったら、ステータスが どう かわったかを 見せる
           const a = statsWithLevel(myBug, res.before.level)
@@ -317,11 +365,30 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
           // レベルが 2あがる ごとに、あたらしい わざを 1つ おぼえられる
           const learnLv = learnLevelCrossed(res.before.level, res.after.level)
           if (learnLv !== null) {
-            const cur = movesOf(next, myBug)
-            const nm = newMoveFor(myBug, learnLv, cur)
-            if (nm) setLearn({ move: nm, current: cur })
+            const all = allMovesOf(next, myBug)
+            const before = moveSlots(res.before.level)
+            const after = moveSlots(res.after.level)
+            const nm = newMoveFor(myBug, learnLv, all)
+            if (nm) {
+              setLearn({
+                move: nm,
+                current: all.slice(0, Math.max(1, before)),
+                // わくが ふえた ときは えらばずに その わくへ
+                forcedIndex: after > before ? after - 1 : null,
+              })
+            }
           }
         }
+      }
+      // ときどき、たおした虫が なかまに なりたがる
+      if (
+        enemy &&
+        enemy.id !== myBug.id &&
+        partyOf(next, stage.id).length < MAX_PARTY &&
+        !partyOf(next, stage.id).includes(enemy.id) &&
+        Math.random() < RECRUIT_CHANCE
+      ) {
+        setRecruit({ bug: enemy, level: battleCell.level ?? 1 })
       }
       setSave(next)
       saveStory(next)
@@ -369,7 +436,11 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     <div className="modal-backdrop">
       <div className="modal story-learn" onClick={(e) => e.stopPropagation()}>
         <div className="story-levelup-emoji">✨</div>
-        <h3>あたらしい わざを おぼえられる！</h3>
+        <h3>
+          {learn.forcedIndex !== null
+            ? 'あたらしい わざを おぼえた！'
+            : 'あたらしい わざを おぼえられる！'}
+        </h3>
         <div className="story-learn-new">
           <span className="story-learn-emoji">{learn.move.emoji ?? '✨'}</span>
           <span className="story-learn-name">{learn.move.name}</span>
@@ -378,29 +449,72 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
           </span>
           <p className="story-learn-desc">{learn.move.desc}</p>
         </div>
-        <p className="story-learn-q">どの わざと とりかえる？</p>
-        <div className="story-learn-list">
-          {learn.current.map((m, i) => (
-            <button key={m.id + i} className="story-learn-old" onClick={() => swapMove(i)}>
-              <span className="story-learn-old-name">
-                {m.emoji ?? '✨'} {m.name}
-              </span>
-              <span className="story-learn-old-sub">
-                {moveLabel(m)}／{m.uses}かい
-              </span>
+        {learn.forcedIndex !== null ? (
+          <button
+            className="btn btn-big btn-primary"
+            onClick={() => swapMove(learn.forcedIndex as number)}
+          >
+            やった！ 💪
+          </button>
+        ) : (
+          <>
+            <p className="story-learn-q">どの わざと とりかえる？</p>
+            <div className="story-learn-list">
+              {learn.current.map((m, i) => (
+                <button key={m.id + i} className="story-learn-old" onClick={() => swapMove(i)}>
+                  <span className="story-learn-old-name">
+                    {m.emoji ?? '✨'} {m.name}
+                  </span>
+                  <span className="story-learn-old-sub">
+                    {moveLabel(m)}／{m.uses}かい
+                  </span>
+                </button>
+              ))}
+            </div>
+            <button
+              className="btn btn-big"
+              onClick={() => {
+                sfx.tap()
+                setNotice('いまの わざの ままに した。')
+                setLearn(null)
+              }}
+            >
+              おぼえない
             </button>
-          ))}
+          </>
+        )}
+      </div>
+    </div>
+  )
+
+  const recruitModal = recruit && !levelUp && !learn && (
+    <div className="modal-backdrop">
+      <div className="modal story-recruit" onClick={(e) => e.stopPropagation()}>
+        <div className="story-levelup-emoji">🤝</div>
+        <img className="story-recruit-photo" src={mainPhoto(recruit.bug)} alt={recruit.bug.name} />
+        <p className="story-recruit-text">
+          たおれていた <b>{recruit.bug.name}</b> が おきあがり、
+          <br />
+          なかまに なりたそうに こっちを みている！
+        </p>
+        <p className="story-recruit-sub">
+          なかまに すると、この マップの あいだ いっしょに たたかえるよ。
+          （Lv {Math.max(1, recruit.level)} から／けいけんちも たまる）
+        </p>
+        <div className="battle-result-actions">
+          <button className="btn btn-big btn-primary" onClick={doRecruit}>
+            なかまに する 🤝
+          </button>
+          <button
+            className="btn btn-big"
+            onClick={() => {
+              sfx.tap()
+              setRecruit(null)
+            }}
+          >
+            ことわる
+          </button>
         </div>
-        <button
-          className="btn btn-big"
-          onClick={() => {
-            sfx.tap()
-            setNotice('いまの わざの ままに した。')
-            setLearn(null)
-          }}
-        >
-          おぼえない
-        </button>
       </div>
     </div>
   )
@@ -702,7 +816,8 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
       <BattleStage
         key={battleKey}
         fighters={fighters}
-        big
+        big={fighters.length <= 2}
+        sceneIndex={stage?.sceneIndex}
         quitLabel="✕ にげる"
         startLog="⚔️ てきが あらわれた！"
         onQuit={() => {
@@ -776,6 +891,16 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
               {stage.title}／けいけんち {myLevel.exp}/{need}
             </span>
           </div>
+          {partyOf(save, stage.id).map((id) => {
+            const pb = bugs.find((x) => x.id === id)
+            if (!pb) return null
+            return (
+              <span key={id} className="story-party" title={`${pb.name}（なかま）`}>
+                <img src={mainPhoto(pb)} alt={pb.name} />
+                <b>Lv{levelOf(save, id).level}</b>
+              </span>
+            )
+          })}
           <button
             className="btn btn-ghost story-hud-back"
             onClick={() => { sfx.tap(); setAskReset({ id: stage.id, title: stage.title }) }}
@@ -882,6 +1007,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
         {resetModal}
         {levelUpModal}
         {learnModal}
+        {recruitModal}
       </div>
     )
   }

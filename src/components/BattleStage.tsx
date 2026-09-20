@@ -23,6 +23,7 @@ import {
 } from '../lib/battleEngine'
 import { BASIC_ATTACK } from '../lib/moveLibrary'
 import { Confetti } from './Confetti'
+import { ParkScene } from './ParkScene'
 import { sfx } from '../lib/sound'
 
 // -------------------------------------------------------------
@@ -196,6 +197,7 @@ interface Props {
   big?: boolean // 1たい1なら しゃしんを 大きく
   startLog?: string // さいしょに 出す 1行
   quitLabel?: string
+  sceneIndex?: number // せなかの 絵（ストーリーの ステージに あわせる）
   onQuit: () => void
   onFinish: (result: BattleResult) => void
 }
@@ -205,6 +207,7 @@ export function BattleStage({
   big = false,
   startLog = '⚡ すばやい むしから こうどう するよ！',
   quitLabel = '✕ やめる',
+  sceneIndex,
   onQuit,
   onFinish,
 }: Props) {
@@ -446,6 +449,12 @@ export function BattleStage({
 
   return (
     <div className="battle-stage battle-stage2">
+      {/* ストーリーの ときは その ステージの 公園を せなかに しく */}
+      {sceneIndex !== undefined && (
+        <div className="battle-bg">
+          <ParkScene index={sceneIndex} />
+        </div>
+      )}
       <Confetti show={confetti} />
       <button className="battle-flee" onClick={onQuit}>
         {quitLabel}

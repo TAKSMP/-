@@ -185,6 +185,78 @@ export const MOVE_LIBRARY: LibraryMove[] = [
   mv({ id: 'm38a', pattern: 'rest', name: 'まゆごもり', desc: 'まゆに こもって ねむり、HPを ぜんぶ かいふく。', emoji: '🛌', power: 0, accuracy: null, restSleep: true, tags: ['まゆ', 'チョウ目'] }),
   mv({ id: 'm39a', pattern: 'regen', name: 'だっぴのじゅんび', desc: 'まいターン すこしずつ HPが かいふく する。', emoji: '🌱', power: 0, accuracy: null, regen: { ratio: 0.12, turns: 4 }, tags: ['だっぴ'] }),
   mv({ id: 'm40a', pattern: 'leech', name: 'すいつきのくち', desc: 'あいてに すいついて まいターン HPを すいとる。', emoji: '🩸', power: 0, target: 'oneFoe', accuracy: 90, leech: { ratio: 0.1, turns: 4 }, tags: ['すう', 'カメムシ目'] }),
+  // ===== ここから ついか ぶん（50こ）=====
+  // ① あいて1ぴきを つよく
+  mv({ id: 'n01', pattern: 'bigHit', name: 'てっとうのずつき', desc: 'かたい あたまで まっすぐ ぶつかる。', emoji: '💥', power: 80, tags: ['かたい', 'つの'] }),
+  mv({ id: 'n02', pattern: 'bigHit', name: 'じごくのはさみうち', desc: 'りょうがわから はさんで にがさない。', emoji: '🦞', power: 85, tags: ['はさみ', '甲殻類'] }),
+  mv({ id: 'n03', pattern: 'bigHit', name: 'とげあしスタンプ', desc: 'とげの ある あしで ふみつける。', emoji: '🦵', power: 78, tags: ['あし', 'とげ', 'バッタ目'] }),
+  mv({ id: 'n04', pattern: 'bigHit', name: 'まっぷたつぎり', desc: 'いっしゅんで きりさく。', emoji: '✂️', power: 88, tags: ['かま', 'するどい'] }),
+  // ② あいて ぜんいん
+  mv({ id: 'n05', pattern: 'spread', name: 'きりのカーテン', desc: 'しろい きりで あいて ぜんいんを つつむ。', emoji: '🌫️', power: 50, target: 'allFoes', tags: ['みず', 'トビケラ目'] }),
+  mv({ id: 'n06', pattern: 'spread', name: 'すなあらしアタック', desc: 'すなを まきあげて ぜんいんを こうげき。', emoji: '🌪️', power: 55, target: 'allFoes', tags: ['あし', 'もぐる'] }),
+  mv({ id: 'n07', pattern: 'spread', name: 'はねのつむじかぜ', desc: 'はねで かぜを おこして ふきとばす。', emoji: '🪭', power: 52, target: 'allFoes', tags: ['はね', 'トンボ目'] }),
+  // ③ じぶん いがい ぜんいん
+  mv({ id: 'n08', pattern: 'allOthers', name: 'だいばくはつのかおり', desc: 'すごい においが あたり いちめんに ひろがる。', emoji: '💥', power: 68, target: 'allOthers', tags: ['におい', 'カメムシ目'] }),
+  // ④⑤ れんぞく こうげき
+  mv({ id: 'n09', pattern: 'multi25', name: 'めまぐるしパンチ', desc: '2〜5かい すばやく たたく。', emoji: '👊', power: 22, hits: [2, 5], accuracy: 90, tags: ['あし', 'ちから'] }),
+  mv({ id: 'n10', pattern: 'multi25', name: 'つつきのあらし', desc: 'くちばしのような くちで 2〜5かい つつく。', emoji: '🪶', power: 20, hits: [2, 5], accuracy: 90, tags: ['すう', 'カメムシ目'] }),
+  mv({ id: 'n11', pattern: 'multiFixed', name: 'みつげきのつの', desc: 'つので かならず 3かい つきあげる。', emoji: '⚡', power: 26, hits: [3, 3], tags: ['つの', 'コウチュウ目'] }),
+  mv({ id: 'n12', pattern: 'multiFixed', name: 'ダブルキック', desc: 'りょうあしで かならず 2かい ける。', emoji: '⚡', power: 34, hits: [2, 2], tags: ['あし', 'バッタ目'] }),
+  // ⑥ あとに うごくと つよい
+  mv({ id: 'n13', pattern: 'lateBoost', name: 'しずかなるいちげき', desc: 'あいての あとに うごくと いりょくが 2ばい。', emoji: '🕰️', power: 48, boostIfLate: 2, tags: ['ぎたい', 'かくれる'] }),
+  mv({ id: 'n14', pattern: 'lateBoost', name: 'あとだしカウンター', desc: 'ようすを みてから うつと つよい。', emoji: '🕰️', power: 45, boostIfLate: 2, tags: ['め', 'かたい'] }),
+  // ⑦⑧ ためる
+  mv({ id: 'n15', pattern: 'charge', name: 'たいようチャージ', desc: 'おひさまの ちからを ためて つぎに はなつ。', emoji: '☀️', power: 115, chargeTurns: 1, tags: ['ひかる', 'はね'] }),
+  mv({ id: 'n16', pattern: 'hideCharge', name: 'はっぱのしたへ', desc: 'はっぱの したに かくれて つぎに とびだす。', emoji: '🍃', power: 95, chargeTurns: 1, hideWhileCharging: true, tags: ['ぎたい', 'チョウ目'] }),
+  mv({ id: 'n17', pattern: 'hideCharge', name: 'すなのなかへ', desc: 'すなに もぐって つぎに おそいかかる。', emoji: '🏜️', power: 100, chargeTurns: 1, hideWhileCharging: true, tags: ['もぐる', 'あし'] }),
+  // ⑨ ちえん
+  mv({ id: 'n18', pattern: 'delayed', name: 'しかけのねばいと', desc: '2ターンごに わなが はつどうする。', emoji: '🕸️', power: 85, delayTurns: 2, accuracy: null, tags: ['いと', 'クモガタ綱'] }),
+  // ⑩ 大わざ
+  mv({ id: 'n19', pattern: 'recharge', name: 'いっぱつしょうぶ', desc: 'ぜんぶの ちからを こめる。つぎは うごけない。', emoji: '☄️', power: 135, rechargeTurns: 1, accuracy: 90, tags: ['ちから'] }),
+  // ⑪⑫ きゅうしょ
+  mv({ id: 'n20', pattern: 'highCrit', name: 'するどいひとつき', desc: 'きゅうしょに あたりやすい いちげき。', emoji: '✨', power: 58, critStage: 2, tags: ['はり', 'ハチ目'] }),
+  mv({ id: 'n21', pattern: 'highCrit', name: 'いあいのかまえ', desc: 'ねらいすまして きる。きゅうしょに あたりやすい。', emoji: '✨', power: 62, critStage: 2, tags: ['かま', 'カマキリ目'] }),
+  mv({ id: 'n22', pattern: 'alwaysCrit', name: 'きゅうしょつらぬき', desc: 'よわい ところだけを ねらう。かならず きゅうしょ。', emoji: '🎯', power: 44, critStage: 9, accuracy: 85, tags: ['はり', 'するどい'] }),
+  // ⑬ かならず あたる
+  mv({ id: 'n23', pattern: 'sureHit', name: 'においついせき', desc: 'においで おいかける。かならず あたる。', emoji: '👃', power: 52, accuracy: null, tags: ['におい', 'ハエ目'] }),
+  mv({ id: 'n24', pattern: 'sureHit', name: 'しんどうキャッチ', desc: 'ゆれを かんじて ねらう。かならず あたる。', emoji: '📡', power: 50, accuracy: null, tags: ['あし', '多足類'] }),
+  // ⑭ こていダメージ
+  mv({ id: 'n25', pattern: 'fixedDamage', name: 'ちくちくばり', desc: 'あいての HPを かならず 12 へらす。', emoji: '📌', power: 0, kind: 'attack', fixedDamage: 12, accuracy: null, tags: ['はり', 'とげ'] }),
+  // ⑮⑯ じょうたいで つよくなる
+  mv({ id: 'n26', pattern: 'vsStatus', name: 'とどめのひとかみ', desc: 'あいてが よわって いると いりょくが 2ばい。', emoji: '🦷', power: 48, boostIfFoeStatus: 2, tags: ['きば', 'あご'] }),
+  mv({ id: 'n27', pattern: 'selfStatus', name: 'こんじょうアタック', desc: 'じぶんが くるしいほど つよくなる。', emoji: '🔥', power: 48, boostIfSelfStatus: 2, tags: ['ちから', 'かたい'] }),
+  // ⑰⑱ リスクの ある わざ
+  mv({ id: 'n28', pattern: 'recoil', name: 'すてみのとっしん', desc: 'みを すてて つっこむ。じぶんも ダメージ。', emoji: '🚀', power: 105, recoilRatio: 0.3, tags: ['ちから', 'コウチュウ目'] }),
+  mv({ id: 'n29', pattern: 'hpCost', name: 'いのちのきば', desc: 'じぶんの HPを けずって かみつく。', emoji: '💔', power: 120, hpCostRatio: 0.2, tags: ['きば', 'どく'] }),
+  // ⑲ きゅうしゅう
+  mv({ id: 'n30', pattern: 'drain', name: 'あまみつドレイン', desc: 'すいとって じぶんの HPに する。', emoji: '💚', power: 52, drainRatio: 0.5, tags: ['みつ', 'すう'] }),
+  mv({ id: 'n31', pattern: 'drain', name: 'ねっしんきゅうしゅう', desc: 'あいての ねつを うばって げんきに なる。', emoji: '🌡️', power: 48, drainRatio: 0.6, tags: ['すう', 'カメムシ目'] }),
+  // ⑳㉑ はんげき
+  mv({ id: 'n32', pattern: 'counter', name: 'いかりのおかえし', desc: 'このターン うけた ダメージを 2ばいで かえす。', emoji: '↩️', power: 0, kind: 'attack', counterRatio: 2, priority: -3, accuracy: null, target: 'oneFoe', tags: ['ちから'] }),
+  mv({ id: 'n33', pattern: 'counterGuard', name: 'こうらのかまえ', desc: 'こうげきを うけると こうらで はんげき。', emoji: '🐢', power: 0, counterGuard: true, accuracy: null, tags: ['かたい', 'こうら'] }),
+  // ㉒㉓㉔ じょうたいいじょう
+  mv({ id: 'n34', pattern: 'poison', name: 'しびれどくえき', desc: 'どくの えきを かけて どくに する。', emoji: '☠️', power: 0, target: 'oneFoe', accuracy: 90, inflict: { status: 'poison', chance: 1 }, tags: ['どく', 'はり'] }),
+  mv({ id: 'n35', pattern: 'poison', name: 'くさったにおい', desc: 'ひどい においで あいてを どくに する。', emoji: '🤢', power: 0, target: 'oneFoe', accuracy: 85, inflict: { status: 'poison', chance: 1 }, tags: ['におい'] }),
+  mv({ id: 'n36', pattern: 'paralyze', name: 'でんげきのしっぽ', desc: 'びりびりと しびれさせる。', emoji: '⚡', power: 0, target: 'oneFoe', accuracy: 90, inflict: { status: 'paralysis', chance: 1 }, tags: ['あし', 'とげ'] }),
+  mv({ id: 'n37', pattern: 'sleep', name: 'ゆりかごのうた', desc: 'やさしい おとで ねむらせる。', emoji: '💤', power: 0, target: 'oneFoe', accuracy: 75, inflict: { status: 'sleep', chance: 1 }, tags: ['はね', 'バッタ目'] }),
+  mv({ id: 'n38', pattern: 'sleep', name: 'ねむりのかおり', desc: 'あまい かおりで ねむくさせる。', emoji: '🌸', power: 0, target: 'oneFoe', accuracy: 75, inflict: { status: 'sleep', chance: 1 }, tags: ['みつ', 'チョウ目'] }),
+  // ㉕〜㉘ のうりょく ダウン
+  mv({ id: 'n39', pattern: 'atkDown', name: 'きあいそらし', desc: 'あいての ちからを ぬく。', emoji: '😮‍💨', power: 0, target: 'oneFoe', accuracy: 100, statChanges: [down('attack', -1)], tags: ['ぎたい'] }),
+  mv({ id: 'n40', pattern: 'defDown', name: 'よろいくだき', desc: 'かたい ところを こわして ぼうぎょを さげる。', emoji: '🔨', power: 0, target: 'oneFoe', accuracy: 100, statChanges: [down('defense', -2)], tags: ['あご', 'ちから'] }),
+  mv({ id: 'n41', pattern: 'spdDown', name: 'あしからめ', desc: 'あしを からめて うごきを にぶくする。', emoji: '🪢', power: 0, target: 'oneFoe', accuracy: 95, statChanges: [down('speed', -2)], tags: ['いと', 'あし'] }),
+  mv({ id: 'n42', pattern: 'accDown', name: 'こなかけ', desc: 'こなを かけて ねらいを くるわせる。', emoji: '💨', power: 0, target: 'oneFoe', accuracy: 100, statChanges: [down('accuracy', -1)], tags: ['りんぷん', 'チョウ目'] }),
+  // ㉙㉚ じぶん アップ
+  mv({ id: 'n43', pattern: 'selfUp', name: 'ちからのおたけび', desc: 'おおきな こえで こうげきが あがる。', emoji: '🔺', power: 0, accuracy: null, statChanges: [up('attack', 2)], tags: ['ちから', 'バッタ目'] }),
+  mv({ id: 'n44', pattern: 'selfUp', name: 'こうそくモード', desc: 'からだを かるくして すばやさが あがる。', emoji: '💨', power: 0, accuracy: null, statChanges: [up('speed', 2)], tags: ['とぶ', 'はね'] }),
+  mv({ id: 'n45', pattern: 'selfUpMulti', name: 'だっぴのめざめ', desc: 'だっぴして ぼうぎょと すばやさが あがる。', emoji: '🌱', power: 0, accuracy: null, statChanges: [up('defense', 1), up('speed', 1)], tags: ['だっぴ'] }),
+  // ㉛㉜ こうげき＋へんか
+  mv({ id: 'n46', pattern: 'atkAndUp', name: 'かまえながらぎり', desc: 'きりつけながら ぼうぎょが あがる。', emoji: '🛡️', power: 55, statChanges: [{ to: 'self', stat: 'defense', stage: 1, chance: 1 }], tags: ['かま', 'かたい'] }),
+  mv({ id: 'n47', pattern: 'atkAndDown', name: 'どろはねキック', desc: 'こうげき しながら あいての すばやさを さげる。', emoji: '🥾', power: 52, statChanges: [down('speed', -1, 1)], tags: ['あし', 'みず'] }),
+  // ㉝ うばう
+  mv({ id: 'n48', pattern: 'steal', name: 'ものまねポーズ', desc: 'あいての あげた ちからを まねて うばう。', emoji: '🫳', power: 0, target: 'oneFoe', accuracy: null, stealStats: true, tags: ['ぎたい', 'め'] }),
+  // ㉟〜㊵ かいふく
+  mv({ id: 'n49', pattern: 'healAlly', name: 'なかまへのみつ', desc: 'みかたに みつを わけて HPを かいふく。', emoji: '🍯', power: 0, target: 'ally', accuracy: null, healRatio: 0.5, tags: ['みつ', 'ハチ目'] }),
+  mv({ id: 'n50', pattern: 'regen', name: 'ひなたぼっこ', desc: 'おひさまを あびて まいターン かいふく。', emoji: '☀️', power: 0, accuracy: null, regen: { ratio: 0.12, turns: 4 }, tags: ['ひかる', 'はね'] }),
 ]
 
 export function findMove(id: string): LibraryMove | undefined {

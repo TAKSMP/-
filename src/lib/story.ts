@@ -26,6 +26,8 @@ export interface StoryCell {
   kind: CellKind
   bugId?: string // battle のときだけ
   level?: number // 敵の レベル（10マップモードで 1より 大きくなる）
+  allyBugId?: string // さきの ステージでは 敵が なかまを つれてくる
+  allyLevel?: number
   encounterId?: string // であいの おはなし（マップの中で かぶらない）
   col: number
   row: number
@@ -152,14 +154,35 @@ export function buildQuestStage(bugs: CaughtBug[], index: number): StoryStage {
   }
 
   const stories = assignEncounters(picks.map((p) => p.bug.order), questId(index))
-  const kinds: { kind: CellKind; bugId?: string; level?: number; encounterId?: string }[] = [
+  // ステージが すすむと、敵が なかまを つれて 2ひきで かかってくる
+  const hasAlly = (i: number) => {
+    if (index >= 8) return true // ステージ9〜：ぜんぶ 2ひき
+    if (index >= 6) return i % 2 === 1 // ステージ7〜：ひとつ おきに
+    if (index >= 4) return i === QUEST_PER_MAP - 1 // ステージ5〜：ボスだけ
+    return false
+  }
+  const kinds: {
+    kind: CellKind
+    bugId?: string
+    level?: number
+    allyBugId?: string
+    allyLevel?: number
+    encounterId?: string
+  }[] = [
     { kind: 'start' },
-    ...picks.map((p, i) => ({
-      kind: 'battle' as const,
-      bugId: p.bug.id,
-      level: p.level,
-      encounterId: stories[i],
-    })),
+    ...picks.map((p, i) => {
+      const ally = hasAlly(i)
+        ? sorted[Math.max(0, Math.min(n - 1, (n <= QUEST_PER_MAP ? (i + 2) % n : start + ((i + 2) % QUEST_PER_MAP))))]
+        : undefined
+      return {
+        kind: 'battle' as const,
+        bugId: p.bug.id,
+        level: p.level,
+        allyBugId: ally && ally.id !== p.bug.id ? ally.id : undefined,
+        allyLevel: Math.max(1, p.level - 1),
+        encounterId: stories[i],
+      }
+    }),
     { kind: 'goal' as const },
   ]
   const total = kinds.length
@@ -174,6 +197,8 @@ export function buildQuestStage(bugs: CaughtBug[], index: number): StoryStage {
       kind: k.kind,
       bugId: k.bugId,
       level: k.level,
+      allyBugId: k.allyBugId,
+      allyLevel: k.allyLevel,
       encounterId: k.encounterId,
       col,
       row,
@@ -226,9 +251,10 @@ export interface StorySave {
   goal: Record<string, boolean> // マップ → ゴールに ついたか
   seen: Record<string, string[]> // マップ → もう 出会った マス（しゃしんを 見せる）
   moves?: Record<string, SpecialMoveV2[]> // 虫のID → おぼえなおした わざ3つ
+  party?: Record<string, string[]> // マップ → なかまに した虫のID
 }
 
-const emptySave = (): StorySave => ({ levels: {}, cleared: {}, goal: {}, seen: {}, moves: {} })
+const emptySave = (): StorySave => ({ levels: {}, cleared: {}, goal: {}, seen: {}, moves: {}, party: {} })
 
 export function loadStory(): StorySave {
   try {
@@ -241,6 +267,7 @@ export function loadStory(): StorySave {
       goal: d.goal ?? {},
       seen: d.seen ?? {},
       moves: d.moves ?? {},
+      party: d.party ?? {},
     }
   } catch {
     return emptySave()
@@ -347,10 +374,12 @@ export function resetStage(save: StorySave, stageId: string): StorySave {
   const cleared = { ...save.cleared }
   const goal = { ...save.goal }
   const seen = { ...save.seen }
+  const party = { ...(save.party ?? {}) }
   delete cleared[stageId]
   delete goal[stageId]
   delete seen[stageId]
-  return { ...save, cleared, goal, seen }
+  delete party[stageId] // なかまも いなくなる
+  return { ...save, cleared, goal, seen, party }
 }
 
 // 虫の レベルを 1に もどす（すすみぐあいは そのまま）
@@ -372,9 +401,64 @@ export function resetAllLevels(save: StorySave): StorySave {
 // -------------------------------------------------------------
 export const LEARN_EVERY = 2
 
-// いまの わざ3つ（おぼえなおして いれば そっち）
-export function movesOf(save: StorySave, bug: CaughtBug): SpecialMoveV2[] {
+export const MAX_MOVES = 3
+
+// レベルで つかえる わざの かず（Lv1は 1つ、2レベルごとに ふえる）
+export function moveSlots(level: number): number {
+  return Math.min(MAX_MOVES, 1 + Math.floor(level / LEARN_EVERY))
+}
+
+// もっている わざ ぜんぶ（おぼえなおして いれば そっち）
+export function allMovesOf(save: StorySave, bug: CaughtBug): SpecialMoveV2[] {
   return save.moves?.[bug.id] ?? battleStatsV2(bug).moves
+}
+
+// いま つかえる わざ（レベルぶんだけ）
+export function movesOf(
+  save: StorySave,
+  bug: CaughtBug,
+  level: number,
+): SpecialMoveV2[] {
+  return allMovesOf(save, bug).slice(0, moveSlots(level))
+}
+
+// -------------------------------------------------------------
+//  なかま（ステージの なかだけ いっしょに たたかう）
+// -------------------------------------------------------------
+export const RECRUIT_CHANCE = 0.25 // たおした あと なかまに なりたがる かくりつ
+export const MAX_PARTY = 1 // つれて あるける なかまの かず
+
+export function partyOf(save: StorySave, stageId: string): string[] {
+  return save.party?.[stageId] ?? []
+}
+
+export function addParty(
+  save: StorySave,
+  stageId: string,
+  bugId: string,
+  level: number,
+): StorySave {
+  const list = partyOf(save, stageId)
+  if (list.includes(bugId)) return save
+  const next: StorySave = {
+    ...save,
+    party: { ...(save.party ?? {}), [stageId]: [...list, bugId].slice(-MAX_PARTY) },
+  }
+  // たたかった ときの レベルを ひきつぐ（はじめてなら）
+  if (!next.levels[bugId]) {
+    next.levels = { ...next.levels, [bugId]: { level: Math.max(1, level), exp: 0 } }
+  }
+  return next
+}
+
+export function removeParty(save: StorySave, stageId: string, bugId: string): StorySave {
+  return {
+    ...save,
+    party: {
+      ...(save.party ?? {}),
+      [stageId]: partyOf(save, stageId).filter((id) => id !== bugId),
+    },
+  }
 }
 
 export function setMoves(
