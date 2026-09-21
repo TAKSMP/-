@@ -4890,3 +4890,172 @@ input:focus {
   margin: 0;
   font-weight: 800;
 }
+
+/* --- あるいて さがす フィールド --- */
+.fieldmap {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: #b8d88a;
+}
+/* 「通行範囲」は かいはつ用なので かくす */
+.fieldmap [data-action='debug'] {
+  display: none;
+}
+
+/* --- フィールドの うえに かさねる そうさ ばん --- */
+.field-top {
+  position: fixed;
+  top: calc(8px + env(safe-area-inset-top));
+  left: 8px;
+  right: 8px;
+  z-index: 62;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+.field-top > * {
+  pointer-events: auto;
+}
+.field-back,
+.field-cage {
+  flex: none;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: 999px;
+}
+.field-bug {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 999px;
+  padding: 4px 10px 4px 4px;
+  box-shadow: var(--shadow);
+  font-size: 12px;
+  font-weight: 800;
+}
+.field-bug img {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+}
+.field-bug span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.field-notice {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  z-index: 62;
+  margin: 0;
+}
+
+/* --- マップに 出る むしを えらぶ --- */
+.fieldbugs-lead {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.7;
+  margin: 8px 0 10px;
+}
+.fieldbugs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.fieldbugs-item {
+  position: relative;
+  border: 3px solid transparent;
+  background: var(--card);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  padding: 5px;
+  font-family: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  opacity: 0.55;
+}
+.fieldbugs-item.on {
+  border-color: var(--green);
+  opacity: 1;
+}
+.fieldbugs-item img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 10px;
+}
+.fieldbugs-name {
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.25;
+  text-align: center;
+}
+.fieldbugs-check {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  font-size: 13px;
+}
+.fieldbugs-reset {
+  display: block;
+  width: 100%;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+/* --- あるけるマップ：エンジンの HUD は かくして アプリの バーに まとめる --- */
+.yuyuu-field .field-hud {
+  display: none;
+}
+.yuyuu-field .field-tools button[data-action='debug'] {
+  display: none;
+}
+.yuyuu-field .field-zone {
+  top: calc(60px + env(safe-area-inset-top));
+  font-weight: 800;
+}
+.field-place {
+  flex: none;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 999px;
+  padding: 7px 11px;
+  box-shadow: var(--shadow);
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 38vw;
+}
+.field-hint {
+  position: fixed;
+  left: 8px;
+  right: 8px;
+  top: calc(54px + env(safe-area-inset-top));
+  z-index: 61;
+  margin: 0;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.82);
+  border-radius: 999px;
+  padding: 4px 8px;
+  pointer-events: none;
+}

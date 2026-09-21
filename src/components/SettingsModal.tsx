@@ -1,5 +1,6 @@
 import { useRef, useState, type ChangeEvent } from 'react'
 import { MoveDexModal } from './MoveDexModal'
+import { FieldBugsModal } from './FieldBugsModal'
 import { sfx } from '../lib/sound'
 import type { CaughtBug } from '../types'
 import {
@@ -18,6 +19,7 @@ interface Props {
 // onChanged は AIキーの ための ものだった（いまは つかわない）
 export function SettingsModal({ onClose, onDataRestored }: Props) {
   const [dexOpen, setDexOpen] = useState(false)
+  const [fieldBugsOpen, setFieldBugsOpen] = useState(false)
   const [dataBusy, setDataBusy] = useState(false)
   const [dataMessage, setDataMessage] = useState<{
     type: 'success' | 'error'
@@ -120,6 +122,23 @@ export function SettingsModal({ onClose, onDataRestored }: Props) {
         <h2 className="modal-name">⚙️ せってい</h2>
 
         <section className="settings-dex">
+          <h3>🗺️ マップに 出る むし</h3>
+          <p>
+            ストーリーの「あるいて さがす マップ」で、どの虫に であうかを
+            図鑑から えらべます。
+          </p>
+          <button
+            className="btn btn-primary settings-dex-btn"
+            onClick={() => {
+              sfx.tap()
+              setFieldBugsOpen(true)
+            }}
+          >
+            🗺️ でる むしを えらぶ
+          </button>
+        </section>
+
+        <section className="settings-dex">
           <h3>📜 ひっさつわざリスト</h3>
           <p>
             バトルで 見たり つかったりした ひっさつわざを、
@@ -180,6 +199,7 @@ export function SettingsModal({ onClose, onDataRestored }: Props) {
       </div>
 
       {dexOpen && <MoveDexModal onClose={() => setDexOpen(false)} />}
+      {fieldBugsOpen && <FieldBugsModal onClose={() => setFieldBugsOpen(false)} />}
     </div>
   )
 }

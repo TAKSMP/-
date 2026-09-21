@@ -15,6 +15,10 @@ import { orderEmoji } from '../data/orders'
 import { ParkScene, parkName } from '../components/ParkScene'
 import { BattleStage, type BattleResult } from '../components/BattleStage'
 import { BugPicker } from '../components/BugPicker'
+import { FieldMap } from '../components/FieldMap'
+import { fieldForPlace, type FieldDef } from '../data/fields'
+import { bugsForField } from '../lib/fieldBugs'
+import { assignEncounters } from '../data/encounters'
 import { findEncounter } from '../data/encounters'
 import { sfx } from '../lib/sound'
 import {
@@ -62,7 +66,7 @@ interface Props {
   onGoCapture: () => void
 }
 
-type Phase = 'pickBug' | 'pickMap' | 'map' | 'encounter' | 'party' | 'battle' | 'clear'
+type Phase = 'pickBug' | 'pickMap' | 'map' | 'field' | 'encounter' | 'party' | 'battle' | 'clear'
 type MapMode = 'place' | 'quest'
 
 // マスの まんなかの いち（％）
@@ -78,6 +82,8 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   const [mapMode, setMapMode] = useState<MapMode>('quest')
   const [myBug, setMyBug] = useState<CaughtBug | null>(null)
   const [stage, setStage] = useState<StoryStage | null>(null)
+  // あるける マップ（えらんで いれば）
+  const [field, setField] = useState<FieldDef | null>(null)
   const [save, setSave] = useState<StorySave>(() => loadStory())
   const [pos, setPos] = useState(0)
   const [moving, setMoving] = useState(false)
@@ -167,6 +173,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
 
   function openStage(st: StoryStage) {
     sfx.tap()
+    setField(null)
     setStage(st)
     setPos(currentIndex(save, st))
     setPhase('map')
@@ -222,6 +229,46 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     setRecruit(null)
     setPendingCell(null)
     sfx.tap()
+  }
+
+  // あるける マップを ひらく（すごろくの かわり）
+  function openField(f: FieldDef) {
+    sfx.tap()
+    setField(f)
+    setStage({
+      id: `field:${f.id}`,
+      title: f.name,
+      kind: 'place',
+      cells: [],
+      cols: 1,
+      rows: 1,
+      sceneIndex: 0,
+    })
+    setNotice(null)
+    setPhase('field')
+  }
+
+  // あるいていて むしに であった
+  function fieldEncounter() {
+    if (!field) return
+    const pool = bugsForField(field.id, bugs)
+    if (pool.length === 0) {
+      setNotice('この マップに 出る むしが きまっていないよ（せっていで えらべます）')
+      return
+    }
+    const enemy = pool[Math.floor(Math.random() * pool.length)]
+    const [encId] = assignEncounters([enemy.order], `f${Math.random()}`)
+    setEncounterCell({
+      index: -1,
+      kind: 'battle',
+      bugId: enemy.id,
+      level: 1,
+      encounterId: encId,
+      col: 0,
+      row: 0,
+    })
+    setGoFlash(false)
+    setPhase('encounter')
   }
 
   // そのマップの すすみぐあいを まっさらに する
@@ -427,7 +474,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
       setPos(currentIndex(save, stage))
       setNotice('😢 まけちゃった… レベルを あげて もういちど！')
     }
-    setPhase('map')
+    setPhase(field ? 'field' : 'map')
     setBattleCell(null)
   }
 
@@ -800,22 +847,29 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
             ) : (
               <div className="story-map-list">
                 {places.map((p) => {
+                  const walkable = fieldForPlace(p.place)
                   const st = buildStage(bugs, p.place)
                   const done = (save.cleared[st.id] ?? []).length
                   const goal = !!save.goal[st.id]
                   return (
                     <div key={p.place} className="story-map-row">
-                      <button className="story-map" onClick={() => openStage(st)}>
+                      <button
+                        className="story-map"
+                        onClick={() => (walkable ? openField(walkable) : openStage(st))}
+                      >
                         <span className="story-map-thumb">
                           <ParkScene index={st.sceneIndex} fit="meet" />
                         </span>
                         <span className="story-map-body">
                           <span className="story-map-name">
                             {goal && '🏆 '}
+                            {walkable && '🚶 '}
                             {p.place}
                           </span>
                           <span className="story-map-sub">
-                            {parkName(st.sceneIndex)}／てき {p.count}ひき（たおした {done}）
+                            {walkable
+                              ? 'あるいて さがす マップ'
+                              : `${parkName(st.sceneIndex)}／てき ${p.count}ひき（たおした ${done}）`}
                           </span>
                         </span>
                       </button>
@@ -849,6 +903,58 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
         {resetModal}
         {cageModal}
       </div>
+    )
+  }
+
+  // ③' あるける マップ（フィールド）
+  if (phase === 'field' && field && myBug) {
+    const pool = bugsForField(field.id, bugs)
+    return (
+      <>
+        <FieldMap
+          base={field.base}
+          onEncounter={fieldEncounter}
+          onError={() => setNotice('マップを よみこめませんでした')}
+        />
+        <div className="field-top">
+          <button
+            className="btn btn-ghost field-back"
+            onClick={() => {
+              sfx.tap()
+              setField(null)
+              setPhase('pickMap')
+            }}
+          >
+            ← もどる
+          </button>
+          <span className="field-place">{field.name}</span>
+          <div className="field-bug">
+            <img src={mainPhoto(myBug)} alt="" />
+            <span>
+              {myBug.name} <b>Lv {myLevel.level}</b>
+            </span>
+          </div>
+          {cageOf(save).length > 0 && (
+            <button
+              className="btn btn-ghost field-cage"
+              onClick={() => {
+                sfx.tap()
+                setCageOpen(true)
+              }}
+            >
+              🧺{cageOf(save).length}
+            </button>
+          )}
+        </div>
+        <p className="field-hint">あるくと むしに であうよ</p>
+        {notice && <p className="story-notice field-notice">{notice}</p>}
+        {pool.length === 0 && (
+          <p className="story-notice field-notice">
+            この マップに 出る むしが まだ きまっていません（⚙️ せっていで えらべます）
+          </p>
+        )}
+        {cageModal}
+      </>
     )
   }
 
@@ -892,7 +998,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
               sfx.tap()
               if (stage) setPos(currentIndex(save, stage))
               setEncounterCell(null)
-              setPhase('map')
+              setPhase(field ? 'field' : 'map')
             }}
           >
             ← マップに もどる
@@ -941,7 +1047,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
           </button>
           <button
             className="btn btn-ghost battle-back"
-            onClick={() => { sfx.tap(); setPendingCell(null); setPhase('map') }}
+            onClick={() => { sfx.tap(); setPendingCell(null); setPhase(field ? 'field' : 'map') }}
           >
             ← もどる
           </button>
@@ -967,7 +1073,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
         startLog="⚔️ てきが あらわれた！"
         onQuit={() => {
           if (stage) setPos(currentIndex(save, stage))
-          setPhase('map')
+          setPhase(field ? 'field' : 'map')
           setBattleCell(null)
           setNotice('にげた…')
         }}
