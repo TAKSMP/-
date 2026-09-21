@@ -72,7 +72,7 @@ export function defaultMovesV2(bug: CaughtBug): SpecialMoveV2[] {
 
   const score = (m: LibraryMove, i: number): number => {
     const match = m.tags.filter((t) => tags.includes(t)).length
-    return match * 100 + ((seed >> (i % 8)) % 17) // にてる わざを ゆうせん＋虫ごとの ゆらぎ
+    return match * 100 + ((seed >>> (i % 8)) % 17) // にてる わざを ゆうせん＋虫ごとの ゆらぎ
   }
 
   const attackers = MOVE_LIBRARY.filter((m) => m.kind === 'attack')
@@ -153,9 +153,9 @@ export function battleStatsV2(bug: CaughtBug): BattleStatsV2 {
   const r = clampInt(bug.rarity, 1, 5)
   const seed = hashStr(bug.name + (bug.id ?? ''))
   return {
-    hp: clampInt(HP_MIN + r * 6 + (((seed >> 5) % 9) - 4), HP_MIN, HP_MAX),
-    attack: clampInt(3 + r + (((seed >> 1) % 3) - 1), STAT_MIN, STAT_MAX),
-    defense: clampInt(2 + r + (((seed >> 3) % 3) - 1), STAT_MIN, STAT_MAX),
+    hp: clampInt(HP_MIN + r * 6 + (((seed >>> 5) % 9) - 4), HP_MIN, HP_MAX),
+    attack: clampInt(3 + r + (((seed >>> 1) % 3) - 1), STAT_MIN, STAT_MAX),
+    defense: clampInt(2 + r + (((seed >>> 3) % 3) - 1), STAT_MIN, STAT_MAX),
     speed: migrateSpeed(bug),
     moves: defaultMovesV2(bug),
   }

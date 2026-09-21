@@ -908,7 +908,7 @@ export function migrateSpeed(bug: CaughtBug): number {
   // ふるいデータには すばやさが ない。レア度と 名前から きめて いつも おなじ値に。
   const seed = hashStr('spd' + bug.name + (bug.id ?? ''))
   const r = clampInt(bug.rarity, 1, 5)
-  return clampInt(3 + r + ((seed >> 2) % 3) - 1, STAT_MIN, STAT_MAX)
+  return clampInt(3 + r + ((seed >>> 2) % 3) - 1, STAT_MIN, STAT_MAX)
 }
 
 export function migrateHp(oldHp: number): number {
