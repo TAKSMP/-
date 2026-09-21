@@ -844,7 +844,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
           </button>
         )}
         <button className="btn btn-ghost battle-back" onClick={reset}>
-          ← 虫を えらびなおす
+          ← つかう虫を えらびなおす
         </button>
         {resetModal}
         {cageModal}
@@ -884,6 +884,18 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
             }}
           >
             バトル かいし ⚔️
+          </button>
+          <button
+            className="btn btn-ghost battle-back"
+            onClick={() => {
+              if (goFlash) return
+              sfx.tap()
+              if (stage) setPos(currentIndex(save, stage))
+              setEncounterCell(null)
+              setPhase('map')
+            }}
+          >
+            ← マップに もどる
           </button>
         </div>
         {goFlash && (
@@ -990,8 +1002,8 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
               つぎの ステージへ ▶
             </button>
           )}
-          <button className="btn btn-big" onClick={() => setPhase('pickMap')}>
-            べつの マップへ 🗺️
+          <button className="btn btn-big" onClick={() => { sfx.tap(); setPhase('pickMap') }}>
+            ← べつの マップへ 🗺️
           </button>
           <button className="btn btn-big" onClick={reset}>
             虫を えらびなおす ⚔️
@@ -1116,6 +1128,16 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
         <p className="story-help">
           となりの マスを タップして すすもう。まだ たおしていない虫の マスに はいると バトル！
         </p>
+
+        <button
+          className="btn btn-ghost battle-back"
+          onClick={() => {
+            sfx.tap()
+            setPhase('pickMap')
+          }}
+        >
+          ← マップを えらびなおす
+        </button>
 
         {askAgain && (
           <div className="modal-backdrop" onClick={() => setAskAgain(null)}>
