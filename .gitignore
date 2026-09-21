@@ -8,3 +8,7 @@ dist-ssr
 .vite
 *.tsbuildinfo
 dist-single
+
+# MAPパッケージの 大きい かくにん用ファイル（元データからいつでも作り直せる）
+MAP/*/preview.html
+MAP/*/walkable-overlay.svg

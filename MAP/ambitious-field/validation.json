@@ -1,0 +1,17 @@
+{
+  "geometry": "passed",
+  "gridStep": 5,
+  "sweptEdgeStep": 1,
+  "reachableSamples": 9049,
+  "entrances": [
+    "north",
+    "east",
+    "south"
+  ],
+  "destinations": [
+    "upper-lawn",
+    "lower-lawn"
+  ],
+  "browser": "not tested",
+  "mobileDevice": "not tested"
+}

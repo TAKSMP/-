@@ -43,7 +43,7 @@ export async function createField(host,{map,imageUrl,onZoneEnter=()=>{},drawPlay
   if(img.naturalWidth!==map.width||img.naturalHeight!==map.height) throw new Error('Map/image size mismatch');
   if(signal?.aborted) throw new DOMException('Aborted','AbortError');
   host.classList.add('yuyuu-field');
-  host.innerHTML='<canvas aria-label="歩行フィールド" tabindex="0"></canvas><div class="field-hud"><strong></strong><span>十字キー・WASD / 左下のパッドで歩く</span></div><div class="field-tools"><button type="button" data-action="debug">通行範囲</button><button type="button" data-action="reset">入口へ</button></div><div class="field-stick" role="group" aria-label="移動パッド"><i></i><b>＋</b></div><output class="field-zone" aria-live="polite"></output>';
+  host.innerHTML='<canvas aria-label="アンビシャス 歩行フィールド" tabindex="0"></canvas><div class="field-hud"><strong></strong><span>十字キー・WASD / 左下のパッドで歩く</span></div><div class="field-tools"><button type="button" data-action="debug">通行範囲</button><button type="button" data-action="reset">入口へ</button></div><div class="field-stick" role="group" aria-label="移動パッド"><i></i><b>＋</b></div><output class="field-zone" aria-live="polite"></output>';
   host.querySelector('strong').textContent=map.name;
   const canvas=host.querySelector('canvas'),ctx=canvas.getContext('2d'),stick=host.querySelector('.field-stick'),knob=stick.querySelector('i'),zoneText=host.querySelector('output');
   const p={...map.spawn},keys=new Set(),abort=new AbortController(),opts={signal:abort.signal};
@@ -65,7 +65,7 @@ export async function createField(host,{map,imageUrl,onZoneEnter=()=>{},drawPlay
   host.addEventListener('focusout',e=>{if(!host.contains(e.relatedTarget))resetInput();},opts);
   window.addEventListener('blur',resetInput,opts);
   document.addEventListener('visibilitychange',()=>{resetInput();last=0;},opts);
-  canvas.setAttribute('aria-label',(map.name||'')+' 歩行フィールド');host.querySelector('[data-action=reset]').addEventListener('click',()=>{Object.assign(p,map.spawn);resetInput();zoneId=null;canvas.focus();},opts);
+  host.querySelector('[data-action=reset]').addEventListener('click',()=>{Object.assign(p,map.spawn);resetInput();zoneId=null;canvas.focus();},opts);
   host.querySelector('[data-action=debug]').addEventListener('click',()=>{debug=!debug;},opts);
   function shape(s){ctx.beginPath();if(s.type==='ellipse')ctx.ellipse(s.x,s.y,s.rx,s.ry,0,0,Math.PI*2);else ctx.rect(s.x,s.y,s.width,s.height);ctx.fill();}
   function render(t){
@@ -86,5 +86,5 @@ export async function createField(host,{map,imageUrl,onZoneEnter=()=>{},drawPlay
     raf=requestAnimationFrame(render);
   }
   raf=requestAnimationFrame(render);
-  return {getPosition:()=>({...p}),setPaused(value){paused=!!value;resetInput();},setDebug(value){debug=!!value;},destroy(){running=false;cancelAnimationFrame(raf);observer.disconnect();abort.abort();host.innerHTML='';host.classList.remove('yuyuu-field');}};
+  return {setPosition(x,y){if(!canStand(map,x,y))throw new Error("通行できない位置です");p.x=x;p.y=y;zoneId=null;resetInput();},getPosition:()=>({...p}),setPaused(value){paused=!!value;resetInput();},setDebug(value){debug=!!value;},destroy(){running=false;cancelAnimationFrame(raf);observer.disconnect();abort.abort();host.innerHTML='';host.classList.remove('yuyuu-field');}};
 }

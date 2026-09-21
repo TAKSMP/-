@@ -18,6 +18,12 @@ export const FIELDS: FieldDef[] = [
     base: 'fields/yuyuu/',
     place: 'ゆうゆうの丘公園',
   },
+  {
+    id: 'ambitious',
+    name: 'アンビシャス',
+    base: 'fields/ambitious/',
+    place: 'アンビシャス',
+  },
 ]
 
 export function fieldById(id: string): FieldDef | undefined {
