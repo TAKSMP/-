@@ -29,9 +29,16 @@ interface Props {
 const lastPos = new Map<string, { x: number; y: number; facing?: string }>()
 
 // つぎに むしに であうまでの きょり（ピクセル）
-const ENCOUNTER_MIN = 90
-const ENCOUNTER_MAX = 230
-const nextStep = () => ENCOUNTER_MIN + Math.random() * (ENCOUNTER_MAX - ENCOUNTER_MIN)
+// であうまでに あるく きょり。マップの speed は 94px/びょう なので
+// ここの すうじを 94で わると だいたいの びょうすうに なる。
+const ENCOUNTER_MIN = 620 // ≒ 6.6びょう
+const ENCOUNTER_MAX = 1500 // ≒ 16びょう
+// マップに 入った ちょくごは すこし ながく あるいてから であう
+const FIRST_MIN = 900 // ≒ 9.6びょう
+const FIRST_MAX = 1800 // ≒ 19びょう
+const rand = (min: number, max: number) => min + Math.random() * (max - min)
+const nextStep = () => rand(ENCOUNTER_MIN, ENCOUNTER_MAX)
+const firstStep = () => rand(FIRST_MIN, FIRST_MAX)
 
 // 男の子を えがく（あしもとが x,y）
 function drawBoy(ctx: CanvasRenderingContext2D, s: FieldPlayerState) {
@@ -105,7 +112,8 @@ export function FieldMap({ base, paused = false, onEncounter, onZoneEnter, onErr
   const errorCb = useRef(onError)
   const pausedRef = useRef(paused)
   const zoneRef = useRef<string | null>(null)
-  const nextAt = useRef(nextStep())
+  const nextAt = useRef(firstStep())
+  const travelRef = useRef(0)
   encounterCb.current = onEncounter
   zoneCb.current = onZoneEnter
   errorCb.current = onError
@@ -113,7 +121,8 @@ export function FieldMap({ base, paused = false, onEncounter, onZoneEnter, onErr
 
   useEffect(() => {
     engine.current?.setPaused(paused)
-    if (!paused) nextAt.current = nextStep() // バトルの あとは つぎの であいまで あるく
+    // バトルの あとは、いまの きょりから かぞえなおす
+    if (!paused) nextAt.current = travelRef.current + nextStep()
   }, [paused])
 
   useEffect(() => {
@@ -139,6 +148,7 @@ export function FieldMap({ base, paused = false, onEncounter, onZoneEnter, onErr
         },
         drawPlayer: (ctx, state) => {
           drawBoy(ctx, state)
+          travelRef.current = state.travel
           // あるいた きょりが たまったら むしに であう
           if (!pausedRef.current && state.moving && state.travel >= nextAt.current) {
             nextAt.current = state.travel + nextStep()
