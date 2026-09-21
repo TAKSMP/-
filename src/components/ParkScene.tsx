@@ -30,6 +30,24 @@ const PALETTES: Palette[] = [
   { name: 'ふゆの公園', sky: ['#dceaf5', '#f2f8fc'], grass: ['#cfe0cf', '#aec9ae'], path: '#e8e2d2', pond: '#a8cfe0', tree: ['#7a9e6f', '#6a4a2c'], flower: ['#fff', '#dce8ff', '#ffd9e8'] },
 ]
 
+// おなじ 10まいの 絵を「ひるま／ゆうぐれ／よる」で つかいまわす。
+// sceneIndex 0〜9=ひるま、10〜19=ゆうぐれ、20〜29=よる。
+interface Tone {
+  name: string
+  veil?: string // ぜんたいに かける いろ
+  veilOpacity?: number
+  sun?: string // おひさま／おつきさま の いろ
+  stars?: boolean
+}
+const TONES: Tone[] = [
+  { name: '', sun: '#fff6c4' },
+  { name: 'ゆうぐれ', veil: '#ff7a2f', veilOpacity: 0.3, sun: '#ffd9a0' },
+  { name: 'よる', veil: '#12224a', veilOpacity: 0.52, sun: '#fdf6d0', stars: true },
+]
+export const TONE_COUNT = TONES.length
+const toneOf = (index: number): Tone =>
+  TONES[Math.floor(index / PALETTES.length) % TONES.length]
+
 // ばしょごとに いつも おなじ 絵に するための かんたんな らんすう
 function rng(seed: number) {
   let s = seed >>> 0
@@ -40,7 +58,9 @@ function rng(seed: number) {
 }
 
 export function parkName(index: number): string {
-  return PALETTES[index % PALETTES.length].name
+  const base = PALETTES[index % PALETTES.length].name
+  const t = toneOf(index)
+  return t.name ? `${base}（${t.name}）` : base
 }
 
 export function ParkScene({
@@ -51,6 +71,7 @@ export function ParkScene({
   fit?: 'slice' | 'meet' // meet=ぜんたいを 見せる（サムネ用）
 }) {
   const p = PALETTES[index % PALETTES.length]
+  const tone = toneOf(index)
   const r = rng(index * 7919 + 13)
   const id = `pk${index}`
 
@@ -68,6 +89,12 @@ export function ParkScene({
   }))
   const pondX = 10 + r() * 60
   const pondY = 58 + r() * 22
+  const stars = Array.from({ length: 22 }, () => ({
+    x: r() * 100,
+    y: 1 + r() * 20,
+    r: 0.3 + r() * 0.5,
+    o: 0.5 + r() * 0.5,
+  }))
 
   return (
     <svg
@@ -91,7 +118,13 @@ export function ParkScene({
       <rect x="0" y="0" width="100" height="100" fill={`url(#${id}sky)`} />
       <rect x="0" y="22" width="100" height="78" fill={`url(#${id}grass)`} />
       {/* おひさま */}
-      <circle cx="82" cy="9" r="6" fill="#fff6c4" opacity="0.9" />
+      <circle cx="82" cy="9" r="6" fill={tone.sun} opacity="0.9" />
+      {/* よるの ほし */}
+      {tone.stars &&
+        stars.map((st, i) => (
+          <circle key={`s${i}`} cx={st.x} cy={st.y} r={st.r} fill="#fff" opacity={st.o} />
+        ))}
+
       {/* とおくの 丘 */}
       <ellipse cx="20" cy="26" rx="34" ry="10" fill={p.grass[0]} opacity="0.9" />
       <ellipse cx="72" cy="24" rx="30" ry="9" fill={p.grass[0]} opacity="0.75" />
@@ -114,6 +147,19 @@ export function ParkScene({
           <circle cx="2" cy="0.2" r="2.2" fill={p.tree[0]} opacity="0.9" />
         </g>
       ))}
+
+      {/* じかんたいの いろ（ゆうぐれ・よる） */}
+      {tone.veil && (
+        <rect
+          x="0"
+          y="0"
+          width="100"
+          height="100"
+          fill={tone.veil}
+          opacity={tone.veilOpacity}
+          style={{ mixBlendMode: 'multiply' }}
+        />
+      )}
     </svg>
   )
 }

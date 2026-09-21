@@ -10,6 +10,7 @@ import type { CaughtBug, SpecialMoveV2 } from '../types'
 import { battleStatsV2, tagsOf, usesFor } from './battleSetup'
 import { MOVE_LIBRARY } from './moveLibrary'
 import { assignEncounters } from '../data/encounters'
+import { TONE_COUNT } from '../components/ParkScene'
 
 const SAVE_KEY = 'chomushi.story.v1'
 
@@ -49,10 +50,40 @@ function hashStr(s: string): number {
   return h
 }
 
+// わざ 1つの つよさ（ステータスだけ 見ても じっさいの つよさは わからない）
+function moveScore(m: SpecialMoveV2): number {
+  if (m.kind === 'status') {
+    let v = 16
+    if (m.healRatio) v += m.healRatio * 60
+    if (m.restSleep) v += 30
+    if (m.statChanges?.length) v += m.statChanges.length * 8
+    if (m.leech) v += m.leech.ratio * 40
+    if (m.inflict) v += (m.inflict.chance / 100) * 22
+    return v
+  }
+  const acc = (m.accuracy ?? 100) / 100
+  const hits = m.hits ? (m.hits[0] + m.hits[1]) / 2 : 1
+  let p = (m.fixedDamage ? m.fixedDamage * 2.2 : m.power) * hits * acc
+  // ためる・うごけない・おくれて あたる わざは そのぶん よわく みる
+  if (m.chargeTurns) p /= 1 + m.chargeTurns
+  if (m.rechargeTurns) p /= 1 + m.rechargeTurns
+  if (m.delayTurns) p /= 1 + m.delayTurns
+  if (m.recoilRatio) p *= 1 - Math.min(0.4, m.recoilRatio)
+  if (m.hpCostRatio) p *= 1 - Math.min(0.4, m.hpCostRatio)
+  if (m.drainRatio) p *= 1 + m.drainRatio * 0.5
+  if (m.inflict) p += (m.inflict.chance / 100) * 14
+  return p
+}
+
 // 虫の つよさ（ならべる ときの ものさし）
+// ステータスだけだと「つよそうに 見えて よわい虫」が さきの ステージに
+// ならんで しまうので、もっている わざの つよさも 入れる。
 export function bugPower(bug: CaughtBug): number {
   const s = battleStatsV2(bug)
-  return s.hp + (s.attack + s.defense + s.speed) * 3
+  const ms = s.moves.map(moveScore)
+  const best = ms.length ? Math.max(...ms) : 0
+  const avg = ms.length ? ms.reduce((a, b) => a + b, 0) / ms.length : 0
+  return s.hp + (s.attack + s.defense + s.speed) * 3 + best * 1.6 + avg * 1.2
 }
 
 // そのばしょで みつけた虫（あたらしい順ではなく、よわい順）
@@ -120,20 +151,35 @@ export function buildStage(bugs: CaughtBug[], place: string): StoryStage {
 // -------------------------------------------------------------
 //  10マップモード（みつけた虫 ぜんぶが たいしょう）
 // -------------------------------------------------------------
-//  ・10この マップ。1マップに 5ひき
+//  ・30この マップ。1マップに 5ひき
 //  ・さきに すすむほど つよい虫＋レベルも あがる
 //  ・ひとつ クリアすると つぎの マップが あく
-export const QUEST_MAPS = 10
+//  ・絵は 10まいを「ひるま／ゆうぐれ／よる」で つかいまわす
+export const QUEST_MAPS = 30
 export const QUEST_PER_MAP = 5
+// てきは プレイヤーの さいだいレベルより すこし うえまで あがる
+export const ENEMY_MAX_LEVEL = 25
+// ステージ21〜：なかまも おなじレベル、さいきょうクラスの虫が つれてこられる
+const LATE_FROM = 20
+const FINAL_FROM = 25
 
 export const questId = (index: number) => `quest:${index}`
 
 // マップが とおしで なんばんめの 敵か → レベル
 function questLevel(slot: number): number {
-  // 0〜49 を 1〜10 くらいに。さいごの 1ぴき（ボス）は すこし つよい
-  const base = 1 + Math.floor(slot / 5)
+  const index = Math.floor(slot / QUEST_PER_MAP)
   const boss = slot % QUEST_PER_MAP === QUEST_PER_MAP - 1 ? 1 : 0
-  return Math.min(MAX_LEVEL, base + boss)
+  // ステージ1〜20：1ずつ あがる
+  // ステージ21〜30：ゆっくり あがって さいごは 25
+  const base =
+    index < MAX_LEVEL
+      ? 1 + index
+      : MAX_LEVEL +
+        Math.round(
+          ((index - (MAX_LEVEL - 1)) * (ENEMY_MAX_LEVEL - MAX_LEVEL)) /
+            (QUEST_MAPS - MAX_LEVEL),
+        )
+  return Math.min(ENEMY_MAX_LEVEL, base + boss)
 }
 
 export function buildQuestStage(bugs: CaughtBug[], index: number): StoryStage {
@@ -161,6 +207,19 @@ export function buildQuestStage(bugs: CaughtBug[], index: number): StoryStage {
     if (index >= 4) return i === QUEST_PER_MAP - 1 // ステージ5〜：ボスだけ
     return false
   }
+  // なかまを どこから えらぶか（ステージ26〜は さいきょうクラスから）
+  const allyAt = (i: number, leaderAt: number) => {
+    const raw =
+      index >= FINAL_FROM
+        ? n - 1 - ((i + 1) % QUEST_PER_MAP)
+        : n <= QUEST_PER_MAP
+          ? (i + 2) % n
+          : start + ((i + 2) % QUEST_PER_MAP)
+    let at = Math.max(0, Math.min(n - 1, raw))
+    // リーダーと おなじ虫に なったら となりを つかう（ボスが 1ぴきに ならないように）
+    if (at === leaderAt && n > 1) at = at > 0 ? at - 1 : at + 1
+    return at
+  }
   const kinds: {
     kind: CellKind
     bugId?: string
@@ -171,15 +230,15 @@ export function buildQuestStage(bugs: CaughtBug[], index: number): StoryStage {
   }[] = [
     { kind: 'start' },
     ...picks.map((p, i) => {
-      const ally = hasAlly(i)
-        ? sorted[Math.max(0, Math.min(n - 1, (n <= QUEST_PER_MAP ? (i + 2) % n : start + ((i + 2) % QUEST_PER_MAP))))]
-        : undefined
+      const leaderAt = n <= QUEST_PER_MAP ? i % n : Math.max(0, Math.min(n - 1, start + i))
+      const ally = hasAlly(i) ? sorted[allyAt(i, leaderAt)] : undefined
       return {
         kind: 'battle' as const,
         bugId: p.bug.id,
         level: p.level,
         allyBugId: ally && ally.id !== p.bug.id ? ally.id : undefined,
-        allyLevel: Math.max(1, p.level - 1),
+        // ステージ21〜：なかまも リーダーと おなじ レベル
+        allyLevel: Math.max(1, p.level - (index >= LATE_FROM ? 0 : 1)),
         encounterId: stories[i],
       }
     }),
@@ -212,7 +271,8 @@ export function buildQuestStage(bugs: CaughtBug[], index: number): StoryStage {
     cells,
     cols,
     rows,
-    sceneIndex: index % SCENE_COUNT, // 10マップ ＝ 10しゅるいの 公園
+    // 10まいの 絵 × ひるま／ゆうぐれ／よる ＝ 30とおり
+    sceneIndex: index % (SCENE_COUNT * TONE_COUNT),
   }
 }
 
@@ -328,10 +388,11 @@ export function statsWithLevel(bug: CaughtBug, level: number) {
   const up = level - 1
   return {
     ...s,
-    hp: Math.min(99, s.hp + up * 4),
-    attack: Math.min(14, s.attack + Math.floor(up / 2)),
-    defense: Math.min(14, s.defense + Math.floor(up / 2)),
-    speed: Math.min(14, s.speed + Math.floor(up / 3)),
+    // うわげんは ひろめに とる。ここが せまいと レベル20と25で さが 出ない。
+    hp: Math.min(110, s.hp + up * 4),
+    attack: Math.min(18, s.attack + Math.floor(up / 2)),
+    defense: Math.min(18, s.defense + Math.floor(up / 2)),
+    speed: Math.min(16, s.speed + Math.floor(up / 3)),
   }
 }
 

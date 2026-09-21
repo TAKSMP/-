@@ -28,6 +28,9 @@ export const RANK_MIN = -6
 export const RANK_MAX = 6
 
 export const POISON_RATIO = 1 / 8 // どくの まいターン ダメージ（さいだいHPひ）
+// バトルの ながさの つまみ。ちいさくすると ダメージが へって ターンが のびる。
+// へいきん 8〜12ターンに おさまるように きめている。
+export const DAMAGE_SCALE = 0.72
 export const SLEEP_MIN_TURNS = 2
 export const SLEEP_MAX_TURNS = 4
 export const PARALYSIS_FAIL_CHANCE = 0.25 // まひで うごけない かくりつ
@@ -296,7 +299,7 @@ function calcDamage(
   if (move.boostIfSelfStatus && att.status) power *= move.boostIfSelfStatus
 
   const crit = rng() < critChance(move.critStage ?? 0)
-  let dmg = ((power / 10) * (a + 2)) / (d / 2 + 3) + 1
+  let dmg = (((power / 10) * (a + 2)) / (d / 2 + 3)) * DAMAGE_SCALE + 1
   if (crit) dmg *= CRIT_MUL
   if (opts.spread) dmg *= SPREAD_MUL
   dmg *= 0.9 + rng() * 0.2 // すこしだけ ゆらす
