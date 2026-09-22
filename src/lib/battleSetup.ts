@@ -82,7 +82,7 @@ export function defaultMovesV2(bug: CaughtBug): SpecialMoveV2[] {
       (m.inflict || m.statChanges || m.stealStats || m.swapStats),
   )
   const recovery = MOVE_LIBRARY.filter(
-    (m) => m.healRatio || m.restSleep || m.regen || m.leech || m.cureStatus,
+    (m) => m.healRatio || m.restSleep || m.regen || m.leech || m.cureStatus || m.cureStatusKey,
   )
 
   const pick = (pool: LibraryMove[], exclude: Set<string>, i: number) => {
@@ -116,6 +116,8 @@ export function defaultMovesV2(bug: CaughtBug): SpecialMoveV2[] {
 export function usesFor(m: SpecialMoveV2): number {
   if (m.power >= 110 || m.restSleep || m.swapStats) return 1
   if (m.power >= 70 || m.stealStats) return 2
+  // みかた ぜんいんを いちどに かいふく／じょうたいいじょう解除 は つよいので すくなめに
+  if (m.target === 'selfSide' && (m.healRatio || m.cureStatus)) return 2
   if (m.kind === 'status') return 3
   return 3
 }

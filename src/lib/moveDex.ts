@@ -18,7 +18,7 @@ export const GROUPS: { key: MoveGroup; label: string; emoji: string }[] = [
 ]
 
 export function groupOf(m: LibraryMove): MoveGroup {
-  if (m.healRatio || m.restSleep || m.regen || m.cureStatus) return 'heal'
+  if (m.healRatio || m.restSleep || m.regen || m.cureStatus || m.cureStatusKey) return 'heal'
   return m.kind === 'attack' ? 'attack' : 'status'
 }
 

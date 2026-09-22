@@ -50,6 +50,11 @@ export const MOVE_PATTERNS = [
   { no: 38, key: 'rest', label: 'ねむって ぜんかいふく' },
   { no: 39, key: 'regen', label: 'まいターン すこしずつ かいふく' },
   { no: 40, key: 'leech', label: 'あいてのHPを まいターン すいとる' },
+  { no: 41, key: 'healAll', label: 'みかた ぜんいんの HPを かいふく' },
+  { no: 42, key: 'cureAll', label: 'みかた ぜんいんの じょうたいいじょうを なおす' },
+  { no: 43, key: 'cureSleep', label: 'じぶんか みかたの ねむりだけ なおす' },
+  { no: 44, key: 'curePoison', label: 'じぶんか みかたの どくだけ なおす' },
+  { no: 45, key: 'cureParalysis', label: 'じぶんか みかたの まひだけ なおす' },
 ] as const
 
 export type MovePatternKey = (typeof MOVE_PATTERNS)[number]['key']
@@ -257,6 +262,35 @@ export const MOVE_LIBRARY: LibraryMove[] = [
   // ㉟〜㊵ かいふく
   mv({ id: 'n49', pattern: 'healAlly', name: 'なかまへのみつ', desc: 'みかたに みつを わけて HPを かいふく。', emoji: '🍯', power: 0, target: 'ally', accuracy: null, healRatio: 0.5, tags: ['みつ', 'ハチ目'] }),
   mv({ id: 'n50', pattern: 'regen', name: 'ひなたぼっこ', desc: 'おひさまを あびて まいターン かいふく。', emoji: '☀️', power: 0, accuracy: null, regen: { ratio: 0.12, turns: 4 }, tags: ['ひかる', 'はね'] }),
+
+  // ㊱' みかたの HPを かいふく（じぶんも えらべる）― もっと しゅるいを ふやした
+  mv({ id: 'p01', pattern: 'healAlly', name: 'いやしのはな粉', desc: 'あまい はな粉を わけて HPを かいふく。じぶんにも つかえる。', emoji: '🌼', power: 0, target: 'ally', accuracy: null, healRatio: 0.5, tags: ['はな', 'かふん'] }),
+  mv({ id: 'p02', pattern: 'healAlly', name: 'せいめいのしずく', desc: 'からだから にじみでる しずくで HPを かいふく。じぶんにも つかえる。', emoji: '💧', power: 0, target: 'ally', accuracy: null, healRatio: 0.5, tags: ['すう'] }),
+
+  // ㊲' みかたの じょうたいいじょうを なおす（じぶんも えらべる）― もっと しゅるいを ふやした
+  mv({ id: 'p03', pattern: 'cure', name: 'あんしんのはねおと', desc: 'はねおとで おちつかせて じょうたいいじょうを なおす。じぶんにも つかえる。', emoji: '🎐', power: 0, target: 'ally', accuracy: null, cureStatus: true, tags: ['はね'] }),
+  mv({ id: 'p04', pattern: 'cure', name: 'きよめのこな', desc: 'からだの こなを ふりかけて じょうたいいじょうを なおす。じぶんにも つかえる。', emoji: '✨', power: 0, target: 'ally', accuracy: null, cureStatus: true, tags: ['りんぷん'] }),
+  mv({ id: 'p05', pattern: 'cure', name: 'なかまのかんびょう', desc: 'そばで かいほうして じょうたいいじょうを なおす。じぶんにも つかえる。', emoji: '🩹', power: 0, target: 'ally', accuracy: null, cureStatus: true, tags: ['なかよし'] }),
+
+  // ㊶ みかた ぜんいんの HPを かいふく
+  mv({ id: 'p06', pattern: 'healAll', name: 'なかまへのじゅえき', desc: 'あまい じゅえきを みんなに わけて HPを かいふく。', emoji: '💚', power: 0, target: 'selfSide', accuracy: null, healRatio: 0.35, uses: 2, tags: ['じゅえき'] }),
+  mv({ id: 'p07', pattern: 'healAll', name: 'いのちのはなびら', desc: 'はなびらを まいちらして なかま ぜんいんの HPを かいふく。', emoji: '🌸', power: 0, target: 'selfSide', accuracy: null, healRatio: 0.35, uses: 2, tags: ['はな'] }),
+
+  // ㊷ みかた ぜんいんの じょうたいいじょうを なおす
+  mv({ id: 'p08', pattern: 'cureAll', name: 'せいじょうのかぜ', desc: 'すずしい かぜを おくって なかま ぜんいんの じょうたいいじょうを なおす。', emoji: '🌬️', power: 0, target: 'selfSide', accuracy: null, cureStatus: true, uses: 2, tags: ['かぜ'] }),
+  mv({ id: 'p09', pattern: 'cureAll', name: 'まもりのりんぷん', desc: 'りんぷんを ふりまいて なかま ぜんいんの じょうたいいじょうを なおす。', emoji: '🦋', power: 0, target: 'selfSide', accuracy: null, cureStatus: true, uses: 2, tags: ['りんぷん', 'チョウ目'] }),
+
+  // ㊸ ねむりだけ なおす（じぶんも えらべる）
+  mv({ id: 'p10', pattern: 'cureSleep', name: 'めざめのかね', desc: 'すんだ おとで めを さまさせる。ねむりだけ なおす。じぶんにも つかえる。', emoji: '🔔', power: 0, target: 'ally', accuracy: null, cureStatusKey: 'sleep', tags: ['おと'] }),
+  mv({ id: 'p11', pattern: 'cureSleep', name: 'さわやかなにおい', desc: 'すっきりした においで めを さまさせる。ねむりだけ なおす。じぶんにも つかえる。', emoji: '🌿', power: 0, target: 'ally', accuracy: null, cureStatusKey: 'sleep', tags: ['におい'] }),
+
+  // ㊹ どくだけ なおす（じぶんも えらべる）
+  mv({ id: 'p12', pattern: 'curePoison', name: 'げどくのだえき', desc: 'どくを けす だえきを ぬる。どくだけ なおす。じぶんにも つかえる。', emoji: '🧪', power: 0, target: 'ally', accuracy: null, cureStatusKey: 'poison', tags: ['だえき'] }),
+  mv({ id: 'p13', pattern: 'curePoison', name: 'すいすいのしずく', desc: 'きれいな しずくで どくを ながす。どくだけ なおす。じぶんにも つかえる。', emoji: '💧', power: 0, target: 'ally', accuracy: null, cureStatusKey: 'poison', tags: ['すう'] }),
+
+  // ㊺ まひだけ なおす（じぶんも えらべる）
+  mv({ id: 'p14', pattern: 'cureParalysis', name: 'あたためのはね', desc: 'はねで あおいで からだを あたためる。まひだけ なおす。じぶんにも つかえる。', emoji: '🪶', power: 0, target: 'ally', accuracy: null, cureStatusKey: 'paralysis', tags: ['はね'] }),
+  mv({ id: 'p15', pattern: 'cureParalysis', name: 'しびれぬきマッサージ', desc: 'からだを マッサージして しびれを とる。まひだけ なおす。じぶんにも つかえる。', emoji: '💆', power: 0, target: 'ally', accuracy: null, cureStatusKey: 'paralysis', tags: ['あし'] }),
 ]
 
 export function findMove(id: string): LibraryMove | undefined {

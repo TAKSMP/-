@@ -551,11 +551,23 @@ function executeMove(
       )
     }
 
-    // ── じょうたいいじょうを なおす
+    // ── じょうたいいじょうを なおす（なんでも）
     if (move.cureStatus) {
       if (target.status) {
         log.push(`✨ ${target.name}の ${statusLabel(target.status.key)}が なおった！`)
         target.status = null
+      } else {
+        log.push(`…${target.name}は げんきだ。`)
+      }
+    }
+
+    // ── とくてい の じょうたいいじょうだけ なおす（ねむり／どく／まひ）
+    if (move.cureStatusKey) {
+      if (target.status?.key === move.cureStatusKey) {
+        log.push(`✨ ${target.name}の ${statusLabel(target.status.key)}が なおった！`)
+        target.status = null
+      } else if (target.status) {
+        log.push(`…${target.name}の ${statusLabel(target.status.key)}には きかなかった。`)
       } else {
         log.push(`…${target.name}は げんきだ。`)
       }

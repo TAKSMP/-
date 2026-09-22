@@ -107,7 +107,7 @@ export type MoveTarget =
   | 'allFoes' // あいて ぜんいん
   | 'allOthers' // じぶん いがい ぜんいん（みかたも まきこむ）
   | 'self' // じぶん
-  | 'ally' // みかた1ぴき
+  | 'ally' // じぶんか みかたの どちらか1ぴき（バトル画面で タップして えらぶ）
   | 'selfSide' // じぶん がわ ぜんいん
 
 // のうりょく変化の 1つぶん
@@ -158,7 +158,8 @@ export interface SpecialMoveV2 {
   stealStats?: boolean // あいての のうりょくを うばう
   swapStats?: boolean // のうりょくを いれかえる
   healRatio?: number // さいだいHPの わりあいだけ かいふく
-  cureStatus?: boolean // じょうたいいじょうを なおす
+  cureStatus?: boolean // じょうたいいじょうを なおす（なんでも）
+  cureStatusKey?: StatusKey // この しゅるいの じょうたいいじょうだけ なおす（ねむり／どく／まひ）
   restSleep?: boolean // ねむって ぜんかいふく
   regen?: { ratio: number; turns: number } // まいターン すこしずつ かいふく
   leech?: { ratio: number; turns: number } // あいてのHPを まいターン すいとる

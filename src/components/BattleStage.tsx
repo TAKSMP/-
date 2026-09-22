@@ -434,8 +434,8 @@ export function BattleStage({
     const actor = field.fighters.find((x) => x.uid === pendingMove.actorUid)
     if (!actor) return false
     if (pendingMove.move.target === 'oneFoe') return f.side !== actor.side
-    if (pendingMove.move.target === 'ally')
-      return f.side === actor.side && f.uid !== actor.uid
+    // 'ally' は じぶんも えらべる（回復・かいふく の わざで つかう）
+    if (pendingMove.move.target === 'ally') return f.side === actor.side
     return false
   }
 
