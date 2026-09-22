@@ -65,6 +65,7 @@ export function mountWorld(
     // イラストざひょう ÷ もとの map座標 の ひりつ（例：1307/2048）
     artBg?: ArtBackground | null
     artScale?: number
+    walkZoom?: number
     signal?: AbortSignal
     onPosition?: (p: { x: number; y: number }) => void
     drawPlayer?: ((ctx: CanvasRenderingContext2D, s: WorldPlayerState) => void) | null
