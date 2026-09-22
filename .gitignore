@@ -12,3 +12,7 @@ dist-single
 # MAPパッケージの 大きい かくにん用ファイル（元データからいつでも作り直せる）
 MAP/*/preview.html
 MAP/*/walkable-overlay.svg
+# つるせ：build_map.py で 元画像（reference.png）から 作りなおせる 大きい ファイル
+MAP/*/terrain.bin
+MAP/*/map-overview.png
+MAP/*/assets/game-map.svg

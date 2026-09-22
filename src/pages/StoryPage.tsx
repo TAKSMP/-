@@ -16,7 +16,8 @@ import { ParkScene, parkName } from '../components/ParkScene'
 import { BattleStage, type BattleResult } from '../components/BattleStage'
 import { BugPicker } from '../components/BugPicker'
 import { FieldMap } from '../components/FieldMap'
-import { fieldForPlace, type FieldDef } from '../data/fields'
+import { WorldMap } from '../components/WorldMap'
+import { fieldForPlace, fieldsInList, publicUrl, type FieldDef } from '../data/fields'
 import { bugsForField } from '../lib/fieldBugs'
 import { assignEncounters } from '../data/encounters'
 import { findEncounter } from '../data/encounters'
@@ -35,6 +36,7 @@ import {
   isSeen,
   learnLevelCrossed,
   levelOf,
+  MAX_LEVEL,
   markSeen,
   loadStory,
   markCleared,
@@ -258,11 +260,19 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     }
     const enemy = pool[Math.floor(Math.random() * pool.length)]
     const [encId] = assignEncounters([enemy.order], `f${Math.random()}`)
+    // つるせ などは てきの レベルを じぶんの 虫に あわせる（-2〜+1）
+    const level =
+      field.enemyLevel === 'player' && myBug
+        ? Math.max(
+            1,
+            Math.min(MAX_LEVEL, levelOf(save, myBug.id).level + Math.floor(Math.random() * 4) - 2),
+          )
+        : 1
     setEncounterCell({
       index: -1,
       kind: 'battle',
       bugId: enemy.id,
-      level: 1,
+      level,
       encounterId: encId,
       col: 0,
       row: 0,
@@ -765,6 +775,29 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
 
   // ② マップえらび
   if (phase === 'pickMap') {
+    // ばしょに ひもづかない 大きい マップ（つるせ など）の カード
+    const bigMapCard = (f: FieldDef) => (
+      <div key={`big-${f.id}`} className="story-map-row">
+        <button className="story-map story-map-big" onClick={() => openField(f)}>
+          <span className="story-map-thumb">
+            {f.thumb ? (
+              <img className="story-map-img" src={publicUrl(f.thumb)} alt="" />
+            ) : (
+              <ParkScene index={0} fit="meet" />
+            )}
+          </span>
+          <span className="story-map-body">
+            <span className="story-map-name">🚶 {f.name}</span>
+            <span className="story-map-sub">あるいて さがす 大きな マップ</span>
+            <span className="story-map-sub">
+              {f.enemyLevel === 'player'
+                ? 'てきは じぶんと おなじくらいの レベル'
+                : 'ずかんの 虫が あいて'}
+            </span>
+          </span>
+        </button>
+      </div>
+    )
     return (
       <div className="story">
         <h2 className="battle-step-title">② マップを えらぼう</h2>
@@ -790,6 +823,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
               すすむほど <b>つよい虫・たかいレベル</b> が 出てくるよ。
             </p>
             <div className="story-map-list">
+              {fieldsInList('quest').map(bigMapCard)}
               {Array.from({ length: QUEST_MAPS }, (_, i) => {
                 const id = questId(i)
                 const open = questUnlocked(save, i)
@@ -840,6 +874,11 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
             <p className="story-lead">
               マップは <b>「みつけたばしょ」</b>。そこで みつけた虫が てきに なるよ。
             </p>
+            {fieldsInList('place').length > 0 && (
+              <div className="story-map-list story-map-list-big">
+                {fieldsInList('place').map(bigMapCard)}
+              </div>
+            )}
             {places.length === 0 ? (
               <p className="pick-so-far">
                 まだ「みつけたばしょ」が ないみたい。ずかんで ばしょを 書くと マップが ふえるよ。
@@ -911,11 +950,19 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     const pool = bugsForField(field.id, bugs)
     return (
       <>
-        <FieldMap
-          base={field.base}
-          onEncounter={fieldEncounter}
-          onError={() => setNotice('マップを よみこめませんでした')}
-        />
+        {field.engine === 'world' ? (
+          <WorldMap
+            base={field.base}
+            onEncounter={fieldEncounter}
+            onError={() => setNotice('マップを よみこめませんでした')}
+          />
+        ) : (
+          <FieldMap
+            base={field.base}
+            onEncounter={fieldEncounter}
+            onError={() => setNotice('マップを よみこめませんでした')}
+          />
+        )}
         <div className="field-top">
           <button
             className="btn btn-ghost field-back"

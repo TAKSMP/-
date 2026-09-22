@@ -93,7 +93,8 @@ export function FieldBugsModal({ onClose }: { onClose: () => void }) {
         )}
 
         <button className="btn btn-ghost fieldbugs-reset" onClick={useDefault}>
-          🔄 その ばしょで みつけた むしに もどす（{defaults.length}ひき）
+          🔄 {field?.place ? 'その ばしょで みつけた むし' : 'ずかんの むし ぜんぶ'}に もどす（
+          {defaults.length}ひき）
         </button>
         <button className="btn btn-big btn-primary" onClick={onClose}>
           とじる

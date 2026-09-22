@@ -30,8 +30,10 @@ export function saveFieldBugs(v: FieldBugs): void {
   }
 }
 
-// その ばしょで みつけた虫（せっていが ないときの きほん）
+// せっていが ないときの きほん：その ばしょで みつけた虫。
+// ばしょに ひもづかない マップ（つるせ など）は ずかんの 虫 ぜんぶ。
 export function defaultBugsOfField(field: FieldDef, bugs: CaughtBug[]): CaughtBug[] {
+  if (!field.place) return bugs
   return bugs.filter((b) =>
     b.captures.some((c) => (c.place ?? '').trim() === field.place),
   )
