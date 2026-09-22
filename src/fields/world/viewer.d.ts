@@ -61,6 +61,10 @@ export function mountWorld(
     tileBaseUrl?: string
     resolveTile?: (file: string) => string
     loadTile?: (url: string, signal: AbortSignal) => Promise<CanvasImageSource & { close?: () => void }>
+    // イラスト背景（loadIllustratedMap の けっか）。artScale は
+    // イラストざひょう ÷ もとの map座標 の ひりつ（例：1307/2048）
+    artBg?: ArtBackground | null
+    artScale?: number
     signal?: AbortSignal
     onPosition?: (p: { x: number; y: number }) => void
     drawPlayer?: ((ctx: CanvasRenderingContext2D, s: WorldPlayerState) => void) | null

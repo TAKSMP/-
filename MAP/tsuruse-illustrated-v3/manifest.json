@@ -1,0 +1,341 @@
+{
+  "width": 1307,
+  "height": 1203,
+  "tiles": [
+    {
+      "id": "2_0",
+      "x": 654,
+      "y": 0,
+      "width": 326,
+      "height": 301,
+      "reference": "references/2_0.png",
+      "referenceBounds": {
+        "x": 634,
+        "y": 0,
+        "width": 366,
+        "height": 321
+      },
+      "status": "generated-unverified",
+      "file": "assets/2_0.png",
+      "nativeWidth": 1300,
+      "nativeHeight": 1210,
+      "sourceRect": [
+        71.03825136612022,
+        0.0,
+        1157.9234972677596,
+        1134.6105919003116
+      ],
+      "nativePixelsPerMapUnit": 3.551912568306011
+    },
+    {
+      "id": "3_0",
+      "x": 980,
+      "y": 0,
+      "width": 327,
+      "height": 301,
+      "reference": "references/3_0.png",
+      "referenceBounds": {
+        "x": 960,
+        "y": 0,
+        "width": 347,
+        "height": 321
+      },
+      "status": "generated-unverified",
+      "file": "assets/3_0.png",
+      "nativeWidth": 1300,
+      "nativeHeight": 1210,
+      "sourceRect": [
+        74.92795389048992,
+        0.0,
+        1225.07204610951,
+        1134.6105919003116
+      ],
+      "nativePixelsPerMapUnit": 3.7463976945244957
+    },
+    {
+      "id": "0_1",
+      "x": 0,
+      "y": 301,
+      "width": 327,
+      "height": 301,
+      "reference": "references/0_1.png",
+      "referenceBounds": {
+        "x": 0,
+        "y": 281,
+        "width": 347,
+        "height": 341
+      },
+      "status": "generated-unverified",
+      "file": "assets/0_1.png",
+      "nativeWidth": 1300,
+      "nativeHeight": 1210,
+      "sourceRect": [
+        0.0,
+        70.96774193548387,
+        1225.07204610951,
+        1068.0645161290322
+      ],
+      "nativePixelsPerMapUnit": 3.5483870967741935
+    },
+    {
+      "id": "1_1",
+      "x": 327,
+      "y": 301,
+      "width": 327,
+      "height": 301,
+      "reference": "references/1_1.png",
+      "referenceBounds": {
+        "x": 307,
+        "y": 281,
+        "width": 367,
+        "height": 341
+      },
+      "status": "generated-unverified",
+      "file": "assets/1_1.png",
+      "nativeWidth": 1300,
+      "nativeHeight": 1210,
+      "sourceRect": [
+        70.84468664850137,
+        70.96774193548387,
+        1158.3106267029973,
+        1068.0645161290322
+      ],
+      "nativePixelsPerMapUnit": 3.542234332425068
+    },
+    {
+      "id": "2_1",
+      "x": 654,
+      "y": 301,
+      "width": 326,
+      "height": 301,
+      "reference": "references/2_1.png",
+      "referenceBounds": {
+        "x": 634,
+        "y": 281,
+        "width": 366,
+        "height": 341
+      },
+      "status": "generated-unverified",
+      "file": "assets/2_1.png",
+      "nativeWidth": 1299,
+      "nativeHeight": 1211,
+      "sourceRect": [
+        70.98360655737704,
+        71.02639296187684,
+        1157.0327868852457,
+        1068.9472140762464
+      ],
+      "nativePixelsPerMapUnit": 3.5491803278688523
+    },
+    {
+      "id": "3_1",
+      "x": 980,
+      "y": 301,
+      "width": 327,
+      "height": 301,
+      "reference": "references/3_1.png",
+      "referenceBounds": {
+        "x": 960,
+        "y": 281,
+        "width": 347,
+        "height": 341
+      },
+      "status": "generated-unverified",
+      "file": "assets/3_1.png",
+      "nativeWidth": 1300,
+      "nativeHeight": 1210,
+      "sourceRect": [
+        74.92795389048992,
+        70.96774193548387,
+        1225.07204610951,
+        1068.0645161290322
+      ],
+      "nativePixelsPerMapUnit": 3.5483870967741935
+    },
+    {
+      "id": "0_2",
+      "x": 0,
+      "y": 602,
+      "width": 327,
+      "height": 300,
+      "reference": "references/0_2.png",
+      "referenceBounds": {
+        "x": 0,
+        "y": 582,
+        "width": 347,
+        "height": 340
+      },
+      "status": "generated-unverified",
+      "file": "assets/0_2.png",
+      "nativeWidth": 1267,
+      "nativeHeight": 1241,
+      "sourceRect": [
+        0.0,
+        73.0,
+        1193.9740634005764,
+        1095.0
+      ],
+      "nativePixelsPerMapUnit": 3.65
+    },
+    {
+      "id": "1_2",
+      "x": 327,
+      "y": 602,
+      "width": 327,
+      "height": 300,
+      "reference": "references/1_2.png",
+      "referenceBounds": {
+        "x": 307,
+        "y": 582,
+        "width": 367,
+        "height": 340
+      },
+      "status": "generated-unverified",
+      "file": "assets/1_2.png",
+      "nativeWidth": 1300,
+      "nativeHeight": 1209,
+      "sourceRect": [
+        70.84468664850137,
+        71.11764705882352,
+        1158.3106267029973,
+        1066.764705882353
+      ],
+      "nativePixelsPerMapUnit": 3.542234332425068
+    },
+    {
+      "id": "2_2",
+      "x": 654,
+      "y": 602,
+      "width": 326,
+      "height": 300,
+      "reference": "references/2_2.png",
+      "referenceBounds": {
+        "x": 634,
+        "y": 582,
+        "width": 366,
+        "height": 340
+      },
+      "status": "generated-unverified",
+      "file": "assets/2_2.png",
+      "nativeWidth": 1301,
+      "nativeHeight": 1209,
+      "sourceRect": [
+        71.09289617486338,
+        71.11764705882352,
+        1158.8142076502731,
+        1066.764705882353
+      ],
+      "nativePixelsPerMapUnit": 3.5546448087431695
+    },
+    {
+      "id": "3_2",
+      "x": 980,
+      "y": 602,
+      "width": 327,
+      "height": 300,
+      "reference": "references/3_2.png",
+      "referenceBounds": {
+        "x": 960,
+        "y": 582,
+        "width": 347,
+        "height": 340
+      },
+      "status": "generated-unverified",
+      "file": "assets/3_2.png",
+      "nativeWidth": 1267,
+      "nativeHeight": 1241,
+      "sourceRect": [
+        73.02593659942363,
+        73.0,
+        1193.9740634005764,
+        1095.0
+      ],
+      "nativePixelsPerMapUnit": 3.65
+    },
+    {
+      "id": "0_3",
+      "x": 0,
+      "y": 902,
+      "width": 327,
+      "height": 301,
+      "reference": "references/0_3.png",
+      "referenceBounds": {
+        "x": 0,
+        "y": 882,
+        "width": 347,
+        "height": 321
+      },
+      "status": "generated-unverified",
+      "file": "assets/0_3.png",
+      "nativeWidth": 1304,
+      "nativeHeight": 1206,
+      "sourceRect": [
+        0.0,
+        75.14018691588785,
+        1228.8414985590778,
+        1130.8598130841121
+      ],
+      "nativePixelsPerMapUnit": 3.7570093457943927
+    },
+    {
+      "id": "1_3",
+      "x": 327,
+      "y": 902,
+      "width": 327,
+      "height": 301,
+      "reference": "references/1_3.png",
+      "referenceBounds": {
+        "x": 307,
+        "y": 882,
+        "width": 367,
+        "height": 321
+      },
+      "status": "generated-unverified",
+      "file": "assets/1_3.png",
+      "nativeWidth": 1341,
+      "nativeHeight": 1173,
+      "sourceRect": [
+        73.07901907356948,
+        73.0841121495327,
+        1194.841961852861,
+        1099.9158878504672
+      ],
+      "nativePixelsPerMapUnit": 3.653950953678474
+    },
+    {
+      "id": "2_3",
+      "x": 654,
+      "y": 902,
+      "width": 326,
+      "height": 301,
+      "reference": "references/2_3.png",
+      "referenceBounds": {
+        "x": 634,
+        "y": 882,
+        "width": 366,
+        "height": 321
+      },
+      "status": "generated-unverified",
+      "file": "assets/2_3.png",
+      "nativeWidth": 1339,
+      "nativeHeight": 1174,
+      "sourceRect": [
+        73.16939890710383,
+        73.14641744548287,
+        1192.6612021857923,
+        1100.8535825545173
+      ],
+      "nativePixelsPerMapUnit": 3.6573208722741435
+    }
+  ],
+  "version": 3,
+  "status": "background-art-review",
+  "coordinateSystem": "reference illustration pixels, NOT previous source map pixels",
+  "baseImage": "assets/original.png",
+  "generatedCount": 13,
+  "pendingCount": 0,
+  "minimumNativeScale": 3.542234332425068,
+  "recommendedZoomAtDPR2": 1.77,
+  "collisionStatus": "not-aligned; do not reuse old collision without review",
+  "seamStatus": "unverified; generation shifts road and building positions"
+}

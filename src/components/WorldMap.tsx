@@ -16,6 +16,7 @@ import {
   type WorldMapData,
 } from '../fields/world/viewer'
 import { decodeRoads, isRoad } from '../fields/world/navigation'
+import { loadIllustratedMap, type ArtBackground, type ArtManifest } from '../fields/world/artBackground'
 import '../fields/world/viewer.css'
 import { boySheetUrl, drawBoySprite, loadImage } from '../fields/boySprite'
 import { encounterDistance } from '../lib/encounter'
@@ -78,6 +79,7 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
   const travelRef = useRef(0)
   const speedRef = useRef(12)
   const sheet = useRef<HTMLImageElement | null>(null)
+  const artBgRef = useRef<ArtBackground | null>(null)
   // 世界が ひろいので、いまの いちを 見うしなわない ように 全体地図を 出せる
   const [overview, setOverview] = useState(false)
   encounterCb.current = onEncounter
@@ -113,7 +115,25 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
       const tres = await fetch(new URL('tiles.json', baseUrl), { signal: abort.signal })
       if (!tres.ok) throw new Error(`tiles.json HTTP ${tres.status}`)
       const tileManifest = (await tres.json()) as TileManifest
-      if (disposed || !host.current) return
+      // イラスト背景（あれば）。ないマップは これまでどおり ベクター調の 区画を つかう。
+      let artBg: ArtBackground | null = null
+      let artScale = 1
+      try {
+        const ares = await fetch(new URL('art-manifest.json', baseUrl), { signal: abort.signal })
+        if (ares.ok) {
+          const artManifest = (await ares.json()) as ArtManifest
+          artBg = await loadIllustratedMap({ baseUrl: baseUrl.href, manifest: artManifest })
+          // イラストは べつの ざひょう系（例：1307×2048）。もとの map座標との ひりつを もとめる。
+          artScale = artManifest.width / map.width
+        }
+      } catch {
+        artBg = null // よみこめなくても ベクター調に フォールバック
+      }
+      if (disposed || !host.current) {
+        artBg?.destroy()
+        return
+      }
+      artBgRef.current = artBg
       // まえに いた 道から さいかい（道の うえで なければ 入口から）
       const back = lastPos.get(base)
       const resumed = !!(back && isRoad(map, decodeRoads(map), back.x, back.y))
@@ -134,6 +154,8 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
         tileManifest,
         tileBaseUrl: baseUrl.href,
         loadTile: loadTileBitmap,
+        artBg,
+        artScale,
         signal: abort.signal,
         startWalking: true,
         // であいの はんていも ここで する ので、絵が なくても かならず わたす
@@ -149,6 +171,7 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
       })
       if (disposed) {
         world.destroy()
+        artBg?.destroy()
         return
       }
       engine.current = world
@@ -165,6 +188,8 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
       if (pos) lastPos.set(base, pos)
       engine.current?.destroy()
       engine.current = null
+      artBgRef.current?.destroy()
+      artBgRef.current = null
     }
   }, [base])
 
