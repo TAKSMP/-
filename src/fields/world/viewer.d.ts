@@ -44,6 +44,9 @@ export interface TileStatus {
 export interface WorldHandle {
   getPosition(): { x: number; y: number }
   getTileStatus(): TileStatus
+  getMode(): 'overview' | 'walk'
+  // true：全体地図（赤い てんめつマーカーで いまの いちを しめす）／false：あるく がめんに もどる
+  setOverview(value: boolean): void
   setPaused(value: boolean): void
   destroy(): void
 }

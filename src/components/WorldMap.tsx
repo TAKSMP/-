@@ -8,7 +8,7 @@
 //   ・バトルから もどると、さっきの ばしょから つづける
 //  道を タップすると、つながっている 道を とおって じどうで あるく。
 // =============================================================
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   mountWorld,
   type TileManifest,
@@ -78,9 +78,17 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
   const travelRef = useRef(0)
   const speedRef = useRef(12)
   const sheet = useRef<HTMLImageElement | null>(null)
+  // 世界が ひろいので、いまの いちを 見うしなわない ように 全体地図を 出せる
+  const [overview, setOverview] = useState(false)
   encounterCb.current = onEncounter
   errorCb.current = onError
   pausedRef.current = paused
+
+  function toggleOverview() {
+    const next = !overview
+    setOverview(next)
+    engine.current?.setOverview(next)
+  }
 
   const wasPaused = useRef(paused)
   useEffect(() => {
@@ -94,6 +102,7 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
 
   useEffect(() => {
     let disposed = false
+    setOverview(false)
     const abort = new AbortController()
     const baseUrl = new URL(base, new URL(import.meta.env.BASE_URL, document.baseURI))
     ;(async () => {
@@ -159,5 +168,16 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
     }
   }, [base])
 
-  return <div className="fieldmap worldmap" ref={host} />
+  return (
+    <>
+      <div className="fieldmap worldmap" ref={host} />
+      <button
+        type="button"
+        className={'world-overview-btn' + (overview ? ' on' : '')}
+        onClick={toggleOverview}
+      >
+        {overview ? '✕ とじる' : '🗺️ 全体地図'}
+      </button>
+    </>
+  )
 }
