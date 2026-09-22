@@ -28,3 +28,8 @@ MAP/*/references/
 MAP/*/1_2_stratline.png
 
 MAP/tsuruse-illustrated-v3/assets/*.png
+# つるせ v4：build.py と placements.json から 作りなおせる 大きい ファイル
+MAP/tsuruse-mask-v4/tiles/
+MAP/tsuruse-mask-v4/qa/
+MAP/tsuruse-mask-v4/overview.png
+MAP/tsuruse-mask-v4/mask-check.html
