@@ -33,8 +33,6 @@ const lastPos = new Map<string, { x: number; y: number }>()
 
 const BOY_SCREEN_H = 60 // がめんの 上での 男の子の たかさ（CSS ピクセル）
 const STEP_SEC = 0.15 // この びょうすう ぶん あるくと つぎの コマ
-// イラスト背景の ときの あるく ズーム（ふつうの 8 より ひくく して ぼやけを やわらげる）
-const ART_WALK_ZOOM = 5.5
 
 // 区画の SVG を よみこんだ ときに 1かいだけ ふつうの 絵に する。
 // SVG の まま まいフレーム かくと、スマホ（CPU 4ばい おそい ていど）で 12fps まで おちた。
@@ -118,9 +116,10 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
       if (!tres.ok) throw new Error(`tiles.json HTTP ${tres.status}`)
       const tileManifest = (await tres.json()) as TileManifest
       // イラスト背景（あれば）。ないマップは これまでどおり ベクター調の 区画を つかう。
+      // イラスト背景は 見るだけの 全体地図 だけで つかう（あるく がめんは 道の
+      // ズレが きになる ため ベクター調の まま。viewer.js がわで きりわけて いる）。
       let artBg: ArtBackground | null = null
       let artScale = 1
-      let walkZoom = 8 // ベクター調（SVG）の ときの ズーム
       try {
         const ares = await fetch(new URL('art-manifest.json', baseUrl), { signal: abort.signal })
         if (ares.ok) {
@@ -128,8 +127,6 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
           artBg = await loadIllustratedMap({ baseUrl: baseUrl.href, manifest: artManifest })
           // イラストは べつの ざひょう系（例：1307×2048）。もとの map座標との ひりつを もとめる。
           artScale = artManifest.width / map.width
-          // イラストの 密度は SVGより ひくいので、ズームを すこし さげて ぼやけを やわらげる
-          walkZoom = ART_WALK_ZOOM
         }
       } catch {
         artBg = null // よみこめなくても ベクター調に フォールバック
@@ -161,7 +158,6 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
         loadTile: loadTileBitmap,
         artBg,
         artScale,
-        walkZoom,
         signal: abort.signal,
         startWalking: true,
         // であいの はんていも ここで する ので、絵が なくても かならず わたす
