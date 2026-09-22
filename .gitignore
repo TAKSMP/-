@@ -16,3 +16,6 @@ MAP/*/walkable-overlay.svg
 MAP/*/terrain.bin
 MAP/*/map-overview.png
 MAP/*/assets/game-map.svg
+# つるせ v2：build_tiles.py と terrain.bin から 作りなおせる 大きい ファイル
+MAP/*/assets/overview.svg
+MAP/*/assets/tiles/

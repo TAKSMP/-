@@ -9,7 +9,12 @@
 //  道を タップすると、つながっている 道を とおって じどうで あるく。
 // =============================================================
 import { useEffect, useRef } from 'react'
-import { mountWorld, type WorldHandle, type WorldMapData } from '../fields/world/viewer'
+import {
+  mountWorld,
+  type TileManifest,
+  type WorldHandle,
+  type WorldMapData,
+} from '../fields/world/viewer'
 import { decodeRoads, isRoad } from '../fields/world/navigation'
 import '../fields/world/viewer.css'
 import { boySheetUrl, drawBoySprite, loadImage } from '../fields/boySprite'
@@ -27,6 +32,26 @@ const lastPos = new Map<string, { x: number; y: number }>()
 
 const BOY_SCREEN_H = 60 // がめんの 上での 男の子の たかさ（CSS ピクセル）
 const STEP_SEC = 0.15 // この びょうすう ぶん あるくと つぎの コマ
+
+// 区画の SVG を よみこんだ ときに 1かいだけ ふつうの 絵に する。
+// SVG の まま まいフレーム かくと、スマホ（CPU 4ばい おそい ていど）で 12fps まで おちた。
+async function loadTileBitmap(url: string, signal: AbortSignal): Promise<ImageBitmap | HTMLCanvasElement> {
+  const svg = await loadImage(url, signal)
+  const w = svg.naturalWidth || 1024
+  const h = svg.naturalHeight || 1024
+  if (typeof createImageBitmap === 'function') {
+    try {
+      return await createImageBitmap(svg)
+    } catch {
+      // SVG を ImageBitmap に できない ブラウザは canvas に かく
+    }
+  }
+  const c = document.createElement('canvas')
+  c.width = w
+  c.height = h
+  c.getContext('2d')?.drawImage(svg, 0, 0, w, h)
+  return c
+}
 
 // ドット絵が よめなかった ときの しるし
 function drawMarker(ctx: CanvasRenderingContext2D, x: number, y: number) {
@@ -75,6 +100,10 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
       const res = await fetch(new URL('map.json', baseUrl), { signal: abort.signal })
       if (!res.ok) throw new Error(`map.json HTTP ${res.status}`)
       const map = (await res.json()) as WorldMapData
+      // 区画ごとの 絵（あるいた まわりだけ よみこむ）
+      const tres = await fetch(new URL('tiles.json', baseUrl), { signal: abort.signal })
+      if (!tres.ok) throw new Error(`tiles.json HTTP ${tres.status}`)
+      const tileManifest = (await tres.json()) as TileManifest
       if (disposed || !host.current) return
       // まえに いた 道から さいかい（道の うえで なければ 入口から）
       const back = lastPos.get(base)
@@ -93,6 +122,9 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
       const world = await mountWorld(host.current, {
         map,
         gameUrl: new URL(map.images.game, baseUrl).href,
+        tileManifest,
+        tileBaseUrl: baseUrl.href,
+        loadTile: loadTileBitmap,
         signal: abort.signal,
         startWalking: true,
         // であいの はんていも ここで する ので、絵が なくても かならず わたす

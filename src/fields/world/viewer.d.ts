@@ -21,8 +21,29 @@ export interface WorldPlayerState {
   zoom: number
 }
 
+// 区画（タイル）の いちらん：tiles.json
+export interface TileManifest {
+  version: number
+  tileSize: number // 1区画の 大きさ（元画像の ピクセル）
+  pixelsPerSourceUnit: number
+  width: number
+  height: number
+  columns: number
+  rows: number
+  background?: string
+  tiles: { x: number; y: number; file: string; width: number; height: number }[]
+}
+
+export interface TileStatus {
+  cached: number
+  loading: number
+  failed: number
+  ready: boolean // いま 見えている 区画が ぜんぶ そろったか
+}
+
 export interface WorldHandle {
   getPosition(): { x: number; y: number }
+  getTileStatus(): TileStatus
   setPaused(value: boolean): void
   destroy(): void
 }
@@ -33,6 +54,10 @@ export function mountWorld(
     map: WorldMapData
     gameUrl: string
     referenceUrl?: string
+    tileManifest: TileManifest
+    tileBaseUrl?: string
+    resolveTile?: (file: string) => string
+    loadTile?: (url: string, signal: AbortSignal) => Promise<CanvasImageSource & { close?: () => void }>
     signal?: AbortSignal
     onPosition?: (p: { x: number; y: number }) => void
     drawPlayer?: ((ctx: CanvasRenderingContext2D, s: WorldPlayerState) => void) | null
