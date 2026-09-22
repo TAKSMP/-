@@ -96,7 +96,7 @@ export interface CaptureInput {
 export type StatusKey =
   | 'poison' // どく：まいターン ダメージ
   | 'sleep' // ねむり：2〜4かい こうどうできない
-  | 'paralysis' // まひ：ときどき うごけない＋すばやさダウン
+  | 'paralysis' // まひ：すばやさ はんぶん＋8かいに1かい うごけない。しぜんには なおらない
 
 // のうりょくランクを つけられる ステータス
 export type StatKey = 'attack' | 'defense' | 'speed' | 'accuracy' | 'evasion'

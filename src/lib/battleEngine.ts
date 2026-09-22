@@ -33,7 +33,7 @@ export const POISON_RATIO = 1 / 8 // どくの まいターン ダメージ（�
 export const DAMAGE_SCALE = 0.72
 export const SLEEP_MIN_TURNS = 2
 export const SLEEP_MAX_TURNS = 4
-export const PARALYSIS_FAIL_CHANCE = 0.25 // まひで うごけない かくりつ
+export const PARALYSIS_FAIL_CHANCE = 0.125 // まひで うごけない かくりつ（8かいに 1かい）
 export const PARALYSIS_SPEED_MUL = 0.5 // まひの すばやさ ていか
 export const CRIT_MUL = 1.5
 export const SPREAD_MUL = 0.75 // ぜんたいわざの いりょく ほせい
@@ -381,6 +381,8 @@ function inflictStatus(
       : 0
   target.status = { key, turnsLeft: turns }
   log.push(`${statusEmoji(key)} ${target.name}は ${statusLabel(key)}に なった！`)
+  // まひは 目に 見えにくいので、なにが おきるかを ことばで つたえる
+  if (key === 'paralysis') log.push(`🐢 ${target.name}の すばやさが はんぶんに なった！`)
 }
 
 // のうりょくランクを うごかす

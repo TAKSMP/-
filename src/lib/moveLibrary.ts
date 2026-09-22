@@ -156,7 +156,7 @@ export const MOVE_LIBRARY: LibraryMove[] = [
 
   // ㉒㉓㉔ じょうたいいじょう
   mv({ id: 'm22a', pattern: 'poison', name: 'もうどくスプレー', desc: 'つよい どくを ふきかけて あいてを どくに する。', emoji: '☠️', power: 0, target: 'oneFoe', accuracy: 90, inflict: { status: 'poison', chance: 1 }, tags: ['どく'] }),
-  mv({ id: 'm23a', pattern: 'paralyze', name: 'しびれのこな', desc: 'しびれる こなで あいてを まひに する。', emoji: '⚡', power: 0, target: 'oneFoe', accuracy: 90, inflict: { status: 'paralysis', chance: 1 }, tags: ['りんぷん', 'どく'] }),
+  mv({ id: 'm23a', pattern: 'paralyze', name: 'しびれのこな', desc: 'しびれる こなで あいてを まひに する（すばやさ はんぶん・ときどき うごけない）。', emoji: '⚡', power: 0, target: 'oneFoe', accuracy: 90, inflict: { status: 'paralysis', chance: 1 }, tags: ['りんぷん', 'どく'] }),
   mv({ id: 'm24a', pattern: 'sleep', name: 'ねむりのりんぷん', desc: 'ねむくなる りんぷんで あいてを ねむらせる。', emoji: '💤', power: 0, target: 'oneFoe', accuracy: 75, inflict: { status: 'sleep', chance: 1 }, tags: ['りんぷん', 'チョウ目'] }),
 
   // ㉕〜㉘ あいての のうりょく ダウン
@@ -237,7 +237,7 @@ export const MOVE_LIBRARY: LibraryMove[] = [
   // ㉒㉓㉔ じょうたいいじょう
   mv({ id: 'n34', pattern: 'poison', name: 'しびれどくえき', desc: 'どくの えきを かけて どくに する。', emoji: '☠️', power: 0, target: 'oneFoe', accuracy: 90, inflict: { status: 'poison', chance: 1 }, tags: ['どく', 'はり'] }),
   mv({ id: 'n35', pattern: 'poison', name: 'くさったにおい', desc: 'ひどい においで あいてを どくに する。', emoji: '🤢', power: 0, target: 'oneFoe', accuracy: 85, inflict: { status: 'poison', chance: 1 }, tags: ['におい'] }),
-  mv({ id: 'n36', pattern: 'paralyze', name: 'でんげきのしっぽ', desc: 'びりびりと しびれさせる。', emoji: '⚡', power: 0, target: 'oneFoe', accuracy: 90, inflict: { status: 'paralysis', chance: 1 }, tags: ['あし', 'とげ'] }),
+  mv({ id: 'n36', pattern: 'paralyze', name: 'でんげきのしっぽ', desc: 'びりびりと しびれさせて まひに する（すばやさ はんぶん・ときどき うごけない）。', emoji: '⚡', power: 0, target: 'oneFoe', accuracy: 90, inflict: { status: 'paralysis', chance: 1 }, tags: ['あし', 'とげ'] }),
   mv({ id: 'n37', pattern: 'sleep', name: 'ゆりかごのうた', desc: 'やさしい おとで ねむらせる。', emoji: '💤', power: 0, target: 'oneFoe', accuracy: 75, inflict: { status: 'sleep', chance: 1 }, tags: ['はね', 'バッタ目'] }),
   mv({ id: 'n38', pattern: 'sleep', name: 'ねむりのかおり', desc: 'あまい かおりで ねむくさせる。', emoji: '🌸', power: 0, target: 'oneFoe', accuracy: 75, inflict: { status: 'sleep', chance: 1 }, tags: ['みつ', 'チョウ目'] }),
   // ㉕〜㉘ のうりょく ダウン

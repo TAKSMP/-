@@ -59,6 +59,7 @@ import {
   storyPlaces,
   type StoryCell,
   type StoryStage,
+  type BugLevel,
   type StorySave,
 } from '../lib/story'
 import type { SpecialMoveV2 } from '../types'
@@ -77,6 +78,80 @@ function cellPos(cell: StoryCell, stage: StoryStage) {
     left: ((cell.col + 0.5) / stage.cols) * 100,
     top: ((cell.row + 0.5) / stage.rows) * 100,
   }
+}
+
+// -------------------------------------------------------------
+//  かった あとに 1まいずつ 見せる もの（じぶんの 虫 → なかま の じゅん）
+// -------------------------------------------------------------
+interface LevelUpInfo {
+  bugId: string
+  name: string
+  photo: string
+  fromLv: number
+  toLv: number
+  rows: { label: string; emoji: string; from: number; to: number }[]
+  buddy: boolean // なかまの ぶんか
+}
+interface LearnInfo {
+  bugId: string
+  name: string
+  buddy: boolean
+  move: SpecialMoveV2
+  current: SpecialMoveV2[]
+  forcedIndex: number | null // わくが ふえた ときは えらばずに ついか
+}
+type Celebration = { kind: 'level'; info: LevelUpInfo } | { kind: 'learn'; info: LearnInfo }
+
+// レベルが あがったら「ステータスの かわりかた」、2レベルごとに「あたらしい わざ」
+function celebrationsFor(
+  bug: CaughtBug,
+  res: { before: BugLevel; after: BugLevel; levelUps: number },
+  saveAfter: StorySave,
+  buddy: boolean,
+): Celebration[] {
+  if (res.levelUps <= 0) return []
+  const a = statsWithLevel(bug, res.before.level)
+  const b = statsWithLevel(bug, res.after.level)
+  const out: Celebration[] = [
+    {
+      kind: 'level',
+      info: {
+        bugId: bug.id,
+        name: bug.name,
+        photo: mainPhoto(bug),
+        fromLv: res.before.level,
+        toLv: res.after.level,
+        buddy,
+        rows: [
+          { label: 'たいりょく', emoji: '❤️', from: a.hp, to: b.hp },
+          { label: 'こうげき', emoji: '⚔️', from: a.attack, to: b.attack },
+          { label: 'ぼうぎょ', emoji: '🛡️', from: a.defense, to: b.defense },
+          { label: 'すばやさ', emoji: '⚡', from: a.speed, to: b.speed },
+        ],
+      },
+    },
+  ]
+  const learnLv = learnLevelCrossed(res.before.level, res.after.level)
+  if (learnLv !== null) {
+    const all = allMovesOf(saveAfter, bug)
+    const before = moveSlots(res.before.level)
+    const after = moveSlots(res.after.level)
+    const nm = newMoveFor(bug, learnLv, all)
+    if (nm) {
+      out.push({
+        kind: 'learn',
+        info: {
+          bugId: bug.id,
+          name: bug.name,
+          buddy,
+          move: nm,
+          current: all.slice(0, Math.max(1, before)),
+          forcedIndex: after > before ? after - 1 : null,
+        },
+      })
+    }
+  }
+  return out
 }
 
 export function StoryPage({ bugs, onGoCapture }: Props) {
@@ -101,11 +176,8 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   const [askLevel, setAskLevel] = useState<{ bugId: string; name: string } | null>(null)
   // レベルアップした ときの「なにが どう かわったか」
   // あたらしい わざを おぼえる（レベル2ごと）
-  const [learn, setLearn] = useState<{
-    move: SpecialMoveV2
-    current: SpecialMoveV2[]
-    forcedIndex: number | null // わくが ふえた ときは えらばずに ついか
-  } | null>(null)
+  // （じぶんの 虫と なかまの ぶんを、じゅんばんに 1まいずつ 見せる）
+  const [celebrations, setCelebrations] = useState<Celebration[]>([])
   // たおした虫が なかまに なりたがっている
   const [recruit, setRecruit] = useState<{ bug: CaughtBug; level: number } | null>(null)
   // むしかご：つれていく なかま（この バトルだけ）
@@ -113,13 +185,10 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   const [pendingCell, setPendingCell] = useState<StoryCell | null>(null)
   const [cageOpen, setCageOpen] = useState(false)
   const [askRelease, setAskRelease] = useState<string | null>(null)
-  const [levelUp, setLevelUp] = useState<{
-    name: string
-    photo: string
-    fromLv: number
-    toLv: number
-    rows: { label: string; emoji: string; from: number; to: number }[]
-  } | null>(null)
+  const head = celebrations[0]
+  const levelUp = head?.kind === 'level' ? head.info : null
+  const learn = head?.kind === 'learn' ? head.info : null
+  const popCelebration = () => setCelebrations((q) => q.slice(1))
   const [notice, setNotice] = useState<string | null>(null)
   const moveTimer = useRef<number | null>(null)
 
@@ -158,8 +227,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     setAskAgain(null)
     setEncounterCell(null)
     setGoFlash(false)
-    setLearn(null)
-    setLevelUp(null)
+    setCelebrations([])
     setRecruit(null)
     setCompanionId(null)
     setPendingCell(null)
@@ -184,18 +252,22 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
 
   // あたらしい わざと とりかえる
   function swapMove(index: number) {
-    if (!myBug || !learn) return
+    if (!learn) return
+    const who = bugs.find((b) => b.id === learn.bugId)
+    if (!who) {
+      popCelebration()
+      return
+    }
     sfx.special('attackUp')
-    const all = allMovesOf(save, myBug)
-    const next = setMoves(
-      save,
-      myBug.id,
-      all.map((m, i) => (i === index ? learn.move : m)),
-    )
+    // わざが たりない 虫でも きえない ように、わくが なければ うしろに たす
+    const moves = [...allMovesOf(save, who)]
+    if (index < moves.length) moves[index] = learn.move
+    else moves.push(learn.move)
+    const next = setMoves(save, who.id, moves)
     setSave(next)
     saveStory(next)
-    setNotice(`✨ 「${learn.move.name}」を おぼえた！`)
-    setLearn(null)
+    setNotice(`✨ ${who.name}は 「${learn.move.name}」を おぼえた！`)
+    popCelebration()
   }
 
   // むしかごから にがす
@@ -226,8 +298,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     setSave(next)
     saveStory(next)
     setAskLevel(null)
-    setLevelUp(null)
-    setLearn(null)
+    setCelebrations([])
     setRecruit(null)
     setPendingCell(null)
     sfx.tap()
@@ -426,46 +497,17 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
         const res = addExp(next, myBug.id, gain)
         next = res.save
         msg = `🎉 かった！ +${gain} けいけんち`
-        // つれていった なかまにも おなじ けいけんち
+        const queue: Celebration[] = celebrationsFor(myBug, res, next, false)
+        // つれていった なかまにも おなじ けいけんち。レベルアップも わざも おなじように 見せる
         const buddy = companionId ? bugs.find((x) => x.id === companionId) : null
         if (buddy) {
           const pr = addExp(next, buddy.id, gain)
           next = pr.save
-          if (pr.levelUps > 0) msg += `／🤝 ${buddy.name} は Lv${pr.after.level}！`
+          queue.push(...celebrationsFor(buddy, pr, next, true))
         }
-        if (res.levelUps > 0) {
-          // レベルが あがったら、ステータスが どう かわったかを 見せる
-          const a = statsWithLevel(myBug, res.before.level)
-          const b = statsWithLevel(myBug, res.after.level)
-          setLevelUp({
-            name: myBug.name,
-            photo: mainPhoto(myBug),
-            fromLv: res.before.level,
-            toLv: res.after.level,
-            rows: [
-              { label: 'たいりょく', emoji: '❤️', from: a.hp, to: b.hp },
-              { label: 'こうげき', emoji: '⚔️', from: a.attack, to: b.attack },
-              { label: 'ぼうぎょ', emoji: '🛡️', from: a.defense, to: b.defense },
-              { label: 'すばやさ', emoji: '⚡', from: a.speed, to: b.speed },
-            ],
-          })
+        if (queue.length > 0) {
+          setCelebrations(queue)
           setTimeout(() => sfx.badge(), 200)
-          // レベルが 2あがる ごとに、あたらしい わざを 1つ おぼえられる
-          const learnLv = learnLevelCrossed(res.before.level, res.after.level)
-          if (learnLv !== null) {
-            const all = allMovesOf(next, myBug)
-            const before = moveSlots(res.before.level)
-            const after = moveSlots(res.after.level)
-            const nm = newMoveFor(myBug, learnLv, all)
-            if (nm) {
-              setLearn({
-                move: nm,
-                current: all.slice(0, Math.max(1, before)),
-                // わくが ふえた ときは えらばずに その わくへ
-                forcedIndex: after > before ? after - 1 : null,
-              })
-            }
-          }
         }
       }
       // ときどき、たおした虫が なかまに なりたがる
@@ -519,11 +561,14 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   const moveLabel = (m: SpecialMoveV2) =>
     m.kind === 'attack' ? `いりょく${m.power}` : 'へんかわざ'
 
-  const learnModal = learn && !levelUp && (
+  const learnModal = learn && (
     <div className="modal-backdrop">
       <div className="modal story-learn" onClick={(e) => e.stopPropagation()}>
         <div className="story-levelup-emoji">✨</div>
         <h3>
+          {learn.buddy && '🤝 '}
+          {learn.name}は
+          <br />
           {learn.forcedIndex !== null
             ? 'あたらしい わざを おぼえた！'
             : 'あたらしい わざを おぼえられる！'}
@@ -563,7 +608,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
               onClick={() => {
                 sfx.tap()
                 setNotice('いまの わざの ままに した。')
-                setLearn(null)
+                popCelebration()
               }}
             >
               おぼえない
@@ -620,7 +665,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     </div>
   )
 
-  const recruitModal = recruit && !levelUp && !learn && (
+  const recruitModal = recruit && celebrations.length === 0 && (
     <div className="modal-backdrop">
       <div className="modal story-recruit" onClick={(e) => e.stopPropagation()}>
         <div className="story-levelup-emoji">🤝</div>
@@ -653,10 +698,10 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   )
 
   const levelUpModal = levelUp && (
-    <div className="modal-backdrop" onClick={() => setLevelUp(null)}>
+    <div className="modal-backdrop" onClick={popCelebration}>
       <div className="modal story-levelup" onClick={(e) => e.stopPropagation()}>
         <div className="story-levelup-emoji">⭐</div>
-        <h3>レベルアップ！</h3>
+        <h3>{levelUp.buddy ? '🤝 なかまが レベルアップ！' : 'レベルアップ！'}</h3>
         <div className="story-levelup-head">
           <img src={levelUp.photo} alt={levelUp.name} />
           <span>
@@ -686,7 +731,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
             )
           })}
         </ul>
-        <button className="btn btn-big btn-primary" onClick={() => setLevelUp(null)}>
+        <button className="btn btn-big btn-primary" onClick={popCelebration}>
           つよくなった！ 💪
         </button>
       </div>
@@ -948,17 +993,21 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   // ③' あるける マップ（フィールド）
   if (phase === 'field' && field && myBug) {
     const pool = bugsForField(field.id, bugs)
+    // レベルアップや わざの がめんを 見ている あいだは あるかない（うしろで であわない ように）
+    const fieldPaused = celebrations.length > 0 || !!recruit || cageOpen
     return (
       <>
         {field.engine === 'world' ? (
           <WorldMap
             base={field.base}
+            paused={fieldPaused}
             onEncounter={fieldEncounter}
             onError={() => setNotice('マップを よみこめませんでした')}
           />
         ) : (
           <FieldMap
             base={field.base}
+            paused={fieldPaused}
             onEncounter={fieldEncounter}
             onError={() => setNotice('マップを よみこめませんでした')}
           />
@@ -1000,6 +1049,9 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
             この マップに 出る むしが まだ きまっていません（⚙️ せっていで えらべます）
           </p>
         )}
+        {levelUpModal}
+        {learnModal}
+        {recruitModal}
         {cageModal}
       </>
     )

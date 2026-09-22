@@ -1,3 +1,6 @@
+// アプリ用の へんこう（MAP/yuyuu-field/field.js からの ちがい）：
+//  - canvas の よみあげ名を map.name から つくる
+//  - がめんの どこでも 指を おいて すべらせると あるける（パッドが 指の ところへ うごく）
 /** Coordinates are source-image pixels. Player position means feet, not sprite center. */
 export function pointInPolygon(x,y,p) {
   let inside=false;
@@ -50,7 +53,9 @@ export async function createField(host,{map,imageUrl,onZoneEnter=()=>{},drawPlay
   let running=true,paused=false,raf=0,last=0,debug=false,axis={x:0,y:0},pointer=null,w=1,h=1,dpr=1,zoneId=null,travel=0;
   const resize=()=>{w=Math.max(1,host.clientWidth);h=Math.max(1,host.clientHeight);dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);};
   const observer=new ResizeObserver(resize);observer.observe(host);resize();
-  function resetInput(){keys.clear();axis={x:0,y:0};pointer=null;knob.style.transform='translate(0px,0px)';}
+  function homeStick(){stick.style.left='';stick.style.top='';stick.style.bottom='';stick.classList.remove('floating');}
+  function floatStick(e){const hr=host.getBoundingClientRect(),r=stick.getBoundingClientRect();stick.style.left=(e.clientX-hr.left-r.width/2)+'px';stick.style.top=(e.clientY-hr.top-r.height/2)+'px';stick.style.bottom='auto';stick.classList.add('floating');}
+  function resetInput(){keys.clear();axis={x:0,y:0};pointer=null;knob.style.transform='translate(0px,0px)';homeStick();}
   function axisFrom(e){const r=stick.getBoundingClientRect(),dx=e.clientX-r.left-r.width/2,dy=e.clientY-r.top-r.height/2,length=Math.hypot(dx,dy),max=42;
     axis=length<9?{x:0,y:0}:{x:dx/Math.max(max,length),y:dy/Math.max(max,length)};
     knob.style.transform=`translate(${axis.x*max}px,${axis.y*max}px)`;
@@ -61,7 +66,9 @@ export async function createField(host,{map,imageUrl,onZoneEnter=()=>{},drawPlay
   const accepted=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d'];
   host.addEventListener('keydown',e=>{const k=e.key.length===1?e.key.toLowerCase():e.key;if(accepted.includes(k)){e.preventDefault();keys.add(k);}},opts);
   host.addEventListener('keyup',e=>{keys.delete(e.key.length===1?e.key.toLowerCase():e.key);},opts);
-  canvas.addEventListener('pointerdown',()=>canvas.focus({preventScroll:true}),opts);
+  canvas.addEventListener('pointerdown',e=>{canvas.focus({preventScroll:true});if(pointer!==null)return;pointer=e.pointerId;canvas.setPointerCapture(pointer);floatStick(e);axisFrom(e);e.preventDefault();},opts);
+  canvas.addEventListener('pointermove',e=>{if(e.pointerId===pointer)axisFrom(e);},opts);
+  for(const type of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(type,e=>{if(e.pointerId===pointer)resetInput();},opts);
   host.addEventListener('focusout',e=>{if(!host.contains(e.relatedTarget))resetInput();},opts);
   window.addEventListener('blur',resetInput,opts);
   document.addEventListener('visibilitychange',()=>{resetInput();last=0;},opts);

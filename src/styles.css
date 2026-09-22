@@ -5095,3 +5095,15 @@ input:focus {
 .story-map-list-big {
   margin-bottom: 10px;
 }
+
+/* --- どこでも パッド：指を おいた ところに パッドが うごく --- */
+.fieldmap .field-stick.floating,
+.worldmap .world-stick.floating {
+  opacity: 0.95;
+  transition: none;
+  pointer-events: none; /* 指の いどうは canvas が うけとる */
+}
+.fieldmap .field-stick,
+.worldmap .world-stick {
+  opacity: 0.75;
+}

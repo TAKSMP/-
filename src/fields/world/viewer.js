@@ -5,6 +5,7 @@
 //  - referenceUrl を なしに できる（ひかく用の 元地図 3.4MB を よまない）
 //  - 通行範囲の 重ね絵は つかう ときだけ つくる（iPhone の メモリ たいさく）
 //  - あるいた きょり・むき・うごいているか を drawPlayer に わたす
+//  - がめんの どこでも 指を すべらせると あるける（パッドが 指の ところへ）。タップは これまでどおり 道へ じどう移動
 // それいがいの うごき（あたり判定・カメラ・道タップの 自動移動）は もとの まま。
 import {decodeRoads,isRoad,nearestRoad,move,findRoute} from './navigation.js';
 export async function mountWorld(host,{map,gameUrl,referenceUrl,signal,onPosition=()=>{},drawPlayer=null,startWalking=false}){
@@ -18,15 +19,17 @@ export async function mountWorld(host,{map,gameUrl,referenceUrl,signal,onPositio
  function message(s){notice.textContent=s;}function fit(){zoom=Math.min(width/map.width,(height-150)/map.height)*.95;cx=map.width/2;cy=map.height/2;}
  function resize(){width=host.clientWidth;height=host.clientHeight;dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);if(mode==='overview')fit();}
  const ro=new ResizeObserver(resize);ro.observe(host);resize();
- function cancel(){vx=vy=0;keys.clear();pointer=null;knob.style.transform='translate(0px,0px)';}
+ function homeStick(){stick.style.left='';stick.style.top='';stick.style.bottom='';stick.classList.remove('floating');}
+ function floatStick(x,y){const hr=host.getBoundingClientRect(),r=stick.getBoundingClientRect();stick.style.left=(x-hr.left-r.width/2)+'px';stick.style.top=(y-hr.top-r.height/2)+'px';stick.style.bottom='auto';stick.classList.add('floating');}
+ function cancel(){vx=vy=0;keys.clear();pointer=null;knob.style.transform='translate(0px,0px)';homeStick();}
  function walk(){select=false;mode='walk';zoom=8;cx=player.x;cy=player.y;host.dataset.mode=mode;message('道をタップして移動。細い道は自動移動が便利です。');canvas.focus({preventScroll:true});}
  function zoomBy(scale){zoom=Math.max(.15,Math.min(16,zoom*scale));}
  for(const b of host.querySelectorAll('[data-a]'))b.addEventListener('click',()=>{const a=b.dataset.a;if(a==='walk')walk();if(a==='overview'){cancel();route=[];mode='overview';host.dataset.mode=mode;fit();message('ドラッグで見渡せます。');}if(a==='source'){source=!source;b.textContent=source?'ゲーム表示':'元地図';}if(a==='collision'){collision=!collision;b.setAttribute('aria-pressed',String(collision));}if(a==='plus')zoomBy(1.5);if(a==='minus')zoomBy(1/1.5);if(a==='select'){select=true;cancel();route=[];mode='overview';host.dataset.mode=mode;fit();message('試したい道路を選んでください。開始位置だけを変更します。');}},opts);
  function screenWorld(x,y){const r=canvas.getBoundingClientRect();return{x:cx+(x-r.left-width/2)/zoom,y:cy+(y-r.top-height/2)/zoom};}
  canvas.addEventListener('pointerdown',e=>{canvas.focus({preventScroll:true});drag={id:e.pointerId,x:e.clientX,y:e.clientY,cx,cy,moved:false};canvas.setPointerCapture(e.pointerId);},opts);
- canvas.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId||mode==='walk')return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.hypot(dx,dy)>5)drag.moved=true;cx=drag.cx-dx/zoom;cy=drag.cy-dy/zoom;},opts);
- canvas.addEventListener('pointerup',e=>{if(!drag||drag.id!==e.pointerId)return;const moved=drag.moved;drag=null;if(moved)return;const point=screenWorld(e.clientX,e.clientY),target=nearestRoad(map,mask,point.x,point.y,Math.min(20,Math.max(2,12/zoom)));if(!target){message('この位置には読み取れた道路がありません。');return;}if(select){player.x=target.x;player.y=target.y;walk();return;}if(mode==='walk'){route=findRoute(map,mask,player,target)||[];routeIndex=0;message(route.length?'選んだ道路へ移動します。':'この道路への接続は元画像から確認できていません。');}else{cx=target.x;cy=target.y;zoom=4;}},opts);
- canvas.addEventListener('pointercancel',()=>drag=null,opts);
+ canvas.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId)return;if(mode==='walk'){const ddx=e.clientX-drag.x,ddy=e.clientY-drag.y,len=Math.hypot(ddx,ddy);if(!drag.moved&&len>8){drag.moved=true;route=[];floatStick(drag.x,drag.y);}if(drag.moved){const n=Math.max(38,len);vx=ddx/n;vy=ddy/n;knob.style.transform=`translate(${vx*38}px,${vy*38}px)`;}return;}const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.hypot(dx,dy)>5)drag.moved=true;cx=drag.cx-dx/zoom;cy=drag.cy-dy/zoom;},opts);
+ canvas.addEventListener('pointerup',e=>{if(!drag||drag.id!==e.pointerId)return;const moved=drag.moved;drag=null;if(moved){if(mode==='walk')cancel();return;}const point=screenWorld(e.clientX,e.clientY),target=nearestRoad(map,mask,point.x,point.y,Math.min(20,Math.max(2,12/zoom)));if(!target){message('この位置には読み取れた道路がありません。');return;}if(select){player.x=target.x;player.y=target.y;walk();return;}if(mode==='walk'){route=findRoute(map,mask,player,target)||[];routeIndex=0;message(route.length?'選んだ道路へ移動します。':'この道路への接続は元画像から確認できていません。');}else{cx=target.x;cy=target.y;zoom=4;}},opts);
+ canvas.addEventListener('pointercancel',()=>{drag=null;if(mode==='walk')cancel();},opts);
  canvas.addEventListener('wheel',e=>{e.preventDefault();zoomBy(e.deltaY<0?1.15:1/1.15);},{...opts,passive:false});
  function updateStick(e){const r=stick.getBoundingClientRect(),dx=e.clientX-r.left-r.width/2,dy=e.clientY-r.top-r.height/2,n=Math.max(38,Math.hypot(dx,dy));vx=dx/n;vy=dy/n;if(Math.hypot(dx,dy)<7)vx=vy=0;knob.style.transform=`translate(${vx*38}px,${vy*38}px)`;route=[];}
  stick.addEventListener('pointerdown',e=>{if(pointer!==null)return;pointer=e.pointerId;stick.setPointerCapture(pointer);updateStick(e);},opts);stick.addEventListener('pointermove',e=>{if(e.pointerId===pointer)updateStick(e);},opts);for(const t of ['pointerup','pointercancel','lostpointercapture'])stick.addEventListener(t,e=>{if(e.pointerId===pointer)cancel();},opts);
