@@ -12,24 +12,17 @@ dist-single
 # MAPパッケージの 大きい かくにん用ファイル（元データからいつでも作り直せる）
 MAP/*/preview.html
 MAP/*/walkable-overlay.svg
-# つるせ：build_map.py で 元画像（reference.png）から 作りなおせる 大きい ファイル
 MAP/*/terrain.bin
 MAP/*/map-overview.png
 MAP/*/assets/game-map.svg
-# つるせ v2：build_tiles.py と terrain.bin から 作りなおせる 大きい ファイル
 MAP/*/assets/overview.svg
 MAP/*/assets/tiles/
-# つるせ v3：もとの PNG（37MB）。public に JPEG 版を おいてある
 MAP/*/assets/original.png
 MAP/*/map-art-review.png
 MAP/*/overview-review.png
 MAP/*/overview-review_startline.png
 MAP/*/references/
 MAP/*/1_2_stratline.png
-
-MAP/tsuruse-illustrated-v3/assets/*.png
-# つるせ v4：build.py と placements.json から 作りなおせる 大きい ファイル
-MAP/tsuruse-mask-v4/tiles/
-MAP/tsuruse-mask-v4/qa/
-MAP/tsuruse-mask-v4/overview.png
-MAP/tsuruse-mask-v4/mask-check.html
+# つるせ v5（OSM版）：build_map.py の さぎょうよう フォルダ
+MAP/tsuruse-osm/tiles_raw/
+MAP/tsuruse-osm/out/

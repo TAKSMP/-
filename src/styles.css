@@ -5099,6 +5099,18 @@ input:focus {
   background: var(--green);
   color: #fff;
 }
+.world-attribution {
+  position: fixed;
+  left: 8px;
+  bottom: max(6px, env(safe-area-inset-bottom));
+  z-index: 61;
+  font-size: 9px;
+  color: rgba(0, 0, 0, 0.55);
+  background: rgba(255, 255, 255, 0.75);
+  padding: 2px 6px;
+  border-radius: 999px;
+  text-decoration: none;
+}
 
 /* 大きい マップ（つるせ）の カード */
 .story-map-img {

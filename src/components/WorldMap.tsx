@@ -205,6 +205,15 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
       >
         {overview ? '✕ とじる' : '🗺️ 全体地図'}
       </button>
+      {/* OpenStreetMap の 地図データを つかっているので、ひょうじが ひつよう */}
+      <a
+        className="world-attribution"
+        href="https://www.openstreetmap.org/copyright"
+        target="_blank"
+        rel="noreferrer"
+      >
+        © OpenStreetMap contributors
+      </a>
     </>
   )
 }

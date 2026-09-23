@@ -1,7 +1,0 @@
-Mode: built-in image generation; style-transfer / high-detail restoration.
-All 13 source crops contain 20 reference pixels of overlap when possible. Target requested: maximum supported native resolution. Actual native sizes are recorded in manifest.json and were not represented as 2048px when smaller.
-
-Core prompt:
-High-detail restoration of this exact rectangular Japanese city game map crop. Repaint at maximum supported native resolution. Preserve EXACT full field of view and orientation, road centerlines and widths, every intersection, railways, rivers, bridges, block boundaries, existing empty cream areas and image-edge continuation. Add coherent individual Japanese tiled rooftops, roof ridges, little gardens, hedges, lush leafy round trees, subtle building shadows within existing parcels. Polished richly detailed hand-painted overhead 2D RPG map, green vegetation, muted blue-gray roads, warm roofs. Roads clearly readable and unobstructed. No invented roads, no text or labels, no people, no icons, no borders. Do not simplify into vector polygons. Unknown cream areas stay empty. This is a contiguous map chunk, not a new layout.
-
-The preservation constraints above are generation instructions, not a certification of achieved geometric fidelity. Generated positions and seams need manual review.
