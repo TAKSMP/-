@@ -13,7 +13,7 @@ CENTER = (35.8479, 139.5380)
 HALF_TILES = 14
 TILE_DIR = 'tiles_raw'
 OUT_DIR = 'out'
-SPAWN_LATLON = (35.8497311, 139.5361195)  # アンビシャスガーデン鶴瀬
+SPAWN_LATLON = (35.848635, 139.538117)  # メイプルタウン付近（OSM上に「アンビシャスガーデン鶴瀬」の登録がないため、ゲーム画面の目印に近い場所を採用）
 
 WIDTH_BY_TYPE = {
     'motorway': 18, 'trunk': 18, 'motorway_link': 14, 'trunk_link': 14,
@@ -83,8 +83,8 @@ def main():
     sx0, sy0 = int(sx0), int(sy0)
     best = None
     bd = 1e18
-    for dy in range(-40, 41):
-        for dx in range(-40, 41):
+    for dy in range(-120, 121):
+        for dx in range(-120, 121):
             x, y = sx0 + dx, sy0 + dy
             if 0 <= x < W and 0 <= y < H and arr[y, x]:
                 d = dx * dx + dy * dy
