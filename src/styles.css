@@ -5091,7 +5091,8 @@ input:focus {
 .world-overview-btn {
   position: fixed;
   right: 10px;
-  bottom: max(22px, env(safe-area-inset-bottom));
+  /* あるく ときは ズーム／ダッシュ ボタンが したに つくので、うごかない いちに こていする */
+  bottom: max(148px, calc(env(safe-area-inset-bottom) + 148px));
   z-index: 61;
   font: inherit;
   font-size: 13px;
@@ -5104,6 +5105,44 @@ input:focus {
   box-shadow: var(--shadow);
 }
 .world-overview-btn.on {
+  background: var(--green);
+  color: #fff;
+}
+.world-zoomcycle-btn {
+  position: fixed;
+  right: 10px;
+  bottom: max(86px, calc(env(safe-area-inset-bottom) + 86px));
+  z-index: 61;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+.world-dash-btn {
+  position: fixed;
+  right: 10px;
+  bottom: max(22px, env(safe-area-inset-bottom));
+  z-index: 61;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  border: none;
+  border-radius: 999px;
+  width: 64px;
+  height: 64px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  touch-action: none; /* おしている あいだ スクロールさせない */
+  -webkit-user-select: none;
+  user-select: none;
+}
+.world-dash-btn.on {
   background: var(--green);
   color: #fff;
 }

@@ -34,6 +34,8 @@ const lastPos = new Map<string, { x: number; y: number }>()
 const BOY_SCREEN_H = 60 // がめんの 上での 男の子の たかさ（CSS ピクセル）
 const STEP_SEC = 0.15 // この びょうすう ぶん あるくと つぎの コマ
 const WALK_ZOOM = 5 // あるく ときの ズーム（8だと せまい・はやく かんじる ので さげた）
+// あるく ときの ズーム だんかい（いちばん ちかい じゅんに ならべる。ボタンで じゅんぐりに きりかえる）
+const WALK_ZOOM_LEVELS = [WALK_ZOOM, 3.5, 2]
 
 // 区画の SVG を よみこんだ ときに 1かいだけ ふつうの 絵に する。
 // SVG の まま まいフレーム かくと、スマホ（CPU 4ばい おそい ていど）で 12fps まで おちた。
@@ -83,6 +85,10 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
   const artBgRef = useRef<ArtBackground | null>(null)
   // 世界が ひろいので、いまの いちを 見うしなわない ように 全体地図を 出せる
   const [overview, setOverview] = useState(false)
+  // あるく ときの ズームの だんかい（0がいちばん ちかい）
+  const [zoomIdx, setZoomIdx] = useState(0)
+  // ダッシュボタンを おしている あいだ、はやく あるく
+  const [dashing, setDashing] = useState(false)
   encounterCb.current = onEncounter
   errorCb.current = onError
   pausedRef.current = paused
@@ -93,6 +99,22 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
     engine.current?.setOverview(next)
   }
 
+  function cycleZoom() {
+    const next = (zoomIdx + 1) % WALK_ZOOM_LEVELS.length
+    setZoomIdx(next)
+    engine.current?.setZoom(WALK_ZOOM_LEVELS[next])
+  }
+
+  function dashStart() {
+    setDashing(true)
+    engine.current?.setDash(true)
+  }
+
+  function dashEnd() {
+    setDashing(false)
+    engine.current?.setDash(false)
+  }
+
   const wasPaused = useRef(paused)
   useEffect(() => {
     engine.current?.setPaused(paused)
@@ -101,6 +123,11 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
       nextAt.current = travelRef.current + encounterDistance(speedRef.current)
     }
     wasPaused.current = paused
+    // とまった ときは ダッシュも かいじょ（おしっぱなしの まま バトルに 入っても のこらない ように）
+    if (paused) {
+      setDashing(false)
+      engine.current?.setDash(false)
+    }
   }, [paused])
 
   useEffect(() => {
@@ -160,7 +187,7 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
         artBg,
         artScale,
         walkZoom: WALK_ZOOM, // しょうりゃく時の 8だと せまくて はやく かんじた ので ひくめに
-        detailZoom: Math.min(3, WALK_ZOOM), // walkZoom より ひくく（さもないと したじ画像の ままに なる）
+        detailZoom: Math.min(3, ...WALK_ZOOM_LEVELS), // ズームアウトの さいだいだんかい より ひくく（さもないと したじ画像の ままに なる）
         signal: abort.signal,
         startWalking: true,
         // であいの はんていも ここで する ので、絵が なくても かならず わたす
@@ -198,6 +225,11 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
     }
   }, [base])
 
+  // あたらしい マップに かわったら ズームの だんかいも さいしょから
+  useEffect(() => {
+    setZoomIdx(0)
+  }, [base])
+
   return (
     <>
       <div className="fieldmap worldmap" ref={host} />
@@ -208,6 +240,23 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
       >
         {overview ? '✕ とじる' : '🗺️ 全体地図'}
       </button>
+      {!overview && (
+        <button type="button" className="world-zoomcycle-btn" onClick={cycleZoom}>
+          🔍 {zoomIdx + 1}/{WALK_ZOOM_LEVELS.length}
+        </button>
+      )}
+      {!overview && (
+        <button
+          type="button"
+          className={'world-dash-btn' + (dashing ? ' on' : '')}
+          onPointerDown={dashStart}
+          onPointerUp={dashEnd}
+          onPointerLeave={dashEnd}
+          onPointerCancel={dashEnd}
+        >
+          ダッシュ
+        </button>
+      )}
       {/* OpenStreetMap の 地図データを つかっているので、ひょうじが ひつよう */}
       <a
         className="world-attribution"
