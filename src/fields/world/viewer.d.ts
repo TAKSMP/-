@@ -66,6 +66,7 @@ export function mountWorld(
     artBg?: ArtBackground | null
     artScale?: number
     walkZoom?: number
+    detailZoom?: number
     signal?: AbortSignal
     onPosition?: (p: { x: number; y: number }) => void
     drawPlayer?: ((ctx: CanvasRenderingContext2D, s: WorldPlayerState) => void) | null

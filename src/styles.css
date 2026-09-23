@@ -5072,13 +5072,21 @@ input:focus {
 .worldmap .world-head,
 .worldmap .world-toolbar,
 .worldmap .world-notice,
-.worldmap .world-footer,
-.worldmap .world-zoom {
+.worldmap .world-footer {
   display: none;
 }
 .worldmap .world-stick {
   bottom: max(26px, env(safe-area-inset-bottom));
   left: 20px;
+}
+/* 全体地図（あるいて いない とき）だけ ＋／− を 出す。
+   あるいている ときは パッドと かぶるので かくす */
+.worldmap .world-zoom {
+  display: none;
+}
+.worldmap:not([data-mode='walk']) .world-zoom {
+  display: flex;
+  bottom: max(70px, calc(env(safe-area-inset-bottom) + 44px));
 }
 .world-overview-btn {
   position: fixed;

@@ -120,7 +120,7 @@ def main():
 
     map_json = {
         "schemaVersion": 2, "id": "tsuruse-osm", "name": "つるせ",
-        "width": W, "height": H, "speed": 80,
+        "width": W, "height": H, "speed": 20,
         "spawn": {"x": float(sx), "y": float(sy), "facing": "down"},
         "images": {"game": "assets/overview.jpg"},
         "roadRuns": runs,

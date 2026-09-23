@@ -33,6 +33,7 @@ const lastPos = new Map<string, { x: number; y: number }>()
 
 const BOY_SCREEN_H = 60 // がめんの 上での 男の子の たかさ（CSS ピクセル）
 const STEP_SEC = 0.15 // この びょうすう ぶん あるくと つぎの コマ
+const WALK_ZOOM = 5 // あるく ときの ズーム（8だと せまい・はやく かんじる ので さげた）
 
 // 区画の SVG を よみこんだ ときに 1かいだけ ふつうの 絵に する。
 // SVG の まま まいフレーム かくと、スマホ（CPU 4ばい おそい ていど）で 12fps まで おちた。
@@ -158,6 +159,8 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
         loadTile: loadTileBitmap,
         artBg,
         artScale,
+        walkZoom: WALK_ZOOM, // しょうりゃく時の 8だと せまくて はやく かんじた ので ひくめに
+        detailZoom: Math.min(3, WALK_ZOOM), // walkZoom より ひくく（さもないと したじ画像の ままに なる）
         signal: abort.signal,
         startWalking: true,
         // であいの はんていも ここで する ので、絵が なくても かならず わたす
