@@ -33,9 +33,9 @@ const lastPos = new Map<string, { x: number; y: number }>()
 
 const BOY_SCREEN_H = 60 // がめんの 上での 男の子の たかさ（CSS ピクセル）
 const STEP_SEC = 0.15 // この びょうすう ぶん あるくと つぎの コマ
-const WALK_ZOOM = 5 // あるく ときの ズーム（8だと せまい・はやく かんじる ので さげた）
-// あるく ときの ズーム だんかい（いちばん ちかい じゅんに ならべる。ボタンで じゅんぐりに きりかえる）
-const WALK_ZOOM_LEVELS = [WALK_ZOOM, 3.5, 2]
+// あるく ときの ズーム だんかい（ひろい じゅんに ならべる）。さいしょは いちばん ひろい[0]。
+// ＋ボタンで ちかづき（さいだい WALK_ZOOM_LEVELSの さいご）、－ボタンで とおざかる。
+const WALK_ZOOM_LEVELS = [2, 3.5, 5]
 
 // 区画の SVG を よみこんだ ときに 1かいだけ ふつうの 絵に する。
 // SVG の まま まいフレーム かくと、スマホ（CPU 4ばい おそい ていど）で 12fps まで おちた。
@@ -85,7 +85,7 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
   const artBgRef = useRef<ArtBackground | null>(null)
   // 世界が ひろいので、いまの いちを 見うしなわない ように 全体地図を 出せる
   const [overview, setOverview] = useState(false)
-  // あるく ときの ズームの だんかい（0がいちばん ちかい）
+  // あるく ときの ズームの だんかい（0がいちばん ひろい＝しょきち）
   const [zoomIdx, setZoomIdx] = useState(0)
   // ダッシュボタンを おしている あいだ、はやく あるく
   const [dashing, setDashing] = useState(false)
@@ -97,10 +97,18 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
     const next = !overview
     setOverview(next)
     engine.current?.setOverview(next)
+    // 全体地図から もどると エンジンがわの ズームは しょきち(いちばん ひろい)に もどる ので、あわせる
+    if (!next) setZoomIdx(0)
   }
 
-  function cycleZoom() {
-    const next = (zoomIdx + 1) % WALK_ZOOM_LEVELS.length
+  function zoomIn() {
+    const next = Math.min(zoomIdx + 1, WALK_ZOOM_LEVELS.length - 1)
+    setZoomIdx(next)
+    engine.current?.setZoom(WALK_ZOOM_LEVELS[next])
+  }
+
+  function zoomOut() {
+    const next = Math.max(zoomIdx - 1, 0)
     setZoomIdx(next)
     engine.current?.setZoom(WALK_ZOOM_LEVELS[next])
   }
@@ -186,7 +194,8 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
         loadTile: loadTileBitmap,
         artBg,
         artScale,
-        walkZoom: WALK_ZOOM, // しょうりゃく時の 8だと せまくて はやく かんじた ので ひくめに
+        walkZoom: WALK_ZOOM_LEVELS[WALK_ZOOM_LEVELS.length - 1], // ＋ボタンで ちかづける じょうげん
+        startZoom: WALK_ZOOM_LEVELS[0], // あるき はじめは いちばん ひろい だんかい
         detailZoom: Math.min(3, ...WALK_ZOOM_LEVELS), // ズームアウトの さいだいだんかい より ひくく（さもないと したじ画像の ままに なる）
         signal: abort.signal,
         startWalking: true,
@@ -241,9 +250,26 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
         {overview ? '✕ とじる' : '🗺️ 全体地図'}
       </button>
       {!overview && (
-        <button type="button" className="world-zoomcycle-btn" onClick={cycleZoom}>
-          🔍 {zoomIdx + 1}/{WALK_ZOOM_LEVELS.length}
-        </button>
+        <div className="world-zoompair">
+          <button
+            type="button"
+            className="world-zoompair-btn"
+            onClick={zoomOut}
+            disabled={zoomIdx <= 0}
+            aria-label="ズームアウト"
+          >
+            −
+          </button>
+          <button
+            type="button"
+            className="world-zoompair-btn"
+            onClick={zoomIn}
+            disabled={zoomIdx >= WALK_ZOOM_LEVELS.length - 1}
+            aria-label="ズームイン"
+          >
+            ＋
+          </button>
+        </div>
       )}
       {!overview && (
         <button

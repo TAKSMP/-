@@ -69,7 +69,8 @@ export function mountWorld(
     // イラストざひょう ÷ もとの map座標 の ひりつ（例：1307/2048）
     artBg?: ArtBackground | null
     artScale?: number
-    walkZoom?: number
+    walkZoom?: number // あるく ズームの じょうげん（setZoom は これを こえない）
+    startZoom?: number // あるく モードに 入った ときの はじめの ズーム（省略時は walkZoom）
     detailZoom?: number
     signal?: AbortSignal
     onPosition?: (p: { x: number; y: number }) => void

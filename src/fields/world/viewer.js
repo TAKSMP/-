@@ -20,13 +20,15 @@
 //  - 見えている 区画が そろったら、したじの 全体図（8ばいに ひきのばし）は かかない（スマホで おもい）
 //  - setOverview(true/false)：全体地図に きりかえる。マーカーは あかく てんめつ
 //  - setZoom(value)：あるく ズームを その ばで かえる（walkZoom を じょうげんに）
+//  - startZoom：あるく モードに 入った ときの はじめの ズーム（省略時は walkZoom と おなじ）
 //  - setDash(true/false)：ダッシュ（DASH_MULT ばい の はやさ）。Shiftキーでも どうよう
 //  - tiles.request は まいフレーム よばず、見ている 区画が かわった ときだけ よぶ（557この はいれつを まいフレーム なめると おもい）
 //  - がめんの どこでも 指を すべらせると あるける（パッドが 指の ところへ）。タップは これまでどおり 道へ じどう移動
 // それいがいの うごき（あたり判定・カメラ・道タップの 自動移動）は もとの まま。
 import {TileStore} from './tile-store.js';
 import {decodeRoads,isRoad,nearestRoad,move,findRoute} from './navigation.js';
-export async function mountWorld(host,{map,gameUrl,referenceUrl,tileManifest,tileBaseUrl,resolveTile,loadTile=null,artBg=null,artScale=1,walkZoom=8,detailZoom=6,signal,onPosition=()=>{},drawPlayer=null,startWalking=false}){
+export async function mountWorld(host,{map,gameUrl,referenceUrl,tileManifest,tileBaseUrl,resolveTile,loadTile=null,artBg=null,artScale=1,walkZoom=8,startZoom,detailZoom=6,signal,onPosition=()=>{},drawPlayer=null,startWalking=false}){
+ const initialWalkZoom=startZoom??walkZoom; // あるく モードに 入った ときの ズーム（walkZoom は setZoom の じょうげん）
  const load=url=>new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>reject(Error('地図を読み込めませんでした'));im.src=url;});
  const [game,reference]=await Promise.all([load(gameUrl),referenceUrl?load(referenceUrl):Promise.resolve(null)]);if(signal?.aborted)throw new DOMException('Aborted','AbortError');
  const tiles=new TileStore(tileManifest,{maxCache:12,resolve:resolveTile||(file=>new URL(file,tileBaseUrl).href),load:loadTile||undefined});
@@ -41,7 +43,7 @@ export async function mountWorld(host,{map,gameUrl,referenceUrl,tileManifest,til
  function homeStick(){stick.style.left='';stick.style.top='';stick.style.bottom='';stick.classList.remove('floating');}
  function floatStick(x,y){const hr=host.getBoundingClientRect(),r=stick.getBoundingClientRect();stick.style.left=(x-hr.left-r.width/2)+'px';stick.style.top=(y-hr.top-r.height/2)+'px';stick.style.bottom='auto';stick.classList.add('floating');}
  function cancel(){vx=vy=0;keys.clear();pointer=null;knob.style.transform='translate(0px,0px)';homeStick();}
- function walk(){select=false;mode='walk';zoom=walkZoom;cx=player.x;cy=player.y;host.dataset.mode=mode;message('道をタップして移動。細い道は自動移動が便利です。');canvas.focus({preventScroll:true});}
+ function walk(){select=false;mode='walk';zoom=initialWalkZoom;cx=player.x;cy=player.y;host.dataset.mode=mode;message('道をタップして移動。細い道は自動移動が便利です。');canvas.focus({preventScroll:true});}
  function showOverview(){cancel();route=[];mode='overview';host.dataset.mode=mode;fit();message('ドラッグで見渡せます。');}
  function zoomBy(scale){zoom=Math.max(.15,Math.min(walkZoom,zoom*scale));}
  for(const b of host.querySelectorAll('[data-a]'))b.addEventListener('click',()=>{const a=b.dataset.a;if(a==='walk')walk();if(a==='overview')showOverview();if(a==='source'){source=!source;b.textContent=source?'ゲーム表示':'元地図';}if(a==='collision'){collision=!collision;b.setAttribute('aria-pressed',String(collision));}if(a==='plus')zoomBy(1.5);if(a==='minus')zoomBy(1/1.5);if(a==='select'){select=true;cancel();route=[];mode='overview';host.dataset.mode=mode;fit();message('試したい道路を選んでください。開始位置だけを変更します。');}},opts);
