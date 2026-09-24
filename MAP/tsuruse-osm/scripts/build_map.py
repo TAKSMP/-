@@ -13,7 +13,7 @@ CENTER = (35.8479, 139.5380)
 HALF_TILES = 14
 TILE_DIR = 'tiles_raw'
 OUT_DIR = 'out'
-SPAWN_LATLON = (35.848635, 139.538117)  # メイプルタウン付近（OSM上に「アンビシャスガーデン鶴瀬」の登録がないため、ゲーム画面の目印に近い場所を採用）
+SPAWN_LATLON = (35.849707, 139.536283)  # ユーザーが全体地図のスクリーンショットで指し示した地点（OSM上に「アンビシャスガーデン鶴瀬」の登録がないため）
 
 WIDTH_BY_TYPE = {
     'motorway': 18, 'trunk': 18, 'motorway_link': 14, 'trunk_link': 14,

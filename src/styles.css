@@ -4953,10 +4953,13 @@ input:focus {
   white-space: nowrap;
 }
 .field-notice {
+  /* したの ボタン（全体地図・ズーム・ダッシュ）に かさなって おせなく なる ため、
+     したでは なく うえ（field-hint の した）に 出す */
   position: fixed;
   left: 12px;
   right: 12px;
-  bottom: calc(96px + env(safe-area-inset-bottom));
+  top: calc(84px + env(safe-area-inset-top));
+  bottom: auto;
   z-index: 62;
   margin: 0;
 }
@@ -5129,12 +5132,16 @@ input:focus {
   bottom: max(22px, env(safe-area-inset-bottom));
   z-index: 61;
   font: inherit;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 800;
+  white-space: nowrap;
   border: none;
   border-radius: 999px;
   width: 64px;
   height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: rgba(255, 255, 255, 0.92);
   color: var(--ink);
   box-shadow: var(--shadow);
