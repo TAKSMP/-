@@ -181,6 +181,8 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   const [celebrations, setCelebrations] = useState<Celebration[]>([])
   // たおした虫が なかまに なりたがっている
   const [recruit, setRecruit] = useState<{ bug: CaughtBug; level: number } | null>(null)
+  // 2ひき いっしょの であいで、「〇〇が なかまの 〇〇を つれてきた！」を 見せたか
+  const [allyIntroShown, setAllyIntroShown] = useState(false)
   // むしかご：つれていく なかま（この バトルだけ）
   const [companionId, setCompanionId] = useState<string | null>(null)
   const [pendingCell, setPendingCell] = useState<StoryCell | null>(null)
@@ -355,6 +357,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
       col: 0,
       row: 0,
     })
+    setAllyIntroShown(false)
     setGoFlash(false)
     setPhase('encounter')
   }
@@ -426,6 +429,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
         setSave(next)
         saveStory(next)
         setEncounterCell(cell)
+        setAllyIntroShown(false)
         setGoFlash(false)
         setPhase('encounter')
         return
@@ -1069,9 +1073,35 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     const enemy = bugs.find((b) => b.id === encounterCell.bugId)
     const enc = findEncounter(encounterCell.encounterId)
     const lv = encounterCell.level ?? 1
+    // 2ひき いっしょの であいなら、バトルの まえに「なかまを つれてきた」を 1回 見せる
+    const allyBug = encounterCell.allyBugId ? bugs.find((b) => b.id === encounterCell.allyBugId) : null
+    const allyIntroModal = allyBug && enemy && !allyIntroShown && (
+      <div className="modal-backdrop">
+        <div className="modal story-recruit" onClick={(e) => e.stopPropagation()}>
+          <div className="story-levelup-emoji">👥</div>
+          <img className="story-recruit-photo" src={mainPhoto(allyBug)} alt={allyBug.name} />
+          <p className="story-recruit-text">
+            <b>{enemy.name}</b> が なかまの <b>{allyBug.name}</b> を つれてきた！
+          </p>
+          <p className="story-recruit-sub">2ひき いっしょに たたかう ことに なるよ。</p>
+          <div className="battle-result-actions">
+            <button
+              className="btn btn-big btn-primary"
+              onClick={() => {
+                sfx.tap()
+                setAllyIntroShown(true)
+              }}
+            >
+              わかった
+            </button>
+          </div>
+        </div>
+      </div>
+    )
     return (
       <div className="story-encounter">
         <ParkScene index={stage.sceneIndex} />
+        {allyIntroModal}
         <div className="story-enc-inner">
           <div className="story-enc-emoji">{enc?.emoji ?? '❗'}</div>
           <p className="story-enc-text">
