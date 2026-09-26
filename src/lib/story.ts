@@ -30,6 +30,7 @@ export interface StoryCell {
   allyBugId?: string // さきの ステージでは 敵が なかまを つれてくる
   allyLevel?: number
   encounterId?: string // であいの おはなし（マップの中で かぶらない）
+  encounterMode?: 'catch' // つるせMAPの「むしとりモード」で であった ときだけ 'catch'
   col: number
   row: number
 }

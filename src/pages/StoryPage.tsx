@@ -17,6 +17,7 @@ import { BattleStage, type BattleResult } from '../components/BattleStage'
 import { BugPicker } from '../components/BugPicker'
 import { FieldMap } from '../components/FieldMap'
 import { forgetFieldPosition, WorldMap } from '../components/WorldMap'
+import { CatchChallenge } from '../components/CatchChallenge'
 import { fieldForPlace, fieldsInList, publicUrl, type FieldDef } from '../data/fields'
 import { bugsForField } from '../lib/fieldBugs'
 import { assignEncounters } from '../data/encounters'
@@ -68,7 +69,7 @@ interface Props {
   onGoCapture: () => void
 }
 
-type Phase = 'pickBug' | 'pickMap' | 'map' | 'field' | 'encounter' | 'party' | 'battle' | 'clear'
+type Phase = 'pickBug' | 'pickMap' | 'map' | 'field' | 'encounter' | 'party' | 'battle' | 'catch' | 'clear'
 type MapMode = 'place' | 'quest'
 
 // マスの まんなかの いち（％）
@@ -209,6 +210,8 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   const [stage, setStage] = useState<StoryStage | null>(null)
   // あるける マップ（えらんで いれば）
   const [field, setField] = useState<FieldDef | null>(null)
+  // むしとりモード：ON の あいだ、であった虫は バトルの かわりに むしとりチャレンジ
+  const [catchMode, setCatchMode] = useState(false)
   const [save, setSave] = useState<StorySave>(() => loadStory())
   const [pos, setPos] = useState(0)
   const [moving, setMoving] = useState(false)
@@ -400,6 +403,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
       allyBugId: ally ? ally.id : undefined,
       allyLevel: ally ? pickLevel() : undefined,
       encounterId: encId,
+      encounterMode: field.engine === 'world' && catchMode ? 'catch' : undefined,
       col: 0,
       row: 0,
     })
@@ -1118,6 +1122,19 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
               🧺{cageOf(save).length}
             </button>
           )}
+          {field.engine === 'world' && (
+            <button
+              type="button"
+              className={'field-catchmode' + (catchMode ? ' on' : '')}
+              onClick={() => {
+                sfx.tap()
+                setCatchMode((v) => !v)
+              }}
+              title="ONの あいだは であった虫を むしとりチャレンジで つかまえる"
+            >
+              🕸️ むしとりモード
+            </button>
+          )}
         </div>
         {notice && <p className="story-notice field-notice">{notice}</p>}
         {pool.length === 0 && (
@@ -1249,17 +1266,31 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
               </span>
             </div>
           )}
-          <button
-            className="btn btn-big btn-primary story-enc-go"
-            onClick={() => {
-              if (goFlash) return
-              setGoFlash(true)
-              sfx.battleStart()
-              window.setTimeout(() => beginBattle(encounterCell), 950)
-            }}
-          >
-            バトル かいし ⚔️
-          </button>
+          {encounterCell.encounterMode === 'catch' ? (
+            <button
+              className="btn btn-big btn-primary story-enc-go"
+              onClick={() => {
+                if (goFlash) return
+                setGoFlash(true)
+                sfx.battleStart()
+                window.setTimeout(() => setPhase('catch'), 950)
+              }}
+            >
+              むしとりチャレンジ 🕸️
+            </button>
+          ) : (
+            <button
+              className="btn btn-big btn-primary story-enc-go"
+              onClick={() => {
+                if (goFlash) return
+                setGoFlash(true)
+                sfx.battleStart()
+                window.setTimeout(() => beginBattle(encounterCell), 950)
+              }}
+            >
+              バトル かいし ⚔️
+            </button>
+          )}
           <button
             className="btn btn-ghost battle-back"
             onClick={() => {
@@ -1275,11 +1306,41 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
         </div>
         {goFlash && (
           <div className="story-go">
-            <span>バトル かいし！</span>
+            <span>{encounterCell.encounterMode === 'catch' ? 'むしとり かいし！' : 'バトル かいし！'}</span>
           </div>
         )}
       </div>
     )
+  }
+
+  // ③.6 むしとりチャレンジ
+  if (phase === 'catch' && stage && encounterCell) {
+    const enemy = bugs.find((b) => b.id === encounterCell.bugId)
+    return enemy ? (
+      <div className="story-encounter catch-phase">
+        <ParkScene index={stage.sceneIndex} />
+        <CatchChallenge
+          key={encounterCell.encounterId}
+          bugId={enemy.id}
+          bugName={enemy.name}
+          order={enemy.order}
+          emoji={orderEmoji(enemy.order)}
+          onCatch={() => {
+            const next = addToCage(save, enemy.id, encounterCell.level ?? 1)
+            setSave(next)
+            saveStory(next)
+            setNotice(`🕸️ ${enemy.name} を つかまえた！ むしかごに なかま入り！`)
+            setEncounterCell(null)
+            setPhase(field ? 'field' : 'map')
+          }}
+          onEscape={() => {
+            setNotice(`💨 ${enemy.name} に にげられた…`)
+            setEncounterCell(null)
+            setPhase(field ? 'field' : 'map')
+          }}
+        />
+      </div>
+    ) : null
   }
 
   // ③.7 なかまを つれていく？

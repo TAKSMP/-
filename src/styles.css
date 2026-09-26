@@ -5012,6 +5012,23 @@ input:focus {
   padding: 8px 12px;
   border-radius: 999px;
 }
+.field-catchmode {
+  flex: none;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  color: inherit;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.field-catchmode.on {
+  background: var(--green);
+  color: #fff;
+}
 .field-bug {
   flex: 1;
   min-width: 0;
@@ -5110,6 +5127,82 @@ input:focus {
   width: 100%;
   font-size: 12px;
   margin-bottom: 10px;
+}
+
+/* --- むしとりチャレンジ --- */
+.catch-phase {
+  min-height: 460px;
+  touch-action: none;
+}
+.catch-challenge {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+.catch-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  touch-action: none;
+}
+.catch-hint {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 10px;
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 999px;
+  padding: 7px 12px;
+}
+.catch-stick {
+  position: absolute;
+  left: 22px;
+  bottom: max(22px, env(safe-area-inset-bottom));
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+  border: 3px solid rgba(255, 255, 255, 0.6);
+  touch-action: none;
+}
+.catch-stick-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow);
+  transition: background 0.1s;
+}
+.catch-stick-knob.dash {
+  background: #ff6b5c;
+}
+.catch-swing-btn {
+  position: absolute;
+  right: 22px;
+  bottom: max(30px, env(safe-area-inset-bottom));
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow);
+  font-size: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.catch-swing-btn span.on {
+  transform: scale(1.2) rotate(-15deg);
+  display: inline-block;
 }
 
 /* --- あるけるマップ：エンジンの HUD は かくして アプリの バーに まとめる --- */
