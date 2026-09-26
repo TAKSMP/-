@@ -32,6 +32,7 @@ import {
   currentIndex,
   expForWin,
   expToNext,
+  DOUBLE_ENCOUNTER_CHANCE,
   isCleared,
   isSeen,
   learnLevelCrossed,
@@ -329,21 +330,27 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
       setNotice('この マップに 出る むしが きまっていないよ（せっていで えらべます）')
       return
     }
-    const enemy = pool[Math.floor(Math.random() * pool.length)]
-    const [encId] = assignEncounters([enemy.order], `f${Math.random()}`)
     // つるせ などは てきの レベルを じぶんの 虫に あわせる（-2〜+1）
-    const level =
+    const pickLevel = () =>
       field.enemyLevel === 'player' && myBug
         ? Math.max(
             1,
             Math.min(MAX_LEVEL, levelOf(save, myBug.id).level + Math.floor(Math.random() * 4) - 2),
           )
         : 1
+    const enemy = pool[Math.floor(Math.random() * pool.length)]
+    const [encId] = assignEncounters([enemy.order], `f${Math.random()}`)
+    const level = pickLevel()
+    // 大きい あるく マップ（つるせ）では、たまに 2匹いっしょに であう
+    const doubleUp = field.engine === 'world' && Math.random() < DOUBLE_ENCOUNTER_CHANCE
+    const ally = doubleUp ? pool[Math.floor(Math.random() * pool.length)] : null
     setEncounterCell({
       index: -1,
       kind: 'battle',
       bugId: enemy.id,
       level,
+      allyBugId: ally ? ally.id : undefined,
+      allyLevel: ally ? pickLevel() : undefined,
       encounterId: encId,
       col: 0,
       row: 0,

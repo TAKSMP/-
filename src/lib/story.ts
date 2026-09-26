@@ -498,6 +498,9 @@ export function movesOf(
 // -------------------------------------------------------------
 export const RECRUIT_CHANCE = 0.25 // たおした あと なかまに なりたがる かくりつ
 
+// 大きい あるく マップ（つるせ など）で、1ぴきだけでなく 2ひき いっしょに であう かくりつ
+export const DOUBLE_ENCOUNTER_CHANCE = 0.25
+
 // むしかごの なかま（ずっと のこる）
 export function cageOf(save: StorySave): string[] {
   return save.cage ?? []

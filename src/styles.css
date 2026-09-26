@@ -5094,8 +5094,8 @@ input:focus {
 .world-overview-btn {
   position: fixed;
   right: 10px;
-  /* あるく ときは ズーム／ダッシュ ボタンが したに つくので、うごかない いちに こていする */
-  bottom: max(148px, calc(env(safe-area-inset-bottom) + 148px));
+  /* あるく ときは ズームボタンが したに つくので、うごかない いちに こていする */
+  bottom: max(86px, calc(env(safe-area-inset-bottom) + 86px));
   z-index: 61;
   font: inherit;
   font-size: 13px;
@@ -5114,7 +5114,7 @@ input:focus {
 .world-zoompair {
   position: fixed;
   right: 10px;
-  bottom: max(86px, calc(env(safe-area-inset-bottom) + 86px));
+  bottom: max(22px, env(safe-area-inset-bottom));
   z-index: 61;
   display: flex;
   gap: 8px;
@@ -5137,33 +5137,6 @@ input:focus {
 }
 .world-zoompair-btn:disabled {
   opacity: 0.4;
-}
-.world-dash-btn {
-  position: fixed;
-  right: 10px;
-  bottom: max(22px, env(safe-area-inset-bottom));
-  z-index: 61;
-  font: inherit;
-  font-size: 11px;
-  font-weight: 800;
-  white-space: nowrap;
-  border: none;
-  border-radius: 999px;
-  width: 64px;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.92);
-  color: var(--ink);
-  box-shadow: var(--shadow);
-  touch-action: none; /* おしている あいだ スクロールさせない */
-  -webkit-user-select: none;
-  user-select: none;
-}
-.world-dash-btn.on {
-  background: var(--green);
-  color: #fff;
 }
 .world-attribution {
   position: fixed;

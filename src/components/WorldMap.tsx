@@ -7,6 +7,8 @@
 //   ・あるいた きょりが たまると むしに であう
 //   ・バトルから もどると、さっきの ばしょから つづける
 //  道を タップすると、つながっている 道を とおって じどうで あるく。
+//  ダッシュ：矢印キー/WASDで うごいている あいだに、がめんの どこかを おさえ続けると はやく なる
+//  （固定ボタンでは なく viewer.js がわで はんてい。くわしくは そちらの コメントを）
 // =============================================================
 import { useEffect, useRef, useState } from 'react'
 import {
@@ -33,9 +35,11 @@ const lastPos = new Map<string, { x: number; y: number }>()
 
 const BOY_SCREEN_H = 60 // がめんの 上での 男の子の たかさ（CSS ピクセル）
 const STEP_SEC = 0.15 // この びょうすう ぶん あるくと つぎの コマ
-// あるく ときの ズーム だんかい（ひろい じゅんに ならべる）。さいしょは いちばん ひろい[0]。
-// ＋ボタンで ちかづき（さいだい WALK_ZOOM_LEVELSの さいご）、－ボタンで とおざかる。
-const WALK_ZOOM_LEVELS = [2, 3.5, 5]
+// あるく ときの ズーム だんかい（ひろい じゅんに ならべる）。しょきちは DEFAULT_ZOOM_IDX。
+// ＋ボタンで ちかづき（さいだい WALK_ZOOM_LEVELSの さいご）、－ボタンで とおざかる（さいしょう[0]）。
+const WALK_ZOOM_LEVELS = [0.7, 1, 1.4, 2, 3.5, 5]
+// もとの デフォルト(200%)を まんなかに のこし、そこから ひろげる ことも ちかづける ことも できるように
+const DEFAULT_ZOOM_IDX = WALK_ZOOM_LEVELS.indexOf(2)
 
 // 区画の SVG を よみこんだ ときに 1かいだけ ふつうの 絵に する。
 // SVG の まま まいフレーム かくと、スマホ（CPU 4ばい おそい ていど）で 12fps まで おちた。
@@ -86,9 +90,7 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
   // 世界が ひろいので、いまの いちを 見うしなわない ように 全体地図を 出せる
   const [overview, setOverview] = useState(false)
   // あるく ときの ズームの だんかい（0がいちばん ひろい＝しょきち）
-  const [zoomIdx, setZoomIdx] = useState(0)
-  // ダッシュボタンを おしている あいだ、はやく あるく
-  const [dashing, setDashing] = useState(false)
+  const [zoomIdx, setZoomIdx] = useState(DEFAULT_ZOOM_IDX)
   encounterCb.current = onEncounter
   errorCb.current = onError
   pausedRef.current = paused
@@ -98,7 +100,7 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
     setOverview(next)
     engine.current?.setOverview(next)
     // 全体地図から もどると エンジンがわの ズームは しょきち(いちばん ひろい)に もどる ので、あわせる
-    if (!next) setZoomIdx(0)
+    if (!next) setZoomIdx(DEFAULT_ZOOM_IDX)
   }
 
   function zoomIn() {
@@ -113,16 +115,6 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
     engine.current?.setZoom(WALK_ZOOM_LEVELS[next])
   }
 
-  function dashStart() {
-    setDashing(true)
-    engine.current?.setDash(true)
-  }
-
-  function dashEnd() {
-    setDashing(false)
-    engine.current?.setDash(false)
-  }
-
   const wasPaused = useRef(paused)
   useEffect(() => {
     engine.current?.setPaused(paused)
@@ -131,11 +123,6 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
       nextAt.current = travelRef.current + encounterDistance(speedRef.current)
     }
     wasPaused.current = paused
-    // とまった ときは ダッシュも かいじょ（おしっぱなしの まま バトルに 入っても のこらない ように）
-    if (paused) {
-      setDashing(false)
-      engine.current?.setDash(false)
-    }
   }, [paused])
 
   useEffect(() => {
@@ -195,7 +182,7 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
         artBg,
         artScale,
         walkZoom: WALK_ZOOM_LEVELS[WALK_ZOOM_LEVELS.length - 1], // ＋ボタンで ちかづける じょうげん
-        startZoom: WALK_ZOOM_LEVELS[0], // あるき はじめは いちばん ひろい だんかい
+        startZoom: WALK_ZOOM_LEVELS[DEFAULT_ZOOM_IDX], // あるき はじめは これまでどおりの 200%
         detailZoom: Math.min(3, ...WALK_ZOOM_LEVELS), // ズームアウトの さいだいだんかい より ひくく（さもないと したじ画像の ままに なる）
         signal: abort.signal,
         startWalking: true,
@@ -236,7 +223,7 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
 
   // あたらしい マップに かわったら ズームの だんかいも さいしょから
   useEffect(() => {
-    setZoomIdx(0)
+    setZoomIdx(DEFAULT_ZOOM_IDX)
   }, [base])
 
   return (
@@ -270,18 +257,6 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
             ＋
           </button>
         </div>
-      )}
-      {!overview && (
-        <button
-          type="button"
-          className={'world-dash-btn' + (dashing ? ' on' : '')}
-          onPointerDown={dashStart}
-          onPointerUp={dashEnd}
-          onPointerLeave={dashEnd}
-          onPointerCancel={dashEnd}
-        >
-          ダッシュ
-        </button>
       )}
       {/* OpenStreetMap の 地図データを つかっているので、ひょうじが ひつよう */}
       <a

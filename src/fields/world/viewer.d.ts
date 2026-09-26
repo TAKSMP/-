@@ -49,8 +49,6 @@ export interface WorldHandle {
   setOverview(value: boolean): void
   // あるく ズームを その ばで かえる（walkZoom を じょうげんに クランプされる）
   setZoom(value: number): void
-  // true：ダッシュ（はやく あるく）／false：もとの はやさに もどす
-  setDash(value: boolean): void
   setPaused(value: boolean): void
   destroy(): void
 }
