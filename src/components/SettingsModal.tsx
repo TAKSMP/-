@@ -8,6 +8,14 @@ import {
   loadZukan,
   restoreBackupJson,
 } from '../lib/storage'
+import {
+  levelOf,
+  loadStory,
+  resetAllLevels,
+  resetLevel,
+  saveStory,
+  type StorySave,
+} from '../lib/story'
 
 interface Props {
   onClose: () => void
@@ -15,9 +23,8 @@ interface Props {
   onDataRestored: (bugs: CaughtBug[]) => void
 }
 
-// せってい画面：ひっさつわざリストと、データのバックアップ／復元。
-// onChanged は AIキーの ための ものだった（いまは つかわない）
-export function SettingsModal({ onClose, onDataRestored }: Props) {
+// せってい画面：出す虫・ひっさつわざリスト・レベルもどし・データのバックアップ／復元。
+export function SettingsModal({ onClose, onChanged, onDataRestored }: Props) {
   const [dexOpen, setDexOpen] = useState(false)
   const [fieldBugsOpen, setFieldBugsOpen] = useState(false)
   const [dataBusy, setDataBusy] = useState(false)
@@ -26,6 +33,23 @@ export function SettingsModal({ onClose, onDataRestored }: Props) {
     text: string
   } | null>(null)
   const backupInputRef = useRef<HTMLInputElement>(null)
+  // レベルを もどす（間違って 押されにくい ように、せってい画面の 中に おいて ある）
+  const [bugs] = useState<CaughtBug[]>(() => loadZukan())
+  const [save, setSave] = useState<StorySave>(() => loadStory())
+  const [askLevel, setAskLevel] = useState<{ bugId: string; name: string } | null>(null)
+  const levelableBugs = bugs.filter((b) => {
+    const lv = levelOf(save, b.id)
+    return lv.level > 1 || lv.exp > 0
+  })
+
+  function doResetLevel(bugId: string) {
+    const next = bugId === '*' ? resetAllLevels(save) : resetLevel(save, bugId)
+    setSave(next)
+    saveStory(next)
+    setAskLevel(null)
+    sfx.tap()
+    onChanged()
+  }
 
   function downloadFile(file: File) {
     const url = URL.createObjectURL(file)
@@ -155,6 +179,51 @@ export function SettingsModal({ onClose, onDataRestored }: Props) {
           </button>
         </section>
 
+        <section className="settings-dex">
+          <h3>🔄 レベルを もどす</h3>
+          <p>
+            バトルで あがった 虫の レベルと けいけんちを、まちがえて 1に
+            もどしたい ときは ここから えらべます。
+          </p>
+          {levelableBugs.length === 0 ? (
+            <p className="settings-backup-guide">
+              まだ レベルが あがった 虫は いないよ。
+            </p>
+          ) : (
+            <>
+              <ul className="settings-lv-list">
+                {levelableBugs.map((b) => {
+                  const lv = levelOf(save, b.id)
+                  return (
+                    <li key={b.id} className="settings-lv-item">
+                      <span className="settings-lv-name">{b.name}</span>
+                      <span className="settings-lv-badge">Lv {lv.level}</span>
+                      <button
+                        className="btn btn-ghost settings-lv-reset"
+                        onClick={() => {
+                          sfx.tap()
+                          setAskLevel({ bugId: b.id, name: b.name })
+                        }}
+                      >
+                        🔄 もどす
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+              <button
+                className="btn btn-ghost settings-lv-reset-all"
+                onClick={() => {
+                  sfx.tap()
+                  setAskLevel({ bugId: '*', name: '' })
+                }}
+              >
+                🔄 ぜんぶの虫の レベルを もどす
+              </button>
+            </>
+          )}
+        </section>
+
         <section className="settings-backup">
           <h3>📦 データのバックアップ</h3>
           <p>
@@ -200,6 +269,31 @@ export function SettingsModal({ onClose, onDataRestored }: Props) {
 
       {dexOpen && <MoveDexModal onClose={() => setDexOpen(false)} />}
       {fieldBugsOpen && <FieldBugsModal onClose={() => setFieldBugsOpen(false)} />}
+      {askLevel && (
+        <div className="modal-backdrop" onClick={() => setAskLevel(null)}>
+          <div className="modal story-ask" onClick={(e) => e.stopPropagation()}>
+            <h3>レベルを 1に もどす？</h3>
+            <p>
+              {askLevel.bugId === '*'
+                ? 'ぜんぶの虫の レベルと けいけんちが 1に もどります。'
+                : `「${askLevel.name}」の レベルと けいけんちが 1に もどります。`}
+              <br />
+              マップの すすみぐあいは そのままです。
+            </p>
+            <div className="battle-result-actions">
+              <button
+                className="btn btn-big btn-primary"
+                onClick={() => doResetLevel(askLevel.bugId)}
+              >
+                もどす 🔄
+              </button>
+              <button className="btn btn-big" onClick={() => setAskLevel(null)}>
+                やめる
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

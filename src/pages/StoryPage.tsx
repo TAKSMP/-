@@ -51,8 +51,6 @@ import {
   reachableIndex,
   RECRUIT_CHANCE,
   releaseFromCage,
-  resetAllLevels,
-  resetLevel,
   resetStage,
   saveStory,
   setMoves,
@@ -173,8 +171,6 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   const [battleKey, setBattleKey] = useState(0)
   const [askAgain, setAskAgain] = useState<StoryCell | null>(null)
   const [askReset, setAskReset] = useState<{ id: string; title: string } | null>(null)
-  // レベルを もどす かくにん（bugId が '*' なら ぜんぶ）
-  const [askLevel, setAskLevel] = useState<{ bugId: string; name: string } | null>(null)
   // レベルアップした ときの「なにが どう かわったか」
   // あたらしい わざを おぼえる（レベル2ごと）
   // （じぶんの 虫と なかまの ぶんを、じゅんばんに 1まいずつ 見せる）
@@ -293,18 +289,6 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     saveStory(next)
     setNotice(`🤝 ${recruit.bug.name} が むしかごに なかま入り！`)
     setRecruit(null)
-  }
-
-  // 虫の レベルを 1に もどす
-  function doResetLevel(bugId: string) {
-    const next = bugId === '*' ? resetAllLevels(save) : resetLevel(save, bugId)
-    setSave(next)
-    saveStory(next)
-    setAskLevel(null)
-    setCelebrations([])
-    setRecruit(null)
-    setPendingCell(null)
-    sfx.tap()
   }
 
   // あるける マップを ひらく（すごろくの かわり）
@@ -749,32 +733,6 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     </div>
   )
 
-  const levelModal = askLevel && (
-    <div className="modal-backdrop" onClick={() => setAskLevel(null)}>
-      <div className="modal story-ask" onClick={(e) => e.stopPropagation()}>
-        <h3>レベルを 1に もどす？</h3>
-        <p>
-          {askLevel.bugId === '*'
-            ? 'ぜんぶの虫の レベルと けいけんちが 1に もどります。'
-            : `「${askLevel.name}」の レベルと けいけんちが 1に もどります。`}
-          <br />
-          マップの すすみぐあいは そのままです。
-        </p>
-        <div className="battle-result-actions">
-          <button
-            className="btn btn-big btn-primary"
-            onClick={() => doResetLevel(askLevel.bugId)}
-          >
-            もどす 🔄
-          </button>
-          <button className="btn btn-big" onClick={() => setAskLevel(null)}>
-            やめる
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-
   // ① 虫えらび（ずかんと おなじ もくじ）
   if (phase === 'pickBug') {
     return (
@@ -797,34 +755,10 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
                 <span className="story-bug-stats">
                   ❤️{s.hp} ⚔️{s.attack} 🛡️{s.defense} ⚡{s.speed}
                 </span>
-                {(lv.level > 1 || lv.exp > 0) && (
-                  <button
-                    className="story-lv-reset"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      sfx.tap()
-                      setAskLevel({ bugId: b.id, name: b.name })
-                    }}
-                  >
-                    🔄 Lvを もどす
-                  </button>
-                )}
               </div>
             )
           }}
         />
-        {Object.keys(save.levels).length > 0 && (
-          <button
-            className="btn btn-ghost story-lv-reset-all"
-            onClick={() => {
-              sfx.tap()
-              setAskLevel({ bugId: '*', name: '' })
-            }}
-          >
-            🔄 ぜんぶの虫の レベルを もどす
-          </button>
-        )}
-        {levelModal}
       </div>
     )
   }

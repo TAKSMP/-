@@ -56,9 +56,8 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('capture')
   const [bugs, setBugs] = useState<CaughtBug[]>([])
   const [settingsOpen, setSettingsOpen] = useState(false)
-  // AIせっていが変わったら子を再描画してモード表示を更新するためのカウンタ
-  const [aiVersion, setAiVersion] = useState(0)
-  // バックアップを復元したら、各ページの内部状態も新しいデータで作りなおす。
+  // バックアップを復元したり、せっていでレベルをもどしたりしたら、
+  // 各ページの内部状態も新しいデータで作りなおす。
   const [dataVersion, setDataVersion] = useState(0)
 
   // さいしょに図鑑データをよみこむ。
@@ -117,7 +116,7 @@ export default function App() {
             アンマウントせずに 非表示にするだけにする（登録するまでデータ保持）。 */}
         <div style={{ display: tab === 'capture' ? 'contents' : 'none' }}>
           <CapturePage
-            key={`capture-${aiVersion}-${dataVersion}`}
+            key={`capture-${dataVersion}`}
             onSaved={handleSaved}
             pastPlaces={collectPlaces(bugs)}
           />
@@ -182,7 +181,9 @@ export default function App() {
       {settingsOpen && (
         <SettingsModal
           onClose={() => setSettingsOpen(false)}
-          onChanged={() => setAiVersion((v) => v + 1)}
+          // レベルを もどした ときなど、ストーリー側の セーブが かわった ときに
+          // PlayPage を つくりなおして（key で）、さいしんの データを 読みなおさせる
+          onChanged={() => setDataVersion((v) => v + 1)}
           onDataRestored={handleDataRestored}
         />
       )}
