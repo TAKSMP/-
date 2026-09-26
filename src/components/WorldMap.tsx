@@ -33,6 +33,12 @@ interface Props {
 // バトルから もどった とき つづきから あるく
 const lastPos = new Map<string, { x: number; y: number }>()
 
+// バトルに まけた ときなど、つづきからでは なく スタート地点(map.json の spawn)から
+// やりなおさせたい ときに よぶ
+export function forgetFieldPosition(base: string) {
+  lastPos.delete(base)
+}
+
 const BOY_SCREEN_H = 60 // がめんの 上での 男の子の たかさ（CSS ピクセル）
 const STEP_SEC = 0.15 // この びょうすう ぶん あるくと つぎの コマ
 // あるく ときの ズーム だんかい（ひろい じゅんに ならべる）。しょきちは DEFAULT_ZOOM_IDX。

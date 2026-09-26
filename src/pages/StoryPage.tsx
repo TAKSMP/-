@@ -16,7 +16,7 @@ import { ParkScene, parkName } from '../components/ParkScene'
 import { BattleStage, type BattleResult } from '../components/BattleStage'
 import { BugPicker } from '../components/BugPicker'
 import { FieldMap } from '../components/FieldMap'
-import { WorldMap } from '../components/WorldMap'
+import { forgetFieldPosition, WorldMap } from '../components/WorldMap'
 import { fieldForPlace, fieldsInList, publicUrl, type FieldDef } from '../data/fields'
 import { bugsForField } from '../lib/fieldBugs'
 import { assignEncounters } from '../data/encounters'
@@ -153,6 +153,55 @@ function celebrationsFor(
   return out
 }
 
+// -------------------------------------------------------------
+//  かった あとの「なんターンで かったか・けいけんちバー」の アニメーション
+// -------------------------------------------------------------
+// 1レベルぶんの けいけんちバーの うごき（from → to／need のうち）。
+// レベルアップを またぐ ときは、まん タンに なる ぶんと あたらしい レベルの ぶんとに わける。
+interface ExpSegment {
+  level: number
+  from: number
+  to: number
+  need: number
+}
+interface ExpBarInfo {
+  bugId: string
+  name: string
+  photo: string
+  buddy: boolean
+  segments: ExpSegment[]
+}
+interface VictoryInfo {
+  turns: number
+  bars: ExpBarInfo[]
+  queue: Celebration[] // アニメーションが おわったら 見せる レベルアップ／わざ
+}
+
+function expSegments(fromLevel: number, fromExp: number, gained: number): ExpSegment[] {
+  const segs: ExpSegment[] = []
+  let level = fromLevel
+  let exp = fromExp
+  let remain = gained
+  while (remain > 0 && level < MAX_LEVEL) {
+    const need = expToNext(level)
+    const to = Math.min(need, exp + remain)
+    segs.push({ level, from: exp, to, need })
+    remain -= to - exp
+    if (to >= need) {
+      level++
+      exp = 0
+    } else {
+      exp = to
+    }
+  }
+  if (segs.length === 0) {
+    // MAX_LEVEL に すでに とうたつ、または gained が 0
+    const need = expToNext(fromLevel)
+    segs.push({ level: fromLevel, from: fromExp, to: fromExp, need })
+  }
+  return segs
+}
+
 export function StoryPage({ bugs, onGoCapture }: Props) {
   const [phase, setPhase] = useState<Phase>('pickBug')
   const [mapMode, setMapMode] = useState<MapMode>('quest')
@@ -177,13 +226,25 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   const [celebrations, setCelebrations] = useState<Celebration[]>([])
   // たおした虫が なかまに なりたがっている
   const [recruit, setRecruit] = useState<{ bug: CaughtBug; level: number } | null>(null)
+  // recruit は けいけんちバーの アニメーションが おわるまで とっておく
+  const [pendingRecruit, setPendingRecruit] = useState<{ bug: CaughtBug; level: number } | null>(
+    null,
+  )
   // 2ひき いっしょの であいで、「〇〇が なかまの 〇〇を つれてきた！」を 見せたか
   const [allyIntroShown, setAllyIntroShown] = useState(false)
   // むしかご：つれていく なかま（この バトルだけ）
   const [companionId, setCompanionId] = useState<string | null>(null)
   const [pendingCell, setPendingCell] = useState<StoryCell | null>(null)
   const [cageOpen, setCageOpen] = useState(false)
+  // あるく がめん上部の 虫の なまえを タップした ときの、いまの ステータス表示
+  const [fieldStatOpen, setFieldStatOpen] = useState(false)
   const [askRelease, setAskRelease] = useState<string | null>(null)
+  // かった あとの「なんターン・けいけんちバー」表示
+  const [victory, setVictory] = useState<VictoryInfo | null>(null)
+  const [victorySeg, setVictorySeg] = useState(0) // いま みせている segment
+  const [victoryFilled, setVictoryFilled] = useState(false) // その segment を まん タンまで みせて いるか
+  const [victoryPlaying, setVictoryPlaying] = useState(false)
+  const victoryTimer = useRef<number | null>(null)
   const head = celebrations[0]
   const levelUp = head?.kind === 'level' ? head.info : null
   const learn = head?.kind === 'learn' ? head.info : null
@@ -194,6 +255,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   useEffect(() => {
     return () => {
       if (moveTimer.current) clearTimeout(moveTimer.current)
+      if (victoryTimer.current) clearTimeout(victoryTimer.current)
     }
   }, [])
 
@@ -482,7 +544,8 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
       const enemy = bugs.find((b) => b.id === battleCell.bugId)
       const first = !isCleared(save, stage.id, battleCell)
       let next = markCleared(save, stage.id, battleCell)
-      let msg = '🎉 かった！'
+      const bars: ExpBarInfo[] = []
+      let queue: Celebration[] = []
       if (enemy) {
         const lv = levelOf(next, myBug.id).level
         const gain = Math.max(
@@ -491,38 +554,100 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
         )
         const res = addExp(next, myBug.id, gain)
         next = res.save
-        msg = `🎉 かった！ +${gain} けいけんち`
-        const queue: Celebration[] = celebrationsFor(myBug, res, next, false)
+        bars.push({
+          bugId: myBug.id,
+          name: myBug.name,
+          photo: mainPhoto(myBug),
+          buddy: false,
+          segments: expSegments(res.before.level, res.before.exp, gain),
+        })
+        queue.push(...celebrationsFor(myBug, res, next, false))
         // つれていった なかまにも おなじ けいけんち。レベルアップも わざも おなじように 見せる
         const buddy = companionId ? bugs.find((x) => x.id === companionId) : null
         if (buddy) {
           const pr = addExp(next, buddy.id, gain)
           next = pr.save
+          bars.push({
+            bugId: buddy.id,
+            name: buddy.name,
+            photo: mainPhoto(buddy),
+            buddy: true,
+            segments: expSegments(pr.before.level, pr.before.exp, gain),
+          })
           queue.push(...celebrationsFor(buddy, pr, next, true))
         }
-        if (queue.length > 0) {
-          setCelebrations(queue)
-          setTimeout(() => sfx.badge(), 200)
-        }
       }
-      // ときどき、たおした虫が なかまに なりたがる
-      if (
+      // ときどき、たおした虫が なかまに なりたがる（バーの あとで 見せる）
+      const recruitCandidate =
         enemy &&
         enemy.id !== myBug.id &&
         !cageOf(next).includes(enemy.id) &&
         Math.random() < RECRUIT_CHANCE
-      ) {
-        setRecruit({ bug: enemy, level: battleCell.level ?? 1 })
-      }
+          ? { bug: enemy, level: battleCell.level ?? 1 }
+          : null
       setSave(next)
       saveStory(next)
-      setNotice(msg)
+      if (bars.length > 0) {
+        setVictory({ turns: r.turns, bars, queue })
+        setVictorySeg(0)
+        setVictoryFilled(false)
+        setVictoryPlaying(false)
+        if (recruitCandidate) setPendingRecruit(recruitCandidate)
+      } else if (recruitCandidate) {
+        setRecruit(recruitCandidate)
+      }
     } else {
       setPos(currentIndex(save, stage))
+      if (field) forgetFieldPosition(field.base)
       setNotice('😢 まけちゃった… レベルを あげて もういちど！')
     }
     setPhase(field ? 'field' : 'map')
     setBattleCell(null)
+  }
+
+  // けいけんちバーの アニメーションが すべて おわった あと
+  function finishVictory(v: VictoryInfo) {
+    setVictoryPlaying(false)
+    setVictory(null)
+    setVictorySeg(0)
+    setVictoryFilled(false)
+    if (v.queue.length > 0) {
+      setCelebrations(v.queue)
+      setTimeout(() => sfx.badge(), 200)
+    } else if (pendingRecruit) {
+      setRecruit(pendingRecruit)
+      setPendingRecruit(null)
+    }
+  }
+
+  // タップで けいけんちバーを 1段ずつ すすめる（さいごまで いったら 終了処理）
+  function playVictory() {
+    const v = victory
+    if (!v || victoryPlaying) return
+    setVictoryPlaying(true)
+    const maxSegs = Math.max(...v.bars.map((b) => b.segments.length))
+    const step = (i: number) => {
+      if (i >= maxSegs) {
+        finishVictory(v)
+        return
+      }
+      setVictorySeg(i)
+      setVictoryFilled(false)
+      requestAnimationFrame(() => requestAnimationFrame(() => setVictoryFilled(true)))
+      victoryTimer.current = window.setTimeout(() => {
+        sfx.tap()
+        step(i + 1)
+      }, 900)
+    }
+    sfx.badge()
+    step(0)
+  }
+
+  // アニメーションちゅうに もう1回 タップしたら、いっきに さいごまで すすめる
+  function skipVictory() {
+    if (!victory) return
+    if (victoryTimer.current) clearTimeout(victoryTimer.current)
+    finishVictory(victory)
   }
 
   // -----------------------------------------------------------
@@ -939,7 +1064,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   if (phase === 'field' && field && myBug) {
     const pool = bugsForField(field.id, bugs)
     // レベルアップや わざの がめんを 見ている あいだは あるかない（うしろで であわない ように）
-    const fieldPaused = celebrations.length > 0 || !!recruit || cageOpen
+    const fieldPaused = celebrations.length > 0 || !!recruit || !!victory || cageOpen
     return (
       <>
         {field.engine === 'world' ? (
@@ -969,12 +1094,19 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
             ← もどる
           </button>
           <span className="field-place">{field.name}</span>
-          <div className="field-bug">
+          <button
+            type="button"
+            className="field-bug"
+            onClick={() => {
+              sfx.tap()
+              setFieldStatOpen(true)
+            }}
+          >
             <img src={mainPhoto(myBug)} alt="" />
             <span>
               {myBug.name} <b>Lv {myLevel.level}</b>
             </span>
-          </div>
+          </button>
           {cageOf(save).length > 0 && (
             <button
               className="btn btn-ghost field-cage"
@@ -987,7 +1119,6 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
             </button>
           )}
         </div>
-        <p className="field-hint">あるくと むしに であうよ</p>
         {notice && <p className="story-notice field-notice">{notice}</p>}
         {pool.length === 0 && (
           <p className="story-notice field-notice">
@@ -998,6 +1129,74 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
         {learnModal}
         {recruitModal}
         {cageModal}
+        {victory && (
+          <div
+            className="modal-backdrop"
+            onClick={() => (victoryPlaying ? skipVictory() : playVictory())}
+          >
+            <div className="modal story-victory" onClick={(e) => e.stopPropagation()}>
+              <div className="story-levelup-emoji">🏆</div>
+              <h3>かった！</h3>
+              <p className="battle-result-sub">{victory.turns}ターンで かちました</p>
+              {victory.bars.map((bar) => {
+                const done = victorySeg >= bar.segments.length
+                const seg = bar.segments[Math.min(victorySeg, bar.segments.length - 1)]
+                const lastSeg = bar.segments[bar.segments.length - 1]
+                const finalLevel = lastSeg.to >= lastSeg.need ? lastSeg.level + 1 : lastSeg.level
+                const level = done ? finalLevel : seg.level
+                const pct = done
+                  ? (lastSeg.to >= lastSeg.need ? 0 : (lastSeg.to / lastSeg.need) * 100)
+                  : ((victoryFilled ? seg.to : seg.from) / seg.need) * 100
+                return (
+                  <div key={bar.bugId} className="story-victory-bar">
+                    <img src={bar.photo} alt={bar.name} />
+                    <div className="story-victory-bar-body">
+                      <span className="story-hud-name">
+                        {bar.name} {bar.buddy && '🤝'} <b>Lv {level}</b>
+                      </span>
+                      <span className="story-exp">
+                        <span className="story-exp-fill" style={{ width: `${pct}%` }} />
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+              <p className="story-victory-hint">
+                {victoryPlaying ? 'タップで はやおくり ▶️' : 'タップして けいけんちを うけとる 👉'}
+              </p>
+            </div>
+          </div>
+        )}
+        {fieldStatOpen && myBug && (() => {
+          const s = battleStatsV2(myBug)
+          return (
+            <div className="modal-backdrop" onClick={() => setFieldStatOpen(false)}>
+              <div className="modal story-fieldstat" onClick={(e) => e.stopPropagation()}>
+                <button
+                  className="modal-close"
+                  onClick={() => setFieldStatOpen(false)}
+                  aria-label="とじる"
+                >
+                  ✕
+                </button>
+                <img className="story-hud-photo" src={mainPhoto(myBug)} alt={myBug.name} />
+                <h3>
+                  {myBug.name} <b>Lv {myLevel.level}</b>
+                </h3>
+                <span className="story-exp">
+                  <span
+                    className="story-exp-fill"
+                    style={{ width: `${Math.min(100, (myLevel.exp / need) * 100)}%` }}
+                  />
+                </span>
+                <p className="story-hud-sub">けいけんち {myLevel.exp}/{need}</p>
+                <p className="story-bug-stats">
+                  ❤️{s.hp} ⚔️{s.attack} 🛡️{s.defense} ⚡{s.speed}
+                </p>
+              </div>
+            </div>
+          )
+        })()}
       </>
     )
   }
