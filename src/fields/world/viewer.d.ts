@@ -19,6 +19,8 @@ export interface WorldPlayerState {
   travel: number // あるいた きょり（元画像の ピクセル）
   moving: boolean
   zoom: number
+  wx: number // 元画像の ざひょう（ワールド座標）。あめ等、地図上の物を がめんに 変換するのに つかう
+  wy: number
 }
 
 // 区画（タイル）の いちらん：tiles.json
@@ -45,6 +47,8 @@ export interface WorldHandle {
   getPosition(): { x: number; y: number }
   getTileStatus(): TileStatus
   getMode(): 'overview' | 'walk'
+  // いまの カメラ（全体地図の あめレーダーなど、がめん座標へ 自前で 変換したい ときに つかう）
+  getCamera(): { cx: number; cy: number; zoom: number; mode: 'overview' | 'walk' }
   // true：全体地図（赤い てんめつマーカーで いまの いちを しめす）／false：あるく がめんに もどる
   setOverview(value: boolean): void
   // あるく ズームを その ばで かえる（walkZoom を じょうげんに クランプされる）

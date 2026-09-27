@@ -22,12 +22,14 @@ import { loadIllustratedMap, type ArtBackground, type ArtManifest } from '../fie
 import '../fields/world/viewer.css'
 import { boySheetUrl, drawBoySprite, loadImage } from '../fields/boySprite'
 import { encounterDistance } from '../lib/encounter'
+import { CANDY_PICKUP_RADIUS, loadCandy, respawnCandy, type CandySpot } from '../lib/candy'
 
 interface Props {
   base: string // 'fields/tsuruse/' のような ばしょ
   paused?: boolean
   onEncounter?: () => void
   onError?: (e: unknown) => void
+  onCandyPick?: (id: string) => void
 }
 
 // バトルから もどった とき つづきから あるく
@@ -82,7 +84,7 @@ function drawMarker(ctx: CanvasRenderingContext2D, x: number, y: number) {
   ctx.stroke()
 }
 
-export function WorldMap({ base, paused = false, onEncounter, onError }: Props) {
+export function WorldMap({ base, paused = false, onEncounter, onError, onCandyPick }: Props) {
   const host = useRef<HTMLDivElement>(null)
   const engine = useRef<WorldHandle | null>(null)
   const encounterCb = useRef(onEncounter)
@@ -93,13 +95,25 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
   const speedRef = useRef(12)
   const sheet = useRef<HTMLImageElement | null>(null)
   const artBgRef = useRef<ArtBackground | null>(null)
+  // いま おちている あめ（そのマップ限定、localStorage に ほぞん。ロード後に セットする）
+  const [candies, setCandies] = useState<CandySpot[]>([])
+  // drawPlayer の クロージャから 最新を みるため ref にも もつ
+  const candiesRef = useRef<CandySpot[]>([])
+  const onCandyPickRef = useRef(onCandyPick)
+  // ひろった あめを、setCandies が きく まえに 二重に ひろわない ための ガード
+  const pickedGuard = useRef<Set<string>>(new Set())
   // 世界が ひろいので、いまの いちを 見うしなわない ように 全体地図を 出せる
   const [overview, setOverview] = useState(false)
+  // あめレーダー：全体地図の あいだだけ、あめの ばしょを てんめつ させる
+  const [radarOn, setRadarOn] = useState(false)
+  const radarDotRefs = useRef<(HTMLSpanElement | null)[]>([])
   // あるく ときの ズームの だんかい（0がいちばん ひろい＝しょきち）
   const [zoomIdx, setZoomIdx] = useState(DEFAULT_ZOOM_IDX)
   encounterCb.current = onEncounter
   errorCb.current = onError
   pausedRef.current = paused
+  candiesRef.current = candies
+  onCandyPickRef.current = onCandyPick
 
   function toggleOverview() {
     const next = !overview
@@ -165,10 +179,15 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
         return
       }
       artBgRef.current = artBg
+      const mask = decodeRoads(map)
       // まえに いた 道から さいかい（道の うえで なければ 入口から）
       const back = lastPos.get(base)
-      const resumed = !!(back && isRoad(map, decodeRoads(map), back.x, back.y))
+      const resumed = !!(back && isRoad(map, mask, back.x, back.y))
       if (resumed) map.spawn = { ...map.spawn, x: back!.x, y: back!.y }
+      // あめ：保存ずみが あれば それ、なければ 5個 あたらしく
+      const initialCandies = loadCandy(base, map, mask)
+      candiesRef.current = initialCandies
+      setCandies(initialCandies)
       try {
         sheet.current = await loadImage(boySheetUrl(), abort.signal)
       } catch {
@@ -201,6 +220,30 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
             nextAt.current = s.travel + encounterDistance(speedRef.current)
             encounterCb.current?.()
           }
+          // あめ：プレイヤーからの そうたい いちで がめんに かく（カメラは プレイヤーに ついてくる ので、
+          // s.x/s.y（がめん）＋ワールド座標の さと で かんたんに もとまる）
+          const t = performance.now()
+          for (const c of candiesRef.current) {
+            const sx = s.x + (c.x - s.wx) * s.zoom
+            const sy = s.y + (c.y - s.wy) * s.zoom
+            const bob = Math.sin(t / 260 + c.x) * 3
+            ctx.save()
+            ctx.font = '26px sans-serif'
+            ctx.textAlign = 'center'
+            ctx.textBaseline = 'middle'
+            ctx.fillText('🍬', sx, sy + bob)
+            ctx.restore()
+            if (!pausedRef.current && !pickedGuard.current.has(c.id)) {
+              const dist = Math.hypot(c.x - s.wx, c.y - s.wy)
+              if (dist <= CANDY_PICKUP_RADIUS) {
+                pickedGuard.current.add(c.id)
+                const next = respawnCandy(base, candiesRef.current, c.id, map, mask)
+                candiesRef.current = next
+                setCandies(next)
+                onCandyPickRef.current?.(c.id)
+              }
+            }
+          }
         },
       })
       if (disposed) {
@@ -232,6 +275,38 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
     setZoomIdx(DEFAULT_ZOOM_IDX)
   }, [base])
 
+  // 全体地図を とじたら レーダーも おふ に もどす
+  useEffect(() => {
+    if (!overview) setRadarOn(false)
+  }, [overview])
+
+  // あめレーダー：全体地図の カメラ（getCamera）を つかって、あめの がめん いちを まいフレーム けいさん
+  useEffect(() => {
+    if (!overview || !radarOn) return
+    let raf = 0
+    function frame() {
+      const cam = engine.current?.getCamera()
+      const h = host.current
+      if (cam && cam.mode === 'overview' && h) {
+        const w = h.clientWidth
+        const hh = h.clientHeight
+        const t = performance.now()
+        const blink = 0.55 + 0.45 * Math.sin(t / 220)
+        candiesRef.current.forEach((c, i) => {
+          const el = radarDotRefs.current[i]
+          if (!el) return
+          const sx = w / 2 + (c.x - cam.cx) * cam.zoom
+          const sy = hh / 2 + (c.y - cam.cy) * cam.zoom
+          el.style.transform = `translate(${sx}px, ${sy}px) translate(-50%, -50%) scale(${1 + blink * 0.5})`
+          el.style.opacity = String(0.4 + blink * 0.6)
+        })
+      }
+      raf = requestAnimationFrame(frame)
+    }
+    raf = requestAnimationFrame(frame)
+    return () => cancelAnimationFrame(raf)
+  }, [overview, radarOn])
+
   return (
     <>
       <div className="fieldmap worldmap" ref={host} />
@@ -262,6 +337,28 @@ export function WorldMap({ base, paused = false, onEncounter, onError }: Props) 
           >
             ＋
           </button>
+        </div>
+      )}
+      {overview && candies.length > 0 && (
+        <button
+          type="button"
+          className={'candy-radar-btn' + (radarOn ? ' on' : '')}
+          onClick={() => setRadarOn((v) => !v)}
+        >
+          🍬 あめレーダー
+        </button>
+      )}
+      {overview && radarOn && (
+        <div className="candy-radar-layer">
+          {candies.map((c, i) => (
+            <span
+              key={c.id}
+              ref={(el) => {
+                radarDotRefs.current[i] = el
+              }}
+              className="candy-radar-dot"
+            />
+          ))}
         </div>
       )}
       {/* OpenStreetMap の 地図データを つかっているので、ひょうじが ひつよう */}

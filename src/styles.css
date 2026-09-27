@@ -4662,6 +4662,15 @@ input:focus {
   background: #fff1f0;
   color: #b4453a;
 }
+.story-cage-max {
+  display: inline-block;
+  background: #eee;
+  color: #999;
+}
+.story-candy-give {
+  background: #fff0f7;
+  color: #d1428a;
+}
 .story-cage-confirm {
   display: flex;
   gap: 4px;
@@ -5304,6 +5313,41 @@ input:focus {
 }
 .world-zoompair-btn:disabled {
   opacity: 0.4;
+}
+.candy-radar-btn {
+  position: fixed;
+  left: 10px;
+  bottom: max(86px, calc(env(safe-area-inset-bottom) + 86px));
+  z-index: 61;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+.candy-radar-btn.on {
+  background: #ff6fae;
+  color: #fff;
+}
+.candy-radar-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 61;
+  pointer-events: none;
+}
+.candy-radar-dot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ff6fae;
+  box-shadow: 0 0 0 6px rgba(255, 111, 174, 0.35);
 }
 .world-attribution {
   position: fixed;

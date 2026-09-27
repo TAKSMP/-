@@ -38,6 +38,7 @@ import {
   isSeen,
   learnLevelCrossed,
   levelOf,
+  levelUpOne,
   MAX_LEVEL,
   markSeen,
   loadStory,
@@ -212,6 +213,8 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   const [field, setField] = useState<FieldDef | null>(null)
   // むしとりモード：ON の あいだ、であった虫は バトルの かわりに むしとりチャレンジ
   const [catchMode, setCatchMode] = useState(false)
+  // あめを ひろって、どの虫の レベルを あげるか えらぶ がめん
+  const [candyReward, setCandyReward] = useState(false)
   const [save, setSave] = useState<StorySave>(() => loadStory())
   const [pos, setPos] = useState(0)
   const [moving, setMoving] = useState(false)
@@ -1068,7 +1071,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   if (phase === 'field' && field && myBug) {
     const pool = bugsForField(field.id, bugs)
     // レベルアップや わざの がめんを 見ている あいだは あるかない（うしろで であわない ように）
-    const fieldPaused = celebrations.length > 0 || !!recruit || !!victory || cageOpen
+    const fieldPaused = celebrations.length > 0 || !!recruit || !!victory || cageOpen || candyReward
     return (
       <>
         {field.engine === 'world' ? (
@@ -1077,6 +1080,10 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
             paused={fieldPaused}
             onEncounter={fieldEncounter}
             onError={() => setNotice('マップを よみこめませんでした')}
+            onCandyPick={() => {
+              sfx.discover()
+              setCandyReward(true)
+            }}
           />
         ) : (
           <FieldMap
@@ -1146,6 +1153,45 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
         {learnModal}
         {recruitModal}
         {cageModal}
+        {candyReward && (
+          <div className="modal-backdrop" onClick={() => setCandyReward(false)}>
+            <div className="modal story-cage" onClick={(e) => e.stopPropagation()}>
+              <h3>🍬 あめを ひろった！</h3>
+              <p className="story-recruit-sub">どの虫の レベルを 1つ あげる？</p>
+              <ul className="story-cage-list">
+                {bugs.map((b) => (
+                  <li key={b.id}>
+                    <img src={mainPhoto(b)} alt={b.name} />
+                    <span className="story-cage-name">
+                      {b.name}
+                      <b>Lv {levelOf(save, b.id).level}</b>
+                    </span>
+                    {levelOf(save, b.id).level >= MAX_LEVEL ? (
+                      <span className="story-cage-free story-cage-max">MAX</span>
+                    ) : (
+                      <button
+                        className="story-cage-free story-candy-give"
+                        onClick={() => {
+                          const { save: next, before, after } = levelUpOne(save, b.id)
+                          setSave(next)
+                          saveStory(next)
+                          sfx.badge()
+                          setNotice(`🍬 ${b.name} の レベルが ${before.level} → ${after.level} に あがった！`)
+                          setCandyReward(false)
+                        }}
+                      >
+                        ＋1 レベル
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              <button className="btn btn-big" onClick={() => setCandyReward(false)}>
+                やめる
+              </button>
+            </div>
+          </div>
+        )}
         {victory && (
           <div
             className="modal-backdrop"

@@ -358,6 +358,16 @@ export function levelOf(save: StorySave, bugId: string): BugLevel {
   return save.levels[bugId] ?? { level: 1, exp: 0 }
 }
 
+// あめを たべさせて、けいけんちなしで レベルを 1つ あげる
+export function levelUpOne(
+  save: StorySave,
+  bugId: string,
+): { save: StorySave; before: BugLevel; after: BugLevel } {
+  const before = levelOf(save, bugId)
+  const after: BugLevel = { level: Math.min(MAX_LEVEL, before.level + 1), exp: before.exp }
+  return { save: { ...save, levels: { ...save.levels, [bugId]: after } }, before, after }
+}
+
 // けいけんちを くわえて、あがった ぶんを かえす
 export function addExp(
   save: StorySave,
