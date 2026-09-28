@@ -160,8 +160,10 @@ export const MOVE_LIBRARY: LibraryMove[] = [
   mv({ id: 'm21a', pattern: 'counterGuard', name: 'とげのよろい', desc: 'こうげきを うけると とげで はんげきする かまえ。', emoji: '🦔', power: 0, counterGuard: true, accuracy: null, tags: ['とげ', 'かたい'] }),
 
   // ㉒㉓㉔ じょうたいいじょう
-  mv({ id: 'm22a', pattern: 'poison', name: 'もうどくスプレー', desc: 'つよい どくを ふきかけて あいてを どくに する。', emoji: '☠️', power: 0, target: 'oneFoe', accuracy: 90, inflict: { status: 'poison', chance: 1 }, tags: ['どく'] }),
-  mv({ id: 'm23a', pattern: 'paralyze', name: 'しびれのこな', desc: 'しびれる こなで あいてを まひに する（すばやさ はんぶん・ときどき うごけない）。', emoji: '⚡', power: 0, target: 'oneFoe', accuracy: 90, inflict: { status: 'paralysis', chance: 1 }, tags: ['りんぷん', 'どく'] }),
+  // せいこうりつは わざの めいちゅうりつを つかう（executeMove参照）。
+  // ポケモンの どく・まひ・ねむり わざを めやすに、わざごとに すこしずつ ちがう。
+  mv({ id: 'm22a', pattern: 'poison', name: 'もうどくスプレー', desc: 'つよい どくを ふきかけて あいてを どくに する。', emoji: '☠️', power: 0, target: 'oneFoe', accuracy: 85, inflict: { status: 'poison', chance: 1 }, tags: ['どく'] }),
+  mv({ id: 'm23a', pattern: 'paralyze', name: 'しびれのこな', desc: 'しびれる こなで あいてを まひに する（すばやさ はんぶん・ときどき うごけない）。', emoji: '⚡', power: 0, target: 'oneFoe', accuracy: 80, inflict: { status: 'paralysis', chance: 1 }, tags: ['りんぷん', 'どく'] }),
   mv({ id: 'm24a', pattern: 'sleep', name: 'ねむりのりんぷん', desc: 'ねむくなる りんぷんで あいてを ねむらせる。', emoji: '💤', power: 0, target: 'oneFoe', accuracy: 75, inflict: { status: 'sleep', chance: 1 }, tags: ['りんぷん', 'チョウ目'] }),
 
   // ㉕〜㉘ あいての のうりょく ダウン
@@ -239,12 +241,12 @@ export const MOVE_LIBRARY: LibraryMove[] = [
   // ⑳㉑ はんげき
   mv({ id: 'n32', pattern: 'counter', name: 'いかりのおかえし', desc: 'このターン うけた ダメージを 2ばいで かえす。', emoji: '↩️', power: 0, kind: 'attack', counterRatio: 2, priority: -3, accuracy: null, target: 'oneFoe', tags: ['ちから'] }),
   mv({ id: 'n33', pattern: 'counterGuard', name: 'こうらのかまえ', desc: 'こうげきを うけると こうらで はんげき。', emoji: '🐢', power: 0, counterGuard: true, accuracy: null, tags: ['かたい', 'こうら'] }),
-  // ㉒㉓㉔ じょうたいいじょう
-  mv({ id: 'n34', pattern: 'poison', name: 'しびれどくえき', desc: 'どくの えきを かけて どくに する。', emoji: '☠️', power: 0, target: 'oneFoe', accuracy: 90, inflict: { status: 'poison', chance: 1 }, tags: ['どく', 'はり'] }),
-  mv({ id: 'n35', pattern: 'poison', name: 'くさったにおい', desc: 'ひどい においで あいてを どくに する。', emoji: '🤢', power: 0, target: 'oneFoe', accuracy: 85, inflict: { status: 'poison', chance: 1 }, tags: ['におい'] }),
-  mv({ id: 'n36', pattern: 'paralyze', name: 'でんげきのしっぽ', desc: 'びりびりと しびれさせて まひに する（すばやさ はんぶん・ときどき うごけない）。', emoji: '⚡', power: 0, target: 'oneFoe', accuracy: 90, inflict: { status: 'paralysis', chance: 1 }, tags: ['あし', 'とげ'] }),
-  mv({ id: 'n37', pattern: 'sleep', name: 'ゆりかごのうた', desc: 'やさしい おとで ねむらせる。', emoji: '💤', power: 0, target: 'oneFoe', accuracy: 75, inflict: { status: 'sleep', chance: 1 }, tags: ['はね', 'バッタ目'] }),
-  mv({ id: 'n38', pattern: 'sleep', name: 'ねむりのかおり', desc: 'あまい かおりで ねむくさせる。', emoji: '🌸', power: 0, target: 'oneFoe', accuracy: 75, inflict: { status: 'sleep', chance: 1 }, tags: ['みつ', 'チョウ目'] }),
+  // ㉒㉓㉔ じょうたいいじょう（せいこうりつは めいちゅうりつを つかう。m22a〜のコメント参照）
+  mv({ id: 'n34', pattern: 'poison', name: 'しびれどくえき', desc: 'どくの えきを かけて どくに する。', emoji: '☠️', power: 0, target: 'oneFoe', accuracy: 80, inflict: { status: 'poison', chance: 1 }, tags: ['どく', 'はり'] }),
+  mv({ id: 'n35', pattern: 'poison', name: 'くさったにおい', desc: 'ひどい においで あいてを どくに する。', emoji: '🤢', power: 0, target: 'oneFoe', accuracy: 78, inflict: { status: 'poison', chance: 1 }, tags: ['におい'] }),
+  mv({ id: 'n36', pattern: 'paralyze', name: 'でんげきのしっぽ', desc: 'びりびりと しびれさせて まひに する（すばやさ はんぶん・ときどき うごけない）。', emoji: '⚡', power: 0, target: 'oneFoe', accuracy: 85, inflict: { status: 'paralysis', chance: 1 }, tags: ['あし', 'とげ'] }),
+  mv({ id: 'n37', pattern: 'sleep', name: 'ゆりかごのうた', desc: 'やさしい おとで ねむらせる。', emoji: '💤', power: 0, target: 'oneFoe', accuracy: 68, inflict: { status: 'sleep', chance: 1 }, tags: ['はね', 'バッタ目'] }),
+  mv({ id: 'n38', pattern: 'sleep', name: 'ねむりのかおり', desc: 'あまい かおりで ねむくさせる。', emoji: '🌸', power: 0, target: 'oneFoe', accuracy: 72, inflict: { status: 'sleep', chance: 1 }, tags: ['みつ', 'チョウ目'] }),
   // ㉕〜㉘ のうりょく ダウン
   mv({ id: 'n39', pattern: 'atkDown', name: 'きあいそらし', desc: 'あいての ちからを ぬく。', emoji: '😮‍💨', power: 0, target: 'oneFoe', accuracy: 100, statChanges: [down('attack', -1)], tags: ['ぎたい'] }),
   mv({ id: 'n40', pattern: 'defDown', name: 'よろいくだき', desc: 'かたい ところを こわして ぼうぎょを さげる。', emoji: '🔨', power: 0, target: 'oneFoe', accuracy: 100, statChanges: [down('defense', -2)], tags: ['あご', 'ちから'] }),

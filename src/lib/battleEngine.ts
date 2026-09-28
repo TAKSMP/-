@@ -38,6 +38,9 @@ export const PARALYSIS_SPEED_MUL = 0.5 // まひの すばやさ ていか
 export const CRIT_MUL = 1.5
 export const SPREAD_MUL = 0.75 // ぜんたいわざの いりょく ほせい
 export const BASE_EVASION = 0 // かいひランクの しょきち
+// すばやさの さが 1 で めいちゅうりつ 1%ぶん、あいてが はやいほど よけやすい（さいだい ±10%）
+export const SPEED_EVASION_PER_POINT = 0.01
+export const SPEED_EVASION_CAP = 0.1
 
 export type Side = 'me' | 'foe'
 
@@ -56,7 +59,7 @@ export interface Fighter {
   hp: number
   base: { attack: number; defense: number; speed: number }
   rank: Record<StatKey, number>
-  status: StatusState | null
+  statuses: StatusState[] // ねむり・まひ・どく など、同時に いくつでも つく
   moves: SpecialMoveV2[]
   usesLeft: number[]
   // いちじてきな じょうたい
@@ -115,6 +118,10 @@ export function clampInt(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, n))
 }
 
+function clampNum(v: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, v))
+}
+
 function hashStr(s: string): number {
   let h = 0
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
@@ -141,7 +148,7 @@ export function rankMul(stat: StatKey, rank: number): number {
 // じっさいの ステータス（ランク・じょうたいいじょう こみ）
 export function effStat(f: Fighter, stat: 'attack' | 'defense' | 'speed'): number {
   let v = f.base[stat] * rankMul(stat, f.rank[stat])
-  if (stat === 'speed' && f.status?.key === 'paralysis') v *= PARALYSIS_SPEED_MUL
+  if (stat === 'speed' && hasStatus(f, 'paralysis')) v *= PARALYSIS_SPEED_MUL
   return Math.max(1, v)
 }
 
@@ -149,6 +156,13 @@ export const statusLabel = (k: StatusKey): string =>
   k === 'poison' ? 'どく' : k === 'sleep' ? 'ねむり' : 'まひ'
 export const statusEmoji = (k: StatusKey): string =>
   k === 'poison' ? '☠️' : k === 'sleep' ? '💤' : '⚡'
+
+// じょうたいいじょうは 同時に いくつでも つく（ねむり＋どく、など）ので、
+// 「もっているか」「その1つ」は かならず これらの ヘルパーを つかう。
+export const hasStatus = (f: Fighter, key: StatusKey): boolean =>
+  f.statuses.some((s) => s.key === key)
+export const statusOf = (f: Fighter, key: StatusKey): StatusState | undefined =>
+  f.statuses.find((s) => s.key === key)
 export const statLabel = (s: StatKey): string =>
   s === 'attack'
     ? 'こうげき'
@@ -159,6 +173,27 @@ export const statLabel = (s: StatKey): string =>
         : s === 'accuracy'
           ? 'めいちゅうりつ'
           : 'かいひりつ'
+
+// バッジに 出す みじかい ラベル（「すばやさ↑×2」のように つかう）
+export const statBadgeLabel = (s: StatKey): string =>
+  s === 'attack'
+    ? 'こうげき'
+    : s === 'defense'
+      ? 'ぼうぎょ'
+      : s === 'speed'
+        ? 'すばやさ'
+        : s === 'accuracy'
+          ? 'めいちゅう'
+          : 'かいひ'
+
+// がめんに 出す ぜんぶの のうりょくランク（0いがい だけ）を きまった じゅんで
+export const RANK_DISPLAY_ORDER: StatKey[] = [
+  'attack',
+  'defense',
+  'speed',
+  'accuracy',
+  'evasion',
+]
 
 // -------------------------------------------------------------
 //  ファイターを つくる
@@ -185,7 +220,7 @@ export function makeFighter(
       speed: stats.speed,
     },
     rank: emptyRank(),
-    status: null,
+    statuses: [],
     moves,
     usesLeft: moves.map((m) => m.uses),
     charging: null,
@@ -217,7 +252,7 @@ function snapshotFighters(f: Field): Fighter[] {
   return f.fighters.map((x) => ({
     ...x,
     rank: { ...x.rank },
-    status: x.status ? { ...x.status } : null,
+    statuses: x.statuses.map((s) => ({ ...s })),
     usesLeft: [...x.usesLeft],
     charging: x.charging ? { ...x.charging } : null,
   }))
@@ -295,8 +330,8 @@ function calcDamage(
   let power = move.power
 
   if (opts.late && move.boostIfLate) power *= move.boostIfLate
-  if (move.boostIfFoeStatus && def.status) power *= move.boostIfFoeStatus
-  if (move.boostIfSelfStatus && att.status) power *= move.boostIfSelfStatus
+  if (move.boostIfFoeStatus && def.statuses.length > 0) power *= move.boostIfFoeStatus
+  if (move.boostIfSelfStatus && att.statuses.length > 0) power *= move.boostIfSelfStatus
 
   const crit = rng() < critChance(move.critStage ?? 0)
   let dmg = (((power / 10) * (a + 2)) / (d / 2 + 3)) * DAMAGE_SCALE + 1
@@ -315,11 +350,19 @@ function hitCheck(
 ): boolean {
   if (move.accuracy === null) return true
   if (def.charging?.hidden) return false
+  // すばやい あいてほど、わずかに よけやすい
+  const speedGap = effStat(def, 'speed') - effStat(att, 'speed')
+  const speedEvasion = clampNum(
+    speedGap * SPEED_EVASION_PER_POINT,
+    -SPEED_EVASION_CAP,
+    SPEED_EVASION_CAP,
+  )
   const acc =
     (move.accuracy / 100) *
     rankMul('accuracy', att.rank.accuracy) *
-    (1 / rankMul('evasion', def.rank.evasion))
-  return rng() < Math.min(1, acc)
+    (1 / rankMul('evasion', def.rank.evasion)) *
+    (1 - speedEvasion)
+  return rng() < Math.max(0, Math.min(1, acc))
 }
 
 // -------------------------------------------------------------
@@ -370,8 +413,9 @@ function inflictStatus(
   rng: Rng,
 ): void {
   if (target.fainted) return
-  if (target.status) {
-    log.push(`…${target.name}は すでに ${statusLabel(target.status.key)}だ。`)
+  // どく・まひ・ねむりは 同時に つく（おなじ しゅるいだけ かさねない）
+  if (hasStatus(target, key)) {
+    log.push(`…${target.name}は すでに ${statusLabel(key)}だ。`)
     return
   }
   const turns =
@@ -379,7 +423,7 @@ function inflictStatus(
       ? SLEEP_MIN_TURNS +
         Math.floor(rng() * (SLEEP_MAX_TURNS - SLEEP_MIN_TURNS + 1))
       : 0
-  target.status = { key, turnsLeft: turns }
+  target.statuses.push({ key, turnsLeft: turns })
   log.push(`${statusEmoji(key)} ${target.name}は ${statusLabel(key)}に なった！`)
   // まひは 目に 見えにくいので、なにが おきるかを ことばで つたえる
   if (key === 'paralysis') log.push(`🐢 ${target.name}の すばやさが はんぶんに なった！`)
@@ -526,8 +570,19 @@ function executeMove(
 
     // ── じょうたいいじょう
     if (move.inflict && !target.fainted) {
-      const ok = move.kind === 'attack' ? rng() < move.inflict.chance : true
+      // こうげきわざの ついか こうかは inflict.chance、じょうたいいじょう せんようの
+      // わざ（ねむりのりんぷん など）は わざじたいの めいちゅうりつで はんてい する
+      // （わざごとに せいこうりつが ちがう ＝ こせいに なる）
+      let ok: boolean
+      if (move.kind === 'attack') {
+        ok = rng() < move.inflict.chance
+      } else if (target.uid !== actor.uid && move.accuracy !== null) {
+        ok = hitCheck(actor, target, move, rng)
+      } else {
+        ok = true
+      }
       if (ok) inflictStatus(target, move.inflict.status, log, rng)
+      else log.push(`💨 ${target.name}には きかなかった！`)
     }
 
     // ── のうりょく変化
@@ -551,11 +606,12 @@ function executeMove(
       )
     }
 
-    // ── じょうたいいじょうを なおす（なんでも）
+    // ── じょうたいいじょうを なおす（なんでも・ぜんぶ いっぺんに）
     if (move.cureStatus) {
-      if (target.status) {
-        log.push(`✨ ${target.name}の ${statusLabel(target.status.key)}が なおった！`)
-        target.status = null
+      if (target.statuses.length > 0) {
+        const names = target.statuses.map((s) => statusLabel(s.key)).join('・')
+        log.push(`✨ ${target.name}の ${names}が なおった！`)
+        target.statuses = []
       } else {
         log.push(`…${target.name}は げんきだ。`)
       }
@@ -563,11 +619,12 @@ function executeMove(
 
     // ── とくてい の じょうたいいじょうだけ なおす（ねむり／どく／まひ）
     if (move.cureStatusKey) {
-      if (target.status?.key === move.cureStatusKey) {
-        log.push(`✨ ${target.name}の ${statusLabel(target.status.key)}が なおった！`)
-        target.status = null
-      } else if (target.status) {
-        log.push(`…${target.name}の ${statusLabel(target.status.key)}には きかなかった。`)
+      if (hasStatus(target, move.cureStatusKey)) {
+        log.push(`✨ ${target.name}の ${statusLabel(move.cureStatusKey)}が なおった！`)
+        target.statuses = target.statuses.filter((s) => s.key !== move.cureStatusKey)
+      } else if (target.statuses.length > 0) {
+        const names = target.statuses.map((s) => statusLabel(s.key)).join('・')
+        log.push(`…${target.name}の ${names}には きかなかった。`)
       } else {
         log.push(`…${target.name}は げんきだ。`)
       }
@@ -576,7 +633,8 @@ function executeMove(
     // ── ねむって ぜんかいふく
     if (move.restSleep) {
       target.hp = target.maxHp
-      target.status = { key: 'sleep', turnsLeft: 2 }
+      // ほかの じょうたいいじょうも まとめて なおしてから ねむる
+      target.statuses = [{ key: 'sleep', turnsLeft: 2 }]
       log.push(`🛌 ${target.name}は ねむって HPが ぜんかい！`)
     }
 
@@ -661,7 +719,7 @@ export function resolveTurn(
     fighters: field.fighters.map((x) => ({
       ...x,
       rank: { ...x.rank },
-      status: x.status ? { ...x.status } : null,
+      statuses: x.statuses.map((s) => ({ ...s })),
       usesLeft: [...x.usesLeft],
       damageTakenThisTurn: 0,
       actedIndex: -1,
@@ -732,18 +790,19 @@ export function resolveTurn(
     }
 
     // ねむり
-    if (actor.status?.key === 'sleep') {
-      if (actor.status.turnsLeft > 0) {
-        actor.status.turnsLeft--
+    const sleeping = statusOf(actor, 'sleep')
+    if (sleeping) {
+      if (sleeping.turnsLeft > 0) {
+        sleeping.turnsLeft--
         log.push(`💤 ${actor.name}は ぐっすり ねむっている…`)
         continue
       }
       log.push(`☀️ ${actor.name}は めを さました！`)
-      actor.status = null
+      actor.statuses = actor.statuses.filter((s) => s.key !== 'sleep')
     }
 
     // まひ
-    if (actor.status?.key === 'paralysis' && rng() < PARALYSIS_FAIL_CHANCE) {
+    if (hasStatus(actor, 'paralysis') && rng() < PARALYSIS_FAIL_CHANCE) {
       log.push(`⚡ ${actor.name}は しびれて うごけない！`)
       continue
     }
@@ -823,7 +882,7 @@ function endOfTurn(f: Field, log: string[], rng: Rng): void {
     if (x.fainted) continue
 
     // どく
-    if (x.status?.key === 'poison') {
+    if (hasStatus(x, 'poison')) {
       const dmg = Math.max(1, Math.round(x.maxHp * POISON_RATIO))
       x.hp = Math.max(0, x.hp - dmg)
       log.push(`☠️ ${x.name}は どくで ${dmg}の ダメージ！`)

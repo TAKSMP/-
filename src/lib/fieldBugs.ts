@@ -7,7 +7,9 @@
 import type { CaughtBug } from '../types'
 import { fieldById, type FieldDef } from '../data/fields'
 
-const KEY = 'chomushi.fieldbugs.v1'
+// 引き継ぎバックアップ（storage.ts）からも 直接 よみかきする ので export する
+export const FIELDBUGS_KEY = 'chomushi.fieldbugs.v1'
+const KEY = FIELDBUGS_KEY
 
 export type FieldBugs = Record<string, string[]> // フィールドID → 虫のID
 

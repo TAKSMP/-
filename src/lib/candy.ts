@@ -18,8 +18,11 @@ export const CANDY_COUNT = 5
 // プレイヤーの あしもとから これより ちかいと ひろえる（元画像の ピクセル）
 export const CANDY_PICKUP_RADIUS = 16
 
+// 引き継ぎバックアップが localStorage を まとめて さがす ときに つかう プレフィックス
+export const CANDY_KEY_PREFIX = 'chomushi.candy.v1.'
+
 function keyFor(fieldId: string): string {
-  return `chomushi.candy.v1.${fieldId}`
+  return `${CANDY_KEY_PREFIX}${fieldId}`
 }
 
 function makeId(): string {

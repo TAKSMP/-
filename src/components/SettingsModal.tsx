@@ -79,7 +79,7 @@ export function SettingsModal({ onClose, onChanged, onDataRestored }: Props) {
       ) {
         await navigator.share({
           title: 'ちょうむし バックアップ',
-          text: '図鑑データのバックアップです。',
+          text: '図鑑と、あそぶ（ストーリーなど）のデータのバックアップです。',
           files: [file],
         })
       } else {
@@ -88,7 +88,7 @@ export function SettingsModal({ onClose, onChanged, onDataRestored }: Props) {
 
       setDataMessage({
         type: 'success',
-        text: `✅ 図鑑 ${loadZukan().length}しゅるいのバックアップを作りました。`,
+        text: `✅ 図鑑 ${loadZukan().length}しゅるいと、あそぶのデータを バックアップしました。`,
       })
       sfx.discover()
     } catch (error) {
@@ -110,8 +110,8 @@ export function SettingsModal({ onClose, onChanged, onDataRestored }: Props) {
 
     const currentCount = loadZukan().length
     const question = currentCount
-      ? `いまの図鑑（${currentCount}しゅるい）を、このバックアップで上書きします。よろしいですか？`
-      : 'このバックアップから図鑑を復元しますか？'
+      ? `いまの図鑑（${currentCount}しゅるい）と、あそぶ（ストーリーなど）のデータを、このバックアップで上書きします。よろしいですか？`
+      : 'このバックアップから図鑑と、あそぶのデータを復元しますか？'
     if (!confirm(question)) return
 
     setDataBusy(true)
@@ -121,7 +121,7 @@ export function SettingsModal({ onClose, onChanged, onDataRestored }: Props) {
       onDataRestored(bugs)
       setDataMessage({
         type: 'success',
-        text: `✅ 図鑑 ${bugs.length}しゅるいを復元しました！`,
+        text: `✅ 図鑑 ${bugs.length}しゅるいと、あそぶのデータを 復元しました！`,
       })
       sfx.discover()
     } catch (error) {
@@ -227,8 +227,9 @@ export function SettingsModal({ onClose, onChanged, onDataRestored }: Props) {
         <section className="settings-backup">
           <h3>📦 データのバックアップ</h3>
           <p>
-            図鑑の写真・記録・バッジ・ミッションを、ほかのブラウザへ
-            ひっこしできます。
+            図鑑の写真・記録・バッジ・ミッションと、あそぶ（ストーリーの
+            レベル・クリア状況・むしかご・わざ／わざ図鑑／マップの出現虫）を、
+            まとめて ほかのブラウザへ ひっこしできます。
           </p>
 
           <div className="settings-backup-actions">

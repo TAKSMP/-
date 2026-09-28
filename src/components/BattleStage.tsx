@@ -9,10 +9,13 @@
 // =============================================================
 import { useEffect, useRef, useState } from 'react'
 import type { SpecialMoveV2 } from '../types'
+import type { StatKey } from '../types'
 import {
   chooseCpuCommand,
   createField,
+  RANK_DISPLAY_ORDER,
   resolveTurn,
+  statBadgeLabel,
   statusEmoji,
   statusLabel,
   type Command,
@@ -132,6 +135,11 @@ function FighterSlot({
   if (hurt) photoCls += ' hurt'
   if (glow) photoCls += ' fx-glow'
 
+  // のうりょくランクが 0いがいの ものだけ、きまった じゅんで バッジに する
+  const rankBadges: { stat: StatKey; stage: number }[] = RANK_DISPLAY_ORDER.filter(
+    (stat) => f.rank[stat] !== 0,
+  ).map((stat) => ({ stat, stage: f.rank[stat] }))
+
   return (
     <div
       className={
@@ -145,13 +153,27 @@ function FighterSlot({
       <div className="stage-namebox">
         <span className="fighter-name">
           {f.name}
-          {f.status && (
-            <span className="status-badge" title={statusLabel(f.status.key)}>
-              {statusEmoji(f.status.key)}
-              {statusLabel(f.status.key)}
+          {f.statuses.map((s) => (
+            <span key={s.key} className="status-badge" title={statusLabel(s.key)}>
+              {statusEmoji(s.key)}
+              {statusLabel(s.key)}
             </span>
-          )}
+          ))}
         </span>
+        {rankBadges.length > 0 && (
+          <span className="rank-badges">
+            {rankBadges.map(({ stat, stage }) => (
+              <span
+                key={stat}
+                className={'rank-badge' + (stage > 0 ? ' up' : ' down')}
+              >
+                {statBadgeLabel(stat)}
+                {stage > 0 ? '↑' : '↓'}
+                {Math.abs(stage) >= 2 ? `×${Math.abs(stage)}` : ''}
+              </span>
+            ))}
+          </span>
+        )}
         <HpBar f={f} />
       </div>
       <button

@@ -12,7 +12,8 @@ import { MOVE_LIBRARY } from './moveLibrary'
 import { assignEncounters } from '../data/encounters'
 import { TONE_COUNT } from '../components/ParkScene'
 
-const SAVE_KEY = 'chomushi.story.v1'
+// 引き継ぎバックアップ（storage.ts）からも 直接 よみかきする ので export する
+export const SAVE_KEY = 'chomushi.story.v1'
 
 // 公園のイラストは 10しゅるい。ばしょの名前から いつも おなじ絵に なる。
 export const SCENE_COUNT = 10
@@ -314,6 +315,7 @@ export interface StorySave {
   moves?: Record<string, SpecialMoveV2[]> // 虫のID → おぼえなおした わざ3つ
   party?: Record<string, string[]> // （ふるい形）マップごとの なかま
   cage?: string[] // むしかご：なかまに した虫の ID（ずっと のこる）
+  lastCompanionId?: string // 直近 バトルに つれていった なかまの ID（つれていく？ がめんの ひだり はしに 出す）
 }
 
 const emptySave = (): StorySave => ({
@@ -340,6 +342,7 @@ export function loadStory(): StorySave {
       cage:
         d.cage ??
         Array.from(new Set(Object.values(d.party ?? {}).flat())),
+      lastCompanionId: typeof d.lastCompanionId === 'string' ? d.lastCompanionId : undefined,
     }
   } catch {
     return emptySave()

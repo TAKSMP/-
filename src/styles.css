@@ -3593,7 +3593,7 @@ input:focus {
   }
 }
 
-/* じょうたいいじょうの バッジ */
+/* じょうたいいじょうの バッジ（同時に いくつでも 出る） */
 .status-badge {
   font-size: 10px;
   font-weight: 900;
@@ -3602,6 +3602,29 @@ input:focus {
   border-radius: 999px;
   padding: 1px 6px;
   white-space: nowrap;
+}
+
+/* のうりょくランクの バッジ（すばやさ↑×2 など。0のときは 出さない） */
+.rank-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-bottom: 3px;
+}
+.rank-badge {
+  font-size: 10px;
+  font-weight: 900;
+  border-radius: 999px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+.rank-badge.up {
+  background: #d7f0ff;
+  color: #045a8d;
+}
+.rank-badge.down {
+  background: #ffe0e0;
+  color: #aa3333;
 }
 
 /* --- した：わざボタン --- */

@@ -1,5 +1,8 @@
 import type { BattleStats, CaptureInput, CaughtBug } from '../types'
 import { findSpeciesByName, normalizeBugName } from '../data/bugs'
+import { SAVE_KEY as STORY_KEY } from './story'
+import { loadDexSeen, MOVEDEX_KEY } from './moveDex'
+import { loadFieldBugs, FIELDBUGS_KEY, type FieldBugs } from './fieldBugs'
 
 // 図鑑登録後に、各項目をなおすためのパッチ
 export interface BugPatch {
@@ -25,17 +28,25 @@ const BADGE_KEY = 'chomushi.badges.v2'
 const BASELINE_KEY = 'chomushi.mission-base.v1'
 
 const BACKUP_FORMAT = 'chomushi-backup'
-const BACKUP_VERSION = 1
+// v1：図鑑・バッジ・ミッションのみ。v2：それに くわえて「あそぶ」の蓄積データ
+// （ストーリーの レベル・クリア状況・むしかご・わざ／わざ図鑑／マップの 出現虫せってい）も。
+// ふるい v1 バックアップも、そのまま 復元できる（無い分は さわらない）。
+const BACKUP_VERSION = 2
 
-interface BackupFileV1 {
+interface BackupDataV2 {
+  zukan: CaughtBug[]
+  badges: string[]
+  missionBaseline: unknown | null
+  story: unknown | null // ストーリーモードの ほぞんデータ（StorySave）をそのまま
+  movedex: string[] // 見た／つかった わざの id いちらん
+  fieldBugs: FieldBugs // マップごとに 出す むしの せってい
+}
+
+interface BackupFileV2 {
   format: typeof BACKUP_FORMAT
-  version: typeof BACKUP_VERSION
+  version: number // 1 か 2
   createdAt: string
-  data: {
-    zukan: CaughtBug[]
-    badges: string[]
-    missionBaseline: unknown | null
-  }
+  data: Partial<BackupDataV2> & { zukan: unknown; badges: unknown }
 }
 
 export function loadClaimedBadges(): string[] {
@@ -85,10 +96,12 @@ export function resetMissions(): void {
   }
 }
 
-// 図鑑・写真・バッジ・ミッションを、ほかのブラウザへ持っていくための
-// バックアップファイルを作る。APIキーは安全のため含めない。
+// 図鑑・写真・バッジ・ミッションと、「あそぶ」の蓄積データ（ストーリーの
+// レベル・クリア状況・むしかご・わざ／わざ図鑑／マップの出現虫せってい）を、
+// ほかのブラウザへ 持っていくための バックアップファイルを作る。
+// APIキーと、つるせマップの「いま おちている あめ」の ばしょ（すぐ 作り直せる）は 含めない。
 export function createBackupJson(): string {
-  const backup: BackupFileV1 = {
+  const backup: BackupFileV2 = {
     format: BACKUP_FORMAT,
     version: BACKUP_VERSION,
     createdAt: new Date().toISOString(),
@@ -96,6 +109,16 @@ export function createBackupJson(): string {
       zukan: loadZukan(),
       badges: loadClaimedBadges(),
       missionBaseline: loadMissionBaseline(),
+      story: (() => {
+        try {
+          const raw = localStorage.getItem(STORY_KEY)
+          return raw ? JSON.parse(raw) : null
+        } catch {
+          return null
+        }
+      })(),
+      movedex: [...loadDexSeen()],
+      fieldBugs: loadFieldBugs(),
     },
   }
   return JSON.stringify(backup)
@@ -151,8 +174,9 @@ function restoreStorageValue(key: string, value: string | null): void {
   else localStorage.setItem(key, value)
 }
 
-// バックアップファイルを検査してから、3つの保存領域をまとめて復元する。
+// バックアップファイルを検査してから、保存領域をまとめて復元する。
 // 書き込みに失敗したときは、復元前のデータへ戻す。
+// v1（図鑑・バッジ・ミッションのみ）も、そのまま 復元できる（v2で ふえた分は さわらない）。
 export function restoreBackupJson(text: string): CaughtBug[] {
   let parsed: unknown
   try {
@@ -164,7 +188,7 @@ export function restoreBackupJson(text: string): CaughtBug[] {
   if (!isObject(parsed) || parsed.format !== BACKUP_FORMAT) {
     throw new Error('ちょうむしのバックアップファイルではありません。')
   }
-  if (parsed.version !== BACKUP_VERSION) {
+  if (parsed.version !== 1 && parsed.version !== BACKUP_VERSION) {
     throw new Error('このバックアップには、今のアプリでは対応していません。')
   }
   if (!isObject(parsed.data)) {
@@ -183,10 +207,21 @@ export function restoreBackupJson(text: string): CaughtBug[] {
     ? parsed.data.missionBaseline
     : null
 
+  // v2で ふえた分は、ふるい(v1)バックアップには 無いので undefined のまま（＝さわらない）
+  const hasStory = Object.prototype.hasOwnProperty.call(parsed.data, 'story')
+  const story = hasStory ? parsed.data.story : undefined
+  const hasMovedex = Array.isArray(parsed.data.movedex)
+  const movedex = hasMovedex ? (parsed.data.movedex as unknown[]).filter((x) => typeof x === 'string') : undefined
+  const hasFieldBugs = isObject(parsed.data.fieldBugs)
+  const fieldBugs = hasFieldBugs ? parsed.data.fieldBugs : undefined
+
   const previous = {
     zukan: localStorage.getItem(STORAGE_KEY),
     badges: localStorage.getItem(BADGE_KEY),
     missionBaseline: localStorage.getItem(BASELINE_KEY),
+    story: localStorage.getItem(STORY_KEY),
+    movedex: localStorage.getItem(MOVEDEX_KEY),
+    fieldBugs: localStorage.getItem(FIELDBUGS_KEY),
   }
 
   try {
@@ -194,11 +229,20 @@ export function restoreBackupJson(text: string): CaughtBug[] {
     localStorage.setItem(BADGE_KEY, JSON.stringify(badges))
     if (missionBaseline === null) localStorage.removeItem(BASELINE_KEY)
     else localStorage.setItem(BASELINE_KEY, JSON.stringify(missionBaseline))
+    if (hasStory) {
+      if (story === null) localStorage.removeItem(STORY_KEY)
+      else localStorage.setItem(STORY_KEY, JSON.stringify(story))
+    }
+    if (hasMovedex) localStorage.setItem(MOVEDEX_KEY, JSON.stringify(movedex))
+    if (hasFieldBugs) localStorage.setItem(FIELDBUGS_KEY, JSON.stringify(fieldBugs))
   } catch (error) {
     try {
       restoreStorageValue(STORAGE_KEY, previous.zukan)
       restoreStorageValue(BADGE_KEY, previous.badges)
       restoreStorageValue(BASELINE_KEY, previous.missionBaseline)
+      restoreStorageValue(STORY_KEY, previous.story)
+      restoreStorageValue(MOVEDEX_KEY, previous.movedex)
+      restoreStorageValue(FIELDBUGS_KEY, previous.fieldBugs)
     } catch {
       console.warn('復元前のデータに戻せませんでした')
     }

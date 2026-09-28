@@ -7,7 +7,9 @@
 // =============================================================
 import { MOVE_LIBRARY, MOVE_PATTERNS, type LibraryMove } from './moveLibrary'
 
-const KEY = 'chomushi.movedex.v1'
+// 引き継ぎバックアップ（storage.ts）からも 直接 よみかきする ので export する
+export const MOVEDEX_KEY = 'chomushi.movedex.v1'
+const KEY = MOVEDEX_KEY
 
 export type MoveGroup = 'attack' | 'status' | 'heal'
 
@@ -54,7 +56,7 @@ export function loadDexSeen(): Set<string> {
   }
 }
 
-function saveDexSeen(set: Set<string>): void {
+export function saveDexSeen(set: Set<string>): void {
   try {
     localStorage.setItem(KEY, JSON.stringify([...set]))
   } catch (e) {

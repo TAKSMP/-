@@ -535,6 +535,12 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     }
     setFighters([...mine, ...foes])
     setCompanionId(companion)
+    // 直近 つれていった なかまを おぼえておく（つぎの「つれていく？」で ひだり はしに 出す）
+    if (companion && companion !== save.lastCompanionId) {
+      const nextSave = { ...save, lastCompanionId: companion }
+      setSave(nextSave)
+      saveStory(nextSave)
+    }
     setPendingCell(null)
     setBattleCell(cell)
     setBattleKey((k) => k + 1)
@@ -1393,6 +1399,12 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   if (phase === 'party' && stage && pendingCell) {
     const enemy = bugs.find((b) => b.id === pendingCell.bugId)
     const foeAlly = pendingCell.allyBugId ? bugs.find((b) => b.id === pendingCell.allyBugId) : null
+    // 直近 つれていった なかまを、いちばん ひだりに
+    const partyList = save.lastCompanionId
+      ? [...cageList].sort((a, b) =>
+          a.id === save.lastCompanionId ? -1 : b.id === save.lastCompanionId ? 1 : 0,
+        )
+      : cageList
     const start = (id: string | null) => {
       if (goFlash) return
       setGoFlash(true)
@@ -1410,7 +1422,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
           </p>
           <h3 className="story-party-title">なかまを つれていく？</h3>
           <div className="story-party-list">
-            {cageList.map((b) => (
+            {partyList.map((b) => (
               <button key={b.id} className="story-party-pick" onClick={() => start(b.id)}>
                 <img src={mainPhoto(b)} alt={b.name} />
                 <span className="story-party-name">{b.name}</span>
