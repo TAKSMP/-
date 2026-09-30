@@ -361,16 +361,6 @@ export function levelOf(save: StorySave, bugId: string): BugLevel {
   return save.levels[bugId] ?? { level: 1, exp: 0 }
 }
 
-// あめを たべさせて、けいけんちなしで レベルを 1つ あげる
-export function levelUpOne(
-  save: StorySave,
-  bugId: string,
-): { save: StorySave; before: BugLevel; after: BugLevel } {
-  const before = levelOf(save, bugId)
-  const after: BugLevel = { level: Math.min(MAX_LEVEL, before.level + 1), exp: before.exp }
-  return { save: { ...save, levels: { ...save.levels, [bugId]: after } }, before, after }
-}
-
 // けいけんちを くわえて、あがった ぶんを かえす
 export function addExp(
   save: StorySave,
@@ -404,9 +394,9 @@ export function statsWithLevel(bug: CaughtBug, level: number) {
     ...s,
     // うわげんは ひろめに とる。ここが せまいと レベル20と25で さが 出ない。
     hp: Math.min(110, s.hp + up * 4),
-    attack: Math.min(18, s.attack + Math.floor(up / 2)),
-    defense: Math.min(18, s.defense + Math.floor(up / 2)),
-    speed: Math.min(16, s.speed + Math.floor(up / 3)),
+    attack: Math.min(99, s.attack + Math.floor(up / 2)),
+    defense: Math.min(99, s.defense + Math.floor(up / 2)),
+    speed: Math.min(99, s.speed + Math.floor(up / 3)),
   }
 }
 

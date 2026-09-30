@@ -9,7 +9,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CaughtBug } from '../types'
 import { mainPhoto } from '../lib/storage'
-import { battleStatsV2 } from '../lib/battleSetup'
 import { makeFighter, type Fighter } from '../lib/battleEngine'
 import { orderEmoji } from '../data/orders'
 import { ParkScene, parkName } from '../components/ParkScene'
@@ -38,7 +37,6 @@ import {
   isSeen,
   learnLevelCrossed,
   levelOf,
-  levelUpOne,
   MAX_LEVEL,
   markSeen,
   loadStory,
@@ -174,7 +172,7 @@ interface ExpBarInfo {
   segments: ExpSegment[]
 }
 interface VictoryInfo {
-  turns: number
+  turns?: number // バトルでの かちの ときだけ（あめでの レベルアップは undefined）
   bars: ExpBarInfo[]
   queue: Celebration[] // アニメーションが おわったら 見せる レベルアップ／わざ
 }
@@ -244,6 +242,8 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   const [cageOpen, setCageOpen] = useState(false)
   // あるく がめん上部の 虫の なまえを タップした ときの、いまの ステータス表示
   const [fieldStatOpen, setFieldStatOpen] = useState(false)
+  // ①の虫えらび画面で「わざをみる」を おした とき
+  const [movesViewBug, setMovesViewBug] = useState<CaughtBug | null>(null)
   const [askRelease, setAskRelease] = useState<string | null>(null)
   // かった あとの「なんターン・けいけんちバー」表示
   const [victory, setVictory] = useState<VictoryInfo | null>(null)
@@ -355,8 +355,38 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     const next = addToCage(save, recruit.bug.id, recruit.level)
     setSave(next)
     saveStory(next)
-    setNotice(`🤝 ${recruit.bug.name} が むしかごに なかま入り！`)
+    // つるせMAPの 上部には、バトル後の できごとを 出さない
+    if (field?.engine !== 'world') {
+      setNotice(`🤝 ${recruit.bug.name} が むしかごに なかま入り！`)
+    }
     setRecruit(null)
+  }
+
+  // あめで、けいけんちバー1本ぶんを もらって レベルアップ（バトルの かちかたと おなじ 見せかた）
+  function giveCandyLevelUp(b: CaughtBug) {
+    const before = levelOf(save, b.id)
+    if (before.level >= MAX_LEVEL) return
+    const gained = Math.max(1, expToNext(before.level) - before.exp)
+    const res = addExp(save, b.id, gained)
+    setSave(res.save)
+    saveStory(res.save)
+    setCandyReward(false)
+    sfx.badge()
+    setVictory({
+      bars: [
+        {
+          bugId: b.id,
+          name: b.name,
+          photo: mainPhoto(b),
+          buddy: false,
+          segments: expSegments(res.before.level, res.before.exp, gained),
+        },
+      ],
+      queue: celebrationsFor(b, res, res.save, false),
+    })
+    setVictorySeg(0)
+    setVictoryFilled(false)
+    setVictoryPlaying(false)
   }
 
   // あるける マップを ひらく（すごろくの かわり）
@@ -612,7 +642,10 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     } else {
       setPos(currentIndex(save, stage))
       if (field) forgetFieldPosition(field.base)
-      setNotice('😢 まけちゃった… レベルを あげて もういちど！')
+      // つるせMAPの 上部には、バトル後の できごとを 出さない
+      if (field?.engine !== 'world') {
+        setNotice('😢 まけちゃった… レベルを あげて もういちど！')
+      }
     }
     setPhase(field ? 'field' : 'map')
     setBattleCell(null)
@@ -693,6 +726,34 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
 
   const moveLabel = (m: SpecialMoveV2) =>
     m.kind === 'attack' ? `いりょく${m.power}` : 'へんかわざ'
+
+  const movesViewModal = movesViewBug && (
+    <div className="modal-backdrop" onClick={() => setMovesViewBug(null)}>
+      <div className="modal story-learn" onClick={(e) => e.stopPropagation()}>
+        <button
+          className="modal-close"
+          onClick={() => setMovesViewBug(null)}
+          aria-label="とじる"
+        >
+          ✕
+        </button>
+        <h3>{movesViewBug.name}の わざ</h3>
+        <div className="story-learn-list">
+          {movesOf(save, movesViewBug, levelOf(save, movesViewBug.id).level).map((m, i) => (
+            <div key={m.id + i} className="story-learn-old story-learn-old-view">
+              <span className="story-learn-old-name">
+                {m.emoji ?? '✨'} {m.name}
+              </span>
+              <span className="story-learn-old-sub">
+                {moveLabel(m)}／{m.uses}かい つかえる
+              </span>
+              <p className="story-learn-desc">{m.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
 
   const learnModal = learn && (
     <div className="modal-backdrop">
@@ -884,7 +945,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
           onPick={pickBug}
           renderCard={(b) => {
             const lv = levelOf(save, b.id)
-            const s = battleStatsV2(b)
+            const s = statsWithLevel(b, lv.level)
             return (
               <div className="story-bug">
                 <img src={mainPhoto(b)} alt={b.name} />
@@ -893,10 +954,22 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
                 <span className="story-bug-stats">
                   ❤️{s.hp} ⚔️{s.attack} 🛡️{s.defense} ⚡{s.speed}
                 </span>
+                <button
+                  type="button"
+                  className="btn btn-ghost story-bug-moves-btn"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    sfx.tap()
+                    setMovesViewBug(b)
+                  }}
+                >
+                  📜 わざを みる
+                </button>
               </div>
             )
           }}
         />
+        {movesViewModal}
       </div>
     )
   }
@@ -1177,14 +1250,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
                     ) : (
                       <button
                         className="story-cage-free story-candy-give"
-                        onClick={() => {
-                          const { save: next, before, after } = levelUpOne(save, b.id)
-                          setSave(next)
-                          saveStory(next)
-                          sfx.badge()
-                          setNotice(`🍬 ${b.name} の レベルが ${before.level} → ${after.level} に あがった！`)
-                          setCandyReward(false)
-                        }}
+                        onClick={() => giveCandyLevelUp(b)}
                       >
                         ＋1 レベル
                       </button>
@@ -1204,9 +1270,11 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
             onClick={() => (victoryPlaying ? skipVictory() : playVictory())}
           >
             <div className="modal story-victory" onClick={(e) => e.stopPropagation()}>
-              <div className="story-levelup-emoji">🏆</div>
-              <h3>かった！</h3>
-              <p className="battle-result-sub">{victory.turns}ターンで かちました</p>
+              <div className="story-levelup-emoji">{victory.turns !== undefined ? '🏆' : '🍬'}</div>
+              <h3>{victory.turns !== undefined ? 'かった！' : 'あめの ちからで レベルアップ！'}</h3>
+              {victory.turns !== undefined && (
+                <p className="battle-result-sub">{victory.turns}ターンで かちました</p>
+              )}
               {victory.bars.map((bar) => {
                 const done = victorySeg >= bar.segments.length
                 const seg = bar.segments[Math.min(victorySeg, bar.segments.length - 1)]
@@ -1237,7 +1305,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
           </div>
         )}
         {fieldStatOpen && myBug && (() => {
-          const s = battleStatsV2(myBug)
+          const s = statsWithLevel(myBug, myLevel.level)
           return (
             <div className="modal-backdrop" onClick={() => setFieldStatOpen(false)}>
               <div className="modal story-fieldstat" onClick={(e) => e.stopPropagation()}>
@@ -1463,7 +1531,8 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
           if (stage) setPos(currentIndex(save, stage))
           setPhase(field ? 'field' : 'map')
           setBattleCell(null)
-          setNotice('にげた…')
+          // つるせMAPの 上部には、バトル後の できごとを 出さない
+          if (field?.engine !== 'world') setNotice('にげた…')
         }}
         onFinish={finishBattle}
       />
