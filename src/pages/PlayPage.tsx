@@ -136,7 +136,7 @@ export function PlayPage({ bugs, onGoCapture }: Props) {
         </button>
         <header className="page-head">
           <h1>📡 つうしんバトル</h1>
-          <p className="sub">べつの端末の 相手と、育てた虫で たいせん！</p>
+          <p className="sub">そだてた虫を たたかわせよう</p>
         </header>
         <NetBattlePage bugs={bugs} />
       </div>
@@ -221,7 +221,7 @@ export function PlayPage({ bugs, onGoCapture }: Props) {
           <span className="game-emoji">📡</span>
           <span className="game-title">つうしんバトル</span>
           <span className="game-desc">
-            べつの端末の 相手と、そだてた虫で たいせん！
+            そだてた虫を たたかわせよう
           </span>
         </button>
       </div>

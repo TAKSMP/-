@@ -28,6 +28,23 @@ interface Props {
   bugs: CaughtBug[]
 }
 
+// まえに 入れた なまえを おぼえておく（毎回 入れなおさなくて いいように）
+const NAME_KEY = 'chomushi.netbattle.name'
+function loadSavedName(): string {
+  try {
+    return localStorage.getItem(NAME_KEY) ?? ''
+  } catch {
+    return ''
+  }
+}
+function saveName(name: string): void {
+  try {
+    localStorage.setItem(NAME_KEY, name)
+  } catch {
+    // ほぞんできなくても きにしない
+  }
+}
+
 type Phase =
   | 'pickBug'
   | 'askAlly'
@@ -58,7 +75,7 @@ export function NetBattlePage({ bugs }: Props) {
   const [phase, setPhase] = useState<Phase>('pickBug')
   const [myBug, setMyBug] = useState<CaughtBug | null>(null)
   const [ally, setAlly] = useState<CaughtBug | null>(null)
-  const [name, setName] = useState('')
+  const [name, setName] = useState<string>(() => loadSavedName())
   const [codeInput, setCodeInput] = useState('')
   const [code, setCode] = useState<string | null>(null)
   const [role, setRole] = useState<Role | null>(null)
@@ -233,7 +250,10 @@ export function NetBattlePage({ bugs }: Props) {
           value={name}
           maxLength={10}
           placeholder="なまえ（10もじまで）"
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => {
+            setName(e.target.value)
+            saveName(e.target.value)
+          }}
         />
         {error && <p className="story-notice">{error}</p>}
         <button className="btn btn-big btn-primary" onClick={goMenu}>
@@ -252,13 +272,13 @@ export function NetBattlePage({ bugs }: Props) {
   if (phase === 'menu') {
     return (
       <div className="story net-battle-menu">
-        <h2 className="battle-step-title">④ どうする？</h2>
+        <h2 className="battle-step-title">④ たたかいばを つくる</h2>
         <div className="net-battle-menu-actions">
           <button className="btn btn-big btn-primary" disabled={busy} onClick={doCreate}>
-            🆕 部屋を つくる
+            🆕 じぶんで つくる
           </button>
           <button className="btn btn-big" disabled={busy} onClick={() => setPhase('joinEnter')}>
-            🔑 コードで 参加する
+            🔑 つくってもらう
           </button>
         </div>
         {error && <p className="story-notice">{error}</p>}
