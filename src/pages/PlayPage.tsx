@@ -5,6 +5,7 @@ import { BattlePage } from './BattlePage'
 import { BattlePage2 } from './BattlePage2'
 import { StoryPage } from './StoryPage'
 import { RacePage } from './RacePage'
+import { NetBattlePage } from './NetBattlePage'
 import { sfx } from '../lib/sound'
 
 interface Props {
@@ -12,7 +13,7 @@ interface Props {
   onGoCapture: () => void
 }
 
-type Game = null | 'quiz' | 'battle' | 'battle2' | 'story' | 'race'
+type Game = null | 'quiz' | 'battle' | 'battle2' | 'story' | 'race' | 'net'
 
 // 「あそぶ」ページ。クイズと バトルの ゲームをえらべる。
 export function PlayPage({ bugs, onGoCapture }: Props) {
@@ -121,6 +122,27 @@ export function PlayPage({ bugs, onGoCapture }: Props) {
     )
   }
 
+  if (game === 'net') {
+    return (
+      <div className="page play">
+        <button
+          className="btn btn-ghost play-back"
+          onClick={() => {
+            sfx.tap()
+            setGame(null)
+          }}
+        >
+          ← あそぶ に もどる
+        </button>
+        <header className="page-head">
+          <h1>📡 つうしんバトル</h1>
+          <p className="sub">べつの端末の 相手と、育てた虫で たいせん！</p>
+        </header>
+        <NetBattlePage bugs={bugs} />
+      </div>
+    )
+  }
+
   return (
     <div className="page play">
       <header className="page-head">
@@ -188,6 +210,19 @@ export function PlayPage({ bugs, onGoCapture }: Props) {
           <span className="game-emoji">🏁</span>
           <span className="game-title">レース</span>
           <span className="game-desc">虫たちで かけっこ！ だれが 1いかな</span>
+        </button>
+        <button
+          className="game-card battle"
+          onClick={() => {
+            sfx.tap()
+            setGame('net')
+          }}
+        >
+          <span className="game-emoji">📡</span>
+          <span className="game-title">つうしんバトル</span>
+          <span className="game-desc">
+            べつの端末の 相手と、そだてた虫で たいせん！
+          </span>
         </button>
       </div>
     </div>

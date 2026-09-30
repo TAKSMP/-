@@ -33,7 +33,7 @@ import { markMovesSeen } from '../lib/moveDex'
 // -------------------------------------------------------------
 //  たいりょくゲージ
 // -------------------------------------------------------------
-function HpBar({ f }: { f: Fighter }) {
+export function HpBar({ f }: { f: Fighter }) {
   const pct = Math.max(0, Math.round((f.hp / f.maxHp) * 100))
   const low = f.hp <= f.maxHp * 0.3
   return (
@@ -114,7 +114,7 @@ function soundKind(m: SpecialMoveV2): string {
 // -------------------------------------------------------------
 //  1ぴきぶんの ひょうじ（しゃしん＋なまえ＋HP＋バッジ）
 // -------------------------------------------------------------
-function FighterSlot({
+export function FighterSlot({
   f,
   big,
   hurt,
