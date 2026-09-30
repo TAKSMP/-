@@ -7,9 +7,9 @@
 //  ・field の けいさんは 部屋を つくった がわ（ホスト）だけが する
 // =============================================================
 import { useEffect, useRef, useState } from 'react'
-import type { CaughtBug } from '../types'
+import type { CaughtBug, SpecialMoveV2 } from '../types'
 import { mainPhoto } from '../lib/storage'
-import { levelOf, loadStory, statsWithLevel, type StorySave } from '../lib/story'
+import { levelOf, loadStory, movesOf, statsWithLevel, type StorySave } from '../lib/story'
 import { BugPicker } from '../components/BugPicker'
 import { NetBattleStage } from '../components/NetBattleStage'
 import {
@@ -55,7 +55,9 @@ type Phase =
   | 'joinEnter'
   | 'battle'
 
-function bugCard(save: StorySave, b: CaughtBug) {
+const moveLabel = (m: SpecialMoveV2) => (m.kind === 'attack' ? `いりょく${m.power}` : 'へんかわざ')
+
+function bugCard(save: StorySave, b: CaughtBug, onViewMoves: (b: CaughtBug) => void) {
   const lv = levelOf(save, b.id)
   const s = statsWithLevel(b, lv.level)
   return (
@@ -66,6 +68,17 @@ function bugCard(save: StorySave, b: CaughtBug) {
       <span className="story-bug-stats">
         ❤️{s.hp} ⚔️{s.attack} 🛡️{s.defense} ⚡{s.speed}
       </span>
+      <button
+        type="button"
+        className="btn btn-ghost story-bug-moves-btn"
+        onClick={(e) => {
+          e.stopPropagation()
+          sfx.tap()
+          onViewMoves(b)
+        }}
+      >
+        📜 わざを みる
+      </button>
     </div>
   )
 }
@@ -81,6 +94,8 @@ export function NetBattlePage({ bugs }: Props) {
   const [role, setRole] = useState<Role | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // 虫えらび画面で「わざをみる」を おした とき
+  const [movesViewBug, setMovesViewBug] = useState<CaughtBug | null>(null)
   const unsubRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
@@ -180,12 +195,37 @@ export function NetBattlePage({ bugs }: Props) {
     return <NetBattleStage code={code} role={role} onQuit={backToMenu} />
   }
 
+  const movesViewModal = movesViewBug && (
+    <div className="modal-backdrop" onClick={() => setMovesViewBug(null)}>
+      <div className="modal story-learn" onClick={(e) => e.stopPropagation()}>
+        <button className="modal-close" onClick={() => setMovesViewBug(null)} aria-label="とじる">
+          ✕
+        </button>
+        <h3>{movesViewBug.name}の わざ</h3>
+        <div className="story-learn-list">
+          {movesOf(save, movesViewBug, levelOf(save, movesViewBug.id).level).map((m, i) => (
+            <div key={m.id + i} className="story-learn-old story-learn-old-view">
+              <span className="story-learn-old-name">
+                {m.emoji ?? '✨'} {m.name}
+              </span>
+              <span className="story-learn-old-sub">
+                {moveLabel(m)}／{m.uses}かい つかえる
+              </span>
+              <p className="story-learn-desc">{m.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+
   if (phase === 'pickBug') {
     return (
       <div className="story">
         <h2 className="battle-step-title">① もっていく虫を えらぼう</h2>
         <p className="story-lead">ストーリーモードで そだてた虫の中から、1ぴき えらんでね。</p>
-        <BugPicker bugs={bugs} onPick={pickBug} renderCard={(b) => bugCard(save, b)} />
+        <BugPicker bugs={bugs} onPick={pickBug} renderCard={(b) => bugCard(save, b, setMovesViewBug)} />
+        {movesViewModal}
       </div>
     )
   }
@@ -229,8 +269,9 @@ export function NetBattlePage({ bugs }: Props) {
         <BugPicker
           bugs={bugs.filter((b) => b.id !== myBug?.id)}
           onPick={pickAlly}
-          renderCard={(b) => bugCard(save, b)}
+          renderCard={(b) => bugCard(save, b, setMovesViewBug)}
         />
+        {movesViewModal}
         <button className="btn btn-ghost battle-back" onClick={() => setPhase('askAlly')}>
           ← もどる
         </button>
