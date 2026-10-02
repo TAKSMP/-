@@ -11,6 +11,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { SpecialMoveV2 } from '../types'
 import { type Command, type Field, type Fighter, type Side } from '../lib/battleEngine'
 import {
+  BUILD_ID,
   hydrateField,
   leaveRoom,
   resolveIfReady,
@@ -211,6 +212,8 @@ export function NetBattleStage({ code, role, onQuit }: Props) {
   const iWon = over && liteField.winner === mySide
   const cur = !fieldOver ? nextActor(shown, mySide, cmds) : undefined
   const waiting = !fieldOver && !cur
+  const opponentBuild = (role === 'host' ? room.guest : room.host).build
+  const buildMismatch = opponentBuild !== BUILD_ID
   const shownTurn = playback ? liteField.turnCount - 1 : liteField.turnCount
 
   // つぎの 1行へ（がめんを タップ）。さいごまで 見たら おわり
@@ -299,6 +302,11 @@ export function NetBattleStage({ code, role, onQuit }: Props) {
       </div>
 
       <div className="stage-bottom">
+        {buildMismatch && (
+          <p className="net-battle-warn">
+            ⚠️ あいての アプリの ばんが ちがうよ。りょうほうの ページを 読みこみなおしてね。
+          </p>
+        )}
         <div
           className={'stage-log net-battle-log' + (playback ? ' tappable' : '')}
           onClick={playback ? advanceStep : undefined}

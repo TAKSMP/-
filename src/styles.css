@@ -3796,6 +3796,22 @@ input:focus {
   padding: 14px 24px;
   color: var(--ink);
 }
+.net-battle-warn {
+  margin: 0 0 6px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: #fff3c4;
+  color: #7a4b00;
+  font-size: 12px;
+  font-weight: bold;
+  text-align: center;
+}
+.net-battle-build {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: #7a8a6a;
+  text-align: center;
+}
 .net-battle-log {
   min-height: 60px;
 }

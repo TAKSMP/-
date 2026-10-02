@@ -13,6 +13,7 @@ import { levelOf, loadStory, movesOf, statsWithLevel, type StorySave } from '../
 import { BugPicker } from '../components/BugPicker'
 import { NetBattleStage } from '../components/NetBattleStage'
 import {
+  BUILD_ID,
   buildSnapshot,
   createRoom,
   joinRoom,
@@ -323,6 +324,7 @@ export function NetBattlePage({ bugs }: Props) {
           </button>
         </div>
         {error && <p className="story-notice">{error}</p>}
+        <p className="net-battle-build">アプリの ばん: {BUILD_ID}</p>
         <button className="btn btn-ghost battle-back" onClick={() => setPhase('name')}>
           ← もどる
         </button>

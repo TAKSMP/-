@@ -85,10 +85,14 @@ export interface LiteField {
 
 export type Role = 'host' | 'guest'
 
+// このアプリの ばんごう（あいてと ばんが ちがうと 演出などが そろわないので けいこくに つかう）
+export const BUILD_ID: string = __BUILD_ID__
+
 export interface RoomSide {
   uid: string
   name: string
   team: Team
+  build?: string // ふるい ばんの アプリが つくった 部屋には ない
 }
 
 export interface RoomState {
@@ -212,7 +216,7 @@ export async function createRoom(name: string, team: Team): Promise<string> {
   const state: RoomState = {
     createdAt: Date.now(),
     status: 'waiting',
-    host: { uid: user.uid, name, team },
+    host: { uid: user.uid, name, team, build: BUILD_ID },
   }
   await set(roomRef(code), state)
   onDisconnect(roomRef(code)).remove()
@@ -226,7 +230,7 @@ export async function joinRoom(code: string, name: string, team: Team): Promise<
   if (!snap.exists()) throw new Error('その コードの 部屋が 見つかりません。')
   const state = snap.val() as RoomState
   if (state.guest) throw new Error('その 部屋には もう 2人 そろっています。')
-  const guest: RoomSide = { uid: user.uid, name, team }
+  const guest: RoomSide = { uid: user.uid, name, team, build: BUILD_ID }
   // さいしょの field は 乱数を つかわない ので、ここで つくって そのまま 書きこんで OK
   const initialField = toLiteField(buildInitialField(state.host.team, team))
   await update(roomRef(code), { guest, status: 'battling', field: initialField })
