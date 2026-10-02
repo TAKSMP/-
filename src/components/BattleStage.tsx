@@ -55,7 +55,7 @@ export function HpBar({ f }: { f: Fighter }) {
 //  えんしゅつの ための ちいさな しくみ
 // -------------------------------------------------------------
 // ログ1行から「だれを どう うごかすか」を よみとる
-interface Cue {
+export interface Cue {
   hurt?: string
   glow?: string
   rank?: { uid: string; up: boolean }
@@ -65,8 +65,9 @@ interface Cue {
   moveName?: string
 }
 
-function cueFor(line: string, fighters: Fighter[]): Cue {
-  const find = (test: (f: Fighter) => boolean) => fighters.find(test)?.uid
+export function cueFor(line: string, fighters: Pick<Fighter, 'uid' | 'name'>[]): Cue {
+  const find = (test: (f: Pick<Fighter, 'uid' | 'name'>) => boolean) =>
+    fighters.find(test)?.uid
   const cue: Cue = {}
 
   const damaged =
@@ -109,6 +110,27 @@ function soundKind(m: SpecialMoveV2): string {
   }
   if (m.power >= 80) return 'powerStrike'
   return 'other'
+}
+
+// ログ1行の「きっかけ」に あわせて 音を ならす（わざリストにも きろく）
+export function playCueSound(cue: Cue, moveMap: Map<string, SpecialMoveV2>): void {
+  if (cue.moveName) {
+    const m = moveMap.get(cue.moveName)
+    // つかわれた わざを わざリストに きろく
+    if (m) markMovesSeen([m.id])
+    sfx.special(m ? soundKind(m) : 'other')
+  } else if (cue.dodge) {
+    sfx.dodge()
+  } else if (cue.faint) {
+    sfx.error()
+  } else if (cue.heal) {
+    sfx.special('heal')
+  } else if (cue.hurt) {
+    sfx.hit()
+  } else if (cue.rank) {
+    if (cue.rank.up) sfx.special('attackUp')
+    else sfx.dodge()
+  }
 }
 
 // -------------------------------------------------------------
@@ -396,23 +418,7 @@ export function BattleStage({
     setHurtUid(cue.hurt ?? null)
     setRankPop(cue.rank ?? null)
 
-    if (cue.moveName) {
-      const m = moveMapRef.current.get(cue.moveName)
-      // つかわれた わざを わざリストに きろく
-      if (m) markMovesSeen([m.id])
-      sfx.special(m ? soundKind(m) : 'other')
-    } else if (cue.dodge) {
-      sfx.dodge()
-    } else if (cue.faint) {
-      sfx.error()
-    } else if (cue.heal) {
-      sfx.special('heal')
-    } else if (cue.hurt) {
-      sfx.hit()
-    } else if (cue.rank) {
-      if (cue.rank.up) sfx.special('attackUp')
-      else sfx.dodge()
-    }
+    playCueSound(cue, moveMapRef.current)
 
     setVisibleLog((prev) => [...prev, step.line])
   }

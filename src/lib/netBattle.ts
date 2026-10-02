@@ -22,6 +22,7 @@ import {
   type Command,
   type Field,
   type Fighter,
+  type StatusState,
 } from './battleEngine'
 import type { CaughtBug, SpecialMoveV2 } from '../types'
 import { levelOf, movesOf, statsWithLevel, type StorySave } from './story'
@@ -57,12 +58,29 @@ export function buildSnapshot(bug: CaughtBug, save: StorySave): BugSnapshot {
 
 // ネットに のせる ための、かるい Fighter（しゃしん・図鑑データは のぞく）
 export type LiteFighter = Omit<Fighter, 'bug' | 'photo'>
+
+// ログ1行ごとの「そのときの すがた」。1行ずつ アニメーションを 見せる ために、
+// 見た目に かかわる ものだけに しぼって 送る（わざ一覧などは ふくめない）。
+export interface LiteStepFighter {
+  uid: string
+  hp: number
+  fainted: boolean
+  statuses: StatusState[]
+  rank: Fighter['rank']
+  charging: { hidden: boolean } | null
+}
+export interface LiteStep {
+  line: string
+  fighters: LiteStepFighter[]
+}
+
 export interface LiteField {
   fighters: LiteFighter[]
   turnCount: number
   over: boolean
   winner: Field['winner']
   log: string[] // その ターンの ログだけ（るいせきしない）
+  steps: LiteStep[] // log と おなじ ながさ。1行ごとの すがた（さいせい用）
 }
 
 export type Role = 'host' | 'guest'
@@ -111,6 +129,17 @@ export function toLiteField(f: Field): LiteField {
     over: f.over,
     winner: f.winner,
     log: f.log,
+    steps: f.steps.map((s) => ({
+      line: s.line,
+      fighters: s.fighters.map((x) => ({
+        uid: x.uid,
+        hp: x.hp,
+        fainted: x.fainted,
+        statuses: x.statuses,
+        rank: x.rank,
+        charging: x.charging ? { hidden: x.charging.hidden } : null,
+      })),
+    })),
   })
 }
 
