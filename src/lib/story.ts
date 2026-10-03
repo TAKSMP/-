@@ -8,7 +8,7 @@
 // =============================================================
 import type { CaughtBug, SpecialMoveV2 } from '../types'
 import { battleStatsV2, tagsOf, usesFor } from './battleSetup'
-import { MOVE_LIBRARY } from './moveLibrary'
+import { MOVE_LIBRARY, ULTIMATE_MOVES } from './moveLibrary'
 import { assignEncounters } from '../data/encounters'
 import { TONE_COUNT } from '../components/ParkScene'
 
@@ -159,8 +159,11 @@ export function buildStage(bugs: CaughtBug[], place: string): StoryStage {
 //  ・絵は 10まいを「ひるま／ゆうぐれ／よる」で つかいまわす
 export const QUEST_MAPS = 30
 export const QUEST_PER_MAP = 5
-// てきは プレイヤーの さいだいレベルより すこし うえまで あがる
+// 10マップモードの てきは さいごに Lv25 まで あがる
 export const ENEMY_MAX_LEVEL = 25
+// 10マップモードで ステージごとに 1ずつ レベルが あがる はんい（ステージ1〜20）。
+// むかしは MAX_LEVEL（=20）を つかっていたが、MAX_LEVEL を 100 に した ので べつに もつ
+const QUEST_LEVEL_STEPS = 20
 // ステージ21〜：なかまも おなじレベル、さいきょうクラスの虫が つれてこられる
 const LATE_FROM = 20
 const FINAL_FROM = 25
@@ -174,12 +177,12 @@ function questLevel(slot: number): number {
   // ステージ1〜20：1ずつ あがる
   // ステージ21〜30：ゆっくり あがって さいごは 25
   const base =
-    index < MAX_LEVEL
+    index < QUEST_LEVEL_STEPS
       ? 1 + index
-      : MAX_LEVEL +
+      : QUEST_LEVEL_STEPS +
         Math.round(
-          ((index - (MAX_LEVEL - 1)) * (ENEMY_MAX_LEVEL - MAX_LEVEL)) /
-            (QUEST_MAPS - MAX_LEVEL),
+          ((index - (QUEST_LEVEL_STEPS - 1)) * (ENEMY_MAX_LEVEL - QUEST_LEVEL_STEPS)) /
+            (QUEST_MAPS - QUEST_LEVEL_STEPS),
         )
   return Math.min(ENEMY_MAX_LEVEL, base + boss)
 }
@@ -287,11 +290,15 @@ export function questUnlocked(save: StorySave, index: number): boolean {
 // -------------------------------------------------------------
 //  レベルと けいけんち
 // -------------------------------------------------------------
-export const MAX_LEVEL = 20
+export const MAX_LEVEL = 100
 
-// つぎの レベルまでに ひつような けいけんち
+// Lv20 までは これまで どおりの のびかた。Lv21 から さきは のびかたを かえる
+const EARLY_LEVEL = 20
+
+// つぎの レベルまでに ひつような けいけんち。
+// Lv20 から さきは ずっと おなじ（305）に して、Lv100 まで とどく ように している
 export function expToNext(level: number): number {
-  return 20 + (level - 1) * 15
+  return 20 + (Math.min(level, EARLY_LEVEL) - 1) * 15
 }
 
 // 敵を たおした ときに もらえる けいけんち
@@ -387,15 +394,21 @@ export function addExp(
 }
 
 // レベルぶんの つよさを ステータスに たす
+// Lv1〜20 は これまでと まったく おなじ。Lv21〜100 は まいレベル なにかが あがりつづける：
+//   たいりょく ＋1／レベル、こうげき ＋1／2レベル、すばやさ ＋1／3レベル、ぼうぎょ ＋1／4レベル
+// ぼうぎょと たいりょくの のびを こうげきより ゆっくり に して、
+// おなじ レベルどうしの バトルの ながさが Lv20 の ときと だいたい おなじに なる ように している
+// （ぜんぶ おなじ はやさで のばすと ダメージが ふえず、HPだけ ふえて おわらなく なる）。
 export function statsWithLevel(bug: CaughtBug, level: number) {
   const s = battleStatsV2(bug)
-  const up = level - 1
+  const up = Math.max(0, level - 1)
+  const early = Math.min(up, EARLY_LEVEL - 1)
+  const late = up - early
   return {
     ...s,
-    // うわげんは ひろめに とる。ここが せまいと レベル20と25で さが 出ない。
-    hp: Math.min(110, s.hp + up * 4),
+    hp: Math.min(110, s.hp + early * 4) + late,
     attack: Math.min(99, s.attack + Math.floor(up / 2)),
-    defense: Math.min(99, s.defense + Math.floor(up / 2)),
+    defense: Math.min(99, s.defense + Math.floor(early / 2) + Math.floor(late / 4)),
     speed: Math.min(99, s.speed + Math.floor(up / 3)),
   }
 }
@@ -569,6 +582,45 @@ export function newMoveFor(
     .sort((a, b) => b.s - a.s)
   const pick = scored[0].m
   return { ...pick, uses: usesFor(pick) }
+}
+
+// -------------------------------------------------------------
+//  さいきょうひっさつわざ（Lv30／40／50 で 1つずつ）
+// -------------------------------------------------------------
+export type UltimateGroup = 'attack' | 'status' | 'heal'
+
+export const ULTIMATE_LEVELS: { level: number; group: UltimateGroup }[] = [
+  { level: 30, group: 'attack' },
+  { level: 40, group: 'status' },
+  { level: 50, group: 'heal' },
+]
+
+// before → after の あいだで とおりすぎた さいきょうわざの レベル
+export function ultimateLevelsCrossed(
+  before: number,
+  after: number,
+): { level: number; group: UltimateGroup }[] {
+  return ULTIMATE_LEVELS.filter((u) => u.level > before && u.level <= after)
+}
+
+// その虫に にあう、まだ もっていない さいきょうわざを 1つ えらぶ（虫ごとに いつも おなじ）
+export function ultimateMoveFor(
+  bug: CaughtBug,
+  group: UltimateGroup,
+  known: SpecialMoveV2[],
+): SpecialMoveV2 | null {
+  const knownIds = new Set(known.map((m) => m.id))
+  const pool = ULTIMATE_MOVES.filter((m) => m.ultimate === group && !knownIds.has(m.id))
+  if (pool.length === 0) return null
+  const tags = tagsOf(bug)
+  const seed = hashStr(`${bug.id}/ult/${group}`)
+  const pick = pool
+    .map((m, i) => ({
+      m,
+      s: m.tags.filter((t) => tags.includes(t)).length * 100 + ((seed >>> (i % 8)) % 37),
+    }))
+    .sort((a, b) => b.s - a.s)[0].m
+  return { ...pick }
 }
 
 // しゃしんを あかす（一度 出会った マス）

@@ -45,6 +45,8 @@ import {
   movesOf,
   newMoveFor,
   questId,
+  ultimateLevelsCrossed,
+  ultimateMoveFor,
   questUnlocked,
   QUEST_MAPS,
   QUEST_PER_MAP,
@@ -130,8 +132,10 @@ function celebrationsFor(
       },
     },
   ]
+  // Lv30／40／50 を こえたら さいきょうわざ。その レベルの ふつうの わざ おぼえは かわりに しない
+  const ultimates = ultimateLevelsCrossed(res.before.level, res.after.level)
   const learnLv = learnLevelCrossed(res.before.level, res.after.level)
-  if (learnLv !== null) {
+  if (learnLv !== null && !ultimates.some((u) => u.level === learnLv)) {
     const all = allMovesOf(saveAfter, bug)
     const before = moveSlots(res.before.level)
     const after = moveSlots(res.after.level)
@@ -149,6 +153,24 @@ function celebrationsFor(
         },
       })
     }
+  }
+  for (const u of ultimates) {
+    const all = allMovesOf(saveAfter, bug)
+    const nm = ultimateMoveFor(bug, u.group, all)
+    if (!nm) continue
+    const slots = moveSlots(res.after.level)
+    out.push({
+      kind: 'learn',
+      info: {
+        bugId: bug.id,
+        name: bug.name,
+        buddy,
+        move: nm,
+        current: all.slice(0, slots),
+        // わざが まだ 3つ そろって いない ときだけ、えらばずに ついか
+        forcedIndex: all.length < slots ? all.length : null,
+      },
+    })
   }
   return out
 }
@@ -725,7 +747,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   )
 
   const moveLabel = (m: SpecialMoveV2) =>
-    m.kind === 'attack' ? `いりょく${m.power}` : 'へんかわざ'
+    (m.ultimate ? '👑 ' : '') + (m.kind === 'attack' ? `いりょく${m.power}` : 'へんかわざ')
 
   const movesViewModal = movesViewBug && (
     <div className="modal-backdrop" onClick={() => setMovesViewBug(null)}>
@@ -758,16 +780,20 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   const learnModal = learn && (
     <div className="modal-backdrop">
       <div className="modal story-learn" onClick={(e) => e.stopPropagation()}>
-        <div className="story-levelup-emoji">✨</div>
+        <div className="story-levelup-emoji">{learn.move.ultimate ? '👑' : '✨'}</div>
         <h3>
           {learn.buddy && '🤝 '}
           {learn.name}は
           <br />
-          {learn.forcedIndex !== null
-            ? 'あたらしい わざを おぼえた！'
-            : 'あたらしい わざを おぼえられる！'}
+          {learn.move.ultimate
+            ? learn.forcedIndex !== null
+              ? 'さいきょう ひっさつわざを おぼえた！'
+              : 'さいきょう ひっさつわざを おぼえられる！'
+            : learn.forcedIndex !== null
+              ? 'あたらしい わざを おぼえた！'
+              : 'あたらしい わざを おぼえられる！'}
         </h3>
-        <div className="story-learn-new">
+        <div className={'story-learn-new' + (learn.move.ultimate ? ' ultimate' : '')}>
           <span className="story-learn-emoji">{learn.move.emoji ?? '✨'}</span>
           <span className="story-learn-name">{learn.move.name}</span>
           <span className="story-learn-sub">
@@ -933,6 +959,49 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   )
 
   // ① 虫えらび（ずかんと おなじ もくじ）
+  // かった あとの けいけんちバー（つるせ・10マップ・みつけたばしょ どれでも 出す。
+  // ここを とおらないと レベルアップや わざを おぼえる がめんも 出ない）
+  const victoryModal = victory && (
+    <div
+      className="modal-backdrop"
+      onClick={() => (victoryPlaying ? skipVictory() : playVictory())}
+    >
+      <div className="modal story-victory" onClick={(e) => e.stopPropagation()}>
+        <div className="story-levelup-emoji">{victory.turns !== undefined ? '🏆' : '🍬'}</div>
+        <h3>{victory.turns !== undefined ? 'かった！' : 'あめの ちからで レベルアップ！'}</h3>
+        {victory.turns !== undefined && (
+          <p className="battle-result-sub">{victory.turns}ターンで かちました</p>
+        )}
+        {victory.bars.map((bar) => {
+          const done = victorySeg >= bar.segments.length
+          const seg = bar.segments[Math.min(victorySeg, bar.segments.length - 1)]
+          const lastSeg = bar.segments[bar.segments.length - 1]
+          const finalLevel = lastSeg.to >= lastSeg.need ? lastSeg.level + 1 : lastSeg.level
+          const level = done ? finalLevel : seg.level
+          const pct = done
+            ? (lastSeg.to >= lastSeg.need ? 0 : (lastSeg.to / lastSeg.need) * 100)
+            : ((victoryFilled ? seg.to : seg.from) / seg.need) * 100
+          return (
+            <div key={bar.bugId} className="story-victory-bar">
+              <img src={bar.photo} alt={bar.name} />
+              <div className="story-victory-bar-body">
+                <span className="story-hud-name">
+                  {bar.name} {bar.buddy && '🤝'} <b>Lv {level}</b>
+                </span>
+                <span className="story-exp">
+                  <span className="story-exp-fill" style={{ width: `${pct}%` }} />
+                </span>
+              </div>
+            </div>
+          )
+        })}
+        <p className="story-victory-hint">
+          {victoryPlaying ? 'タップで はやおくり ▶️' : 'タップして けいけんちを うけとる 👉'}
+        </p>
+      </div>
+    </div>
+  )
+
   if (phase === 'pickBug') {
     return (
       <div className="story">
@@ -1264,46 +1333,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
             </div>
           </div>
         )}
-        {victory && (
-          <div
-            className="modal-backdrop"
-            onClick={() => (victoryPlaying ? skipVictory() : playVictory())}
-          >
-            <div className="modal story-victory" onClick={(e) => e.stopPropagation()}>
-              <div className="story-levelup-emoji">{victory.turns !== undefined ? '🏆' : '🍬'}</div>
-              <h3>{victory.turns !== undefined ? 'かった！' : 'あめの ちからで レベルアップ！'}</h3>
-              {victory.turns !== undefined && (
-                <p className="battle-result-sub">{victory.turns}ターンで かちました</p>
-              )}
-              {victory.bars.map((bar) => {
-                const done = victorySeg >= bar.segments.length
-                const seg = bar.segments[Math.min(victorySeg, bar.segments.length - 1)]
-                const lastSeg = bar.segments[bar.segments.length - 1]
-                const finalLevel = lastSeg.to >= lastSeg.need ? lastSeg.level + 1 : lastSeg.level
-                const level = done ? finalLevel : seg.level
-                const pct = done
-                  ? (lastSeg.to >= lastSeg.need ? 0 : (lastSeg.to / lastSeg.need) * 100)
-                  : ((victoryFilled ? seg.to : seg.from) / seg.need) * 100
-                return (
-                  <div key={bar.bugId} className="story-victory-bar">
-                    <img src={bar.photo} alt={bar.name} />
-                    <div className="story-victory-bar-body">
-                      <span className="story-hud-name">
-                        {bar.name} {bar.buddy && '🤝'} <b>Lv {level}</b>
-                      </span>
-                      <span className="story-exp">
-                        <span className="story-exp-fill" style={{ width: `${pct}%` }} />
-                      </span>
-                    </div>
-                  </div>
-                )
-              })}
-              <p className="story-victory-hint">
-                {victoryPlaying ? 'タップで はやおくり ▶️' : 'タップして けいけんちを うけとる 👉'}
-              </p>
-            </div>
-          </div>
-        )}
+        {victoryModal}
         {fieldStatOpen && myBug && (() => {
           const s = statsWithLevel(myBug, myLevel.level)
           return (
@@ -1726,6 +1756,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
         {learnModal}
         {recruitModal}
         {cageModal}
+        {victoryModal}
       </div>
     )
   }

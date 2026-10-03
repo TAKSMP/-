@@ -4599,6 +4599,12 @@ input:focus {
   animation: enc-pop 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.4);
 }
 .story-learn-emoji { display: block; font-size: 30px; line-height: 1; }
+/* さいきょうひっさつわざを おぼえる とき */
+.story-learn-new.ultimate {
+  background: linear-gradient(135deg, #fff3c4, #ffe0f0 55%, #e3e8ff);
+  border-color: #f0a500;
+  box-shadow: 0 0 0 3px rgba(240, 165, 0, 0.25), 0 6px 18px rgba(240, 165, 0, 0.35);
+}
 .story-learn-name { display: block; font-weight: 900; font-size: 16px; margin-top: 2px; }
 .story-learn-sub { display: block; font-size: 11px; font-weight: 800; opacity: 0.75; }
 .story-learn-desc { margin: 6px 0 0; font-size: 12px; font-weight: 700; line-height: 1.6; }
@@ -4992,6 +4998,8 @@ input:focus {
 }
 .movedex-tabs {
   margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 .movedex-tabs .chip {
   font-size: 11px;

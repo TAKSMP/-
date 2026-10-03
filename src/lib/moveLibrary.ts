@@ -62,6 +62,7 @@ export type MovePatternKey = (typeof MOVE_PATTERNS)[number]['key']
 export interface LibraryMove extends SpecialMoveV2 {
   pattern: MovePatternKey
   tags: string[] // どんな虫に にあうか（かま・つの・どく…）
+  typeLabel?: string // わざリストの「タイプ」らん（さいきょうわざは パターンの くみあわせ なので じぶんで かく）
 }
 
 // みじかく かくための ヘルパー
@@ -295,8 +296,56 @@ export const MOVE_LIBRARY: LibraryMove[] = [
   mv({ id: 'p15', pattern: 'cureParalysis', name: 'しびれぬきマッサージ', desc: 'からだを マッサージして しびれを とる。まひだけ なおす。じぶんにも つかえる。', emoji: '💆', power: 0, target: 'ally', accuracy: null, cureStatusKey: 'paralysis', tags: ['あし'] }),
 ]
 
+// -------------------------------------------------------------
+//  さいきょうひっさつわざ（Lv30＝こうげき／Lv40＝へんか／Lv50＝かいふく で おぼえる）
+// -------------------------------------------------------------
+//  でんせつの ポケモンや、たかい レベルで しか おぼえない わざを めやすに した。
+//  ・ふつうの わざリスト（MOVE_LIBRARY）とは べつ。レベルアップで ランダムに 出ることは ない
+//  ・つかえる かいすうは きほん 1かい（すこしだけ 2かい）
+//  ・こうか は エンジンに ある しくみの くみあわせ だけで つくっている
+type UltInput = MvInput & Pick<LibraryMove, 'typeLabel'> & { ultimate: 'attack' | 'status' | 'heal' }
+const ult = (m: UltInput): LibraryMove => mv({ uses: 1, accuracy: null, ...m })
+
+export const ULTIMATE_MOVES: LibraryMove[] = [
+  // ===== こうげきタイプ（Lv30）=====
+  ult({ ultimate: 'attack', id: 'u01', pattern: 'recharge', name: 'じくうのほうこう', desc: 'じかんを ゆがめる だいほうこう！ つぎの ターンは うごけない。', emoji: '🌀', power: 220, rechargeTurns: 1, accuracy: 90, typeLabel: 'すごい いちげき＋つぎの ターン うごけない', tags: ['おおきい', 'ちから', 'おと'] }),
+  ult({ ultimate: 'attack', id: 'u02', pattern: 'highCrit', name: 'くうかんさいだん', desc: 'くうかんごと まっぷたつに きりさく。きゅうしょに あたりやすい。', emoji: '🌌', power: 130, critStage: 2, accuracy: 95, typeLabel: 'きゅうしょに あたりやすい いちげき', tags: ['かま', 'するどい', 'カマキリ目'] }),
+  ult({ ultimate: 'attack', id: 'u03', pattern: 'hideCharge', name: 'かげのせかいダイブ', desc: 'かげの せかいに きえて こうげきを かわし、つぎの ターンに かならず あてる。', emoji: '🌑', power: 150, chargeTurns: 1, hideWhileCharging: true, typeLabel: 'すがたを けして つぎに かならず あたる', tags: ['もぐる', 'かくれる', 'ぎたい'] }),
+  ult({ ultimate: 'attack', id: 'u04', pattern: 'charge', name: 'てんくうのゴッドアタック', desc: 'そらたかく ちからを ためて、つぎの ターンに きゅうこうか。きゅうしょに あたりやすい。', emoji: '🦅', power: 160, chargeTurns: 1, critStage: 2, accuracy: 90, typeLabel: 'ためて つぎに こうげき＋きゅうしょに あたりやすい', tags: ['はね', 'とぶ', 'トンボ目'] }),
+  ult({ ultimate: 'attack', id: 'u05', pattern: 'spread', name: 'だいちのつるぎ', desc: 'じめんから いわの つるぎを つきだして、あいて ぜんいんを こうげき。', emoji: '⛰️', power: 130, target: 'allFoes', accuracy: 85, typeLabel: 'あいて ぜんいんに だいダメージ', tags: ['あし', 'もぐる', 'おおきい'] }),
+  ult({ ultimate: 'attack', id: 'u06', pattern: 'bigHit', name: 'ほのおのVクラッシュ', desc: 'もえる つので Vの じに つっこむ。つかうと じぶんの ぼうぎょと すばやさが さがる。', emoji: '🔥', power: 200, accuracy: 95, statChanges: [{ to: 'self', stat: 'defense', stage: -1, chance: 1 }, { to: 'self', stat: 'speed', stage: -1, chance: 1 }], typeLabel: 'もうれつな いちげき＋じぶんの のうりょくが さがる', tags: ['つの', 'ちから', 'コウチュウ目'] }),
+  ult({ ultimate: 'attack', id: 'u07', pattern: 'bigHit', name: 'せいなるいかずち', desc: 'かみなりの ちからを まとって たいあたり。はんぶんの かくりつで あいてを まひさせる。', emoji: '⚡', power: 120, accuracy: 90, inflict: { status: 'paralysis', chance: 0.5 }, typeLabel: 'つよい こうげき＋まひ（50％）', tags: ['ひかる', 'はね', 'ホタル'] }),
+  ult({ ultimate: 'attack', id: 'u08', pattern: 'alwaysCrit', name: 'むそうれんだ', desc: 'かならず 3かい、かならず きゅうしょに あたる れんぞく こうげき。', emoji: '👊', power: 30, hits: [3, 3], critStage: 9, uses: 2, typeLabel: 'かならず 3かい・かならず きゅうしょ', tags: ['あし', 'ちから', 'バッタ目'] }),
+  ult({ ultimate: 'attack', id: 'u09', pattern: 'delayed', name: 'はめつのながれぼし', desc: 'ほしに ねがいを かけると、2ターンご に ながれぼしが あいてに おちる。ぼうぎょを むしする。', emoji: '🌠', power: 110, delayTurns: 2, typeLabel: '2ターンごに ぼうぎょを むしして あたる', tags: ['ひかる', 'め', 'いと'] }),
+  ult({ ultimate: 'attack', id: 'u10', pattern: 'sureHit', name: 'しんそくのはばたき', desc: 'めにも とまらぬ はやさで かならず さきに こうげき。かならず あたる。', emoji: '💨', power: 100, priority: 2, uses: 2, typeLabel: 'かならず さきに うごく・かならず あたる', tags: ['はね', 'とぶ', 'ハエ目'] }),
+
+  // ===== へんかタイプ（Lv40）=====
+  ult({ ultimate: 'status', id: 'u11', pattern: 'selfUpMulti', name: 'でんせつのちょうのまい', desc: 'まぼろしの まいを おどって、こうげき・ぼうぎょ・すばやさが あがる。', emoji: '🦋', power: 0, uses: 2, statChanges: [up('attack', 1), up('defense', 1), up('speed', 1)], typeLabel: 'こうげき・ぼうぎょ・すばやさが あがる', tags: ['はね', 'りんぷん', 'チョウ目'] }),
+  ult({ ultimate: 'status', id: 'u12', pattern: 'selfUpMulti', name: 'からやぶりのかくせい', desc: 'かたい からを やぶって めざめる。こうげきと すばやさが ぐーんと あがるが、ぼうぎょは さがる。', emoji: '🐚', power: 0, statChanges: [up('attack', 2), up('speed', 2), up('defense', -1)], typeLabel: 'こうげき・すばやさが ぐーんと あがる（ぼうぎょ ダウン）', tags: ['かたい', 'こうら', 'だっぴ'] }),
+  ult({ ultimate: 'status', id: 'u13', pattern: 'selfUp', name: 'いのちのだいこ', desc: 'HPを 3わり はらって こうげきが さいだいまで あがる。HPが すくないと たおれちゃう！', emoji: '🥁', power: 0, hpCostRatio: 0.3, statChanges: [up('attack', 6)], typeLabel: 'HPを はらって こうげき さいだい', tags: ['ちから', 'おおきい'] }),
+  ult({ ultimate: 'status', id: 'u14', pattern: 'sleep', name: 'あくむのねむりごな', desc: 'あくむを みせる こなを まいて、あいて ぜんいんを ねむらせる。', emoji: '🌙', power: 0, target: 'allFoes', accuracy: 80, inflict: { status: 'sleep', chance: 1 }, typeLabel: 'あいて ぜんいんを ねむらせる', tags: ['りんぷん', 'チョウ目', 'みつ'] }),
+  ult({ ultimate: 'status', id: 'u15', pattern: 'selfUpMulti', name: 'こんごうのよろい', desc: 'ダイヤモンドの ように からだを かためる。ぼうぎょと かいひりつが あがる。', emoji: '💎', power: 0, uses: 2, statChanges: [up('defense', 2), up('evasion', 1)], typeLabel: 'ぼうぎょ・かいひりつが あがる', tags: ['かたい', 'こうら', 'コウチュウ目'] }),
+  ult({ ultimate: 'status', id: 'u16', pattern: 'atkDown', name: 'ほろびのまなざし', desc: 'おそろしい めで にらみつけ、あいての こうげきと ぼうぎょを ぐーんと さげる。', emoji: '👁️', power: 0, target: 'oneFoe', statChanges: [down('attack', -2), down('defense', -2)], typeLabel: 'あいての こうげき・ぼうぎょを ぐーんと さげる', tags: ['め', 'いかく', 'カマキリ目'] }),
+  ult({ ultimate: 'status', id: 'u17', pattern: 'paralyze', name: 'かみなりのとどろき', desc: 'そらを ゆるがす かみなりで、あいて ぜんいんを まひさせる。', emoji: '⛈️', power: 0, target: 'allFoes', accuracy: 85, inflict: { status: 'paralysis', chance: 1 }, typeLabel: 'あいて ぜんいんを まひさせる', tags: ['ひかる', 'おと', 'とげ'] }),
+  ult({ ultimate: 'status', id: 'u18', pattern: 'poison', name: 'もうどくのきり', desc: 'もうどくの きりで つつみ、あいて ぜんいんを どくに して すばやさも さげる。', emoji: '☠️', power: 0, target: 'allFoes', accuracy: 90, inflict: { status: 'poison', chance: 1 }, statChanges: [down('speed', -1)], typeLabel: 'あいて ぜんいんを どく＋すばやさ ダウン', tags: ['どく', 'におい', 'カメムシ目'] }),
+  ult({ ultimate: 'status', id: 'u19', pattern: 'steal', name: 'しはいしゃのいげん', desc: 'おうさまの いげんで あいての ちからを うばい、じぶんの こうげきも あがる。', emoji: '👑', power: 0, target: 'oneFoe', stealStats: true, statChanges: [up('attack', 1)], typeLabel: 'あいての のうりょくを うばう＋こうげき アップ', tags: ['ずるい', 'め', 'ぎたい'] }),
+  ult({ ultimate: 'status', id: 'u20', pattern: 'selfUpMulti', name: 'てんくうのりゅうのまい', desc: 'そらを まう りゅうの ように おどって、こうげき・すばやさ・めいちゅうりつが あがる。', emoji: '🐉', power: 0, statChanges: [up('attack', 2), up('speed', 1), up('accuracy', 1)], typeLabel: 'こうげき・すばやさ・めいちゅうりつが あがる', tags: ['とぶ', 'トンボ目', 'はね'] }),
+
+  // ===== かいふくタイプ（Lv50）=====
+  ult({ ultimate: 'heal', id: 'u21', pattern: 'heal', name: 'いのちのさいせい', desc: 'からだを つくりなおして HPを たくさん かいふく。', emoji: '🧬', power: 0, uses: 2, healRatio: 0.75, typeLabel: 'HPを たくさん かいふく', tags: ['だっぴ', 'まゆ'] }),
+  ult({ ultimate: 'heal', id: 'u22', pattern: 'healAll', name: 'せいなるいずみ', desc: 'すみきった いずみの みずで、みかた ぜんいんの HPと じょうたいいじょうを なおす。', emoji: '⛲', power: 0, target: 'selfSide', healRatio: 0.5, cureStatus: true, typeLabel: 'みかた ぜんいんの HP＋じょうたいいじょう', tags: ['みず', 'トビケラ目'] }),
+  ult({ ultimate: 'heal', id: 'u23', pattern: 'regen', name: 'つきのめぐみ', desc: 'つきの ひかりを あびて すぐに かいふく。そのあとも まいターン たくさん かいふく。', emoji: '🌕', power: 0, healRatio: 0.25, regen: { ratio: 0.2, turns: 5 }, typeLabel: 'すぐ かいふく＋まいターン たくさん かいふく', tags: ['ひかる', 'ホタル'] }),
+  ult({ ultimate: 'heal', id: 'u24', pattern: 'drain', name: 'しのつばさ', desc: 'くらい つばさで こうげきして、あたえた ダメージの 4ぶんの3を かいふく。', emoji: '🦇', power: 90, accuracy: 95, drainRatio: 0.75, typeLabel: 'こうげきして たくさん きゅうしゅう', tags: ['はね', 'すう'] }),
+  ult({ ultimate: 'heal', id: 'u25', pattern: 'drain', name: 'いのちのうず', desc: 'うずを まいて あいて ぜんいんから いのちを すいとり、じぶんを かいふく。', emoji: '🌀', power: 70, target: 'allFoes', accuracy: 90, drainRatio: 0.5, typeLabel: 'あいて ぜんいんから きゅうしゅう', tags: ['すう', 'カメムシ目', 'じゅえき'] }),
+  ult({ ultimate: 'heal', id: 'u26', pattern: 'rest', name: 'えいえんのまゆ', desc: 'まゆに こもって ねむり HPが ぜんかい。おきた あとも まいターン かいふく。', emoji: '🛌', power: 0, restSleep: true, regen: { ratio: 0.15, turns: 5 }, typeLabel: 'ねむって ぜんかいふく＋まいターン かいふく', tags: ['まゆ', 'チョウ目'] }),
+  ult({ ultimate: 'heal', id: 'u27', pattern: 'healAll', name: 'もりのめぐみ', desc: 'もりの めぐみを わけあって、みかた ぜんいんを かいふく。そのあとも まいターン かいふく。', emoji: '🌳', power: 0, target: 'selfSide', healRatio: 0.35, regen: { ratio: 0.1, turns: 4 }, typeLabel: 'みかた ぜんいんを かいふく＋まいターン かいふく', tags: ['はな', 'かふん', 'みつ'] }),
+  ult({ ultimate: 'heal', id: 'u28', pattern: 'leech', name: 'せかいじゅのねっこ', desc: 'おおきな ねっこを はって、あいての HPを まいターン たくさん すいとる。', emoji: '🌿', power: 0, target: 'oneFoe', accuracy: 90, leech: { ratio: 0.2, turns: 5 }, typeLabel: 'あいての HPを まいターン たくさん すいとる', tags: ['すう', 'じゅえき', 'あご'] }),
+  ult({ ultimate: 'heal', id: 'u29', pattern: 'heal', name: 'ひかりのつばさやすめ', desc: 'ひかる はねを やすめて HPを かいふく。ぼうぎょと すばやさも あがる。', emoji: '🕊️', power: 0, uses: 2, healRatio: 0.5, statChanges: [up('defense', 1), up('speed', 1)], typeLabel: 'HPを かいふく＋ぼうぎょ・すばやさ アップ', tags: ['はね', 'とぶ'] }),
+  ult({ ultimate: 'heal', id: 'u30', pattern: 'cure', name: 'ふしちょうのほのお', desc: 'ふしぎな ほのおに つつまれて よみがえる。HPが ぜんかいして じょうたいいじょうも なおる。', emoji: '🔥', power: 0, healRatio: 1, cureStatus: true, typeLabel: 'HPを ぜんかいふく＋じょうたいいじょうも なおす', tags: ['ひかる', 'ちから', 'つの'] }),
+]
+
 export function findMove(id: string): LibraryMove | undefined {
-  return MOVE_LIBRARY.find((m) => m.id === id)
+  return MOVE_LIBRARY.find((m) => m.id === id) ?? ULTIMATE_MOVES.find((m) => m.id === id)
 }
 
 export function movesByPattern(pattern: MovePatternKey): LibraryMove[] {

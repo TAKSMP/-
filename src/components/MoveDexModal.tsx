@@ -10,6 +10,7 @@ import {
   dexCount,
   loadDexSeen,
   patternLabel,
+  ULTIMATE_KIND_LABEL,
   type MoveGroup,
 } from '../lib/moveDex'
 import { sfx } from '../lib/sound'
@@ -72,6 +73,7 @@ export function MoveDexModal({ onClose }: { onClose: () => void }) {
                   </span>
                   {found && (
                     <span className="movedex-power">
+                      {d.move.ultimate && `${ULTIMATE_KIND_LABEL[d.move.ultimate]}・`}
                       {d.move.kind === 'attack' && d.move.power > 0
                         ? `いりょく${d.move.power}`
                         : d.move.fixedDamage

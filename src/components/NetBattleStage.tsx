@@ -36,7 +36,8 @@ interface Props {
   onQuit: () => void
 }
 
-const moveLabel = (m: SpecialMoveV2) => (m.kind === 'attack' ? `いりょく${m.power}` : 'へんかわざ')
+const moveLabel = (m: SpecialMoveV2) =>
+  (m.ultimate ? '👑 ' : '') + (m.kind === 'attack' ? `いりょく${m.power}` : 'へんかわざ')
 
 // LiteFighter に しゃしんを もどして、ふつうの FighterSlot で つかえる かたちに
 // Realtime Database は からの配列（[]）を おとして undefined に する くせが ある ので、

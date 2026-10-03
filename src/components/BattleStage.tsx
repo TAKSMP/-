@@ -556,6 +556,7 @@ export function BattleStage({
                     {m.emoji ?? '✨'} {m.name}
                   </span>
                   <small>
+                    {m.ultimate && '👑 '}
                     {m.kind === 'attack' ? `いりょく${m.power}` : 'へんかわざ'}
                     ／のこり{cur.usesLeft[i]}
                   </small>

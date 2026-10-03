@@ -130,6 +130,8 @@ export interface SpecialMoveV2 {
   priority: number // 0がふつう。＋で さきに、−で あとに うごく
   uses: number // つかえる かいすう
   emoji?: string // えんしゅつ用
+  // さいきょうひっさつわざ（Lv30/40/50で おぼえる）の しゅるい。ふつうの わざには ない
+  ultimate?: 'attack' | 'status' | 'heal'
 
   // --- こうげきの かたち ---
   hits?: [number, number] // れんぞく こうげき（さいしょう, さいだい）

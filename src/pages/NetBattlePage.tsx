@@ -56,7 +56,8 @@ type Phase =
   | 'joinEnter'
   | 'battle'
 
-const moveLabel = (m: SpecialMoveV2) => (m.kind === 'attack' ? `いりょく${m.power}` : 'へんかわざ')
+const moveLabel = (m: SpecialMoveV2) =>
+  (m.ultimate ? '👑 ' : '') + (m.kind === 'attack' ? `いりょく${m.power}` : 'へんかわざ')
 
 function bugCard(save: StorySave, b: CaughtBug, onViewMoves: (b: CaughtBug) => void) {
   const lv = levelOf(save, b.id)

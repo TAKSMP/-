@@ -5,21 +5,30 @@
 //  ・見たことの ない わざは「????」の まま
 //  ・おぼえた かどうかは この たんまつの ブラウザに のこる
 // =============================================================
-import { MOVE_LIBRARY, MOVE_PATTERNS, type LibraryMove } from './moveLibrary'
+import { MOVE_LIBRARY, MOVE_PATTERNS, ULTIMATE_MOVES, type LibraryMove } from './moveLibrary'
 
 // 引き継ぎバックアップ（storage.ts）からも 直接 よみかきする ので export する
 export const MOVEDEX_KEY = 'chomushi.movedex.v1'
 const KEY = MOVEDEX_KEY
 
-export type MoveGroup = 'attack' | 'status' | 'heal'
+export type MoveGroup = 'attack' | 'status' | 'heal' | 'ultimate'
 
 export const GROUPS: { key: MoveGroup; label: string; emoji: string }[] = [
   { key: 'attack', label: 'こうげきワザ', emoji: '⚔️' },
   { key: 'status', label: 'へんかワザ', emoji: '✨' },
   { key: 'heal', label: 'かいふくワザ', emoji: '💚' },
+  { key: 'ultimate', label: 'さいきょうワザ', emoji: '👑' },
 ]
 
+// さいきょうワザの なかの しゅるい（こうげき／へんか／かいふく）
+export const ULTIMATE_KIND_LABEL: Record<'attack' | 'status' | 'heal', string> = {
+  attack: 'こうげき',
+  status: 'へんか',
+  heal: 'かいふく',
+}
+
 export function groupOf(m: LibraryMove): MoveGroup {
+  if (m.ultimate) return 'ultimate'
   if (m.healRatio || m.restSleep || m.regen || m.cureStatus || m.cureStatusKey) return 'heal'
   return m.kind === 'attack' ? 'attack' : 'status'
 }
@@ -31,7 +40,7 @@ export interface DexEntry {
 }
 
 // ぜんぶの わざを No.つきで
-export const DEX: DexEntry[] = MOVE_LIBRARY.map((move, i) => ({
+export const DEX: DexEntry[] = [...MOVE_LIBRARY, ...ULTIMATE_MOVES].map((move, i) => ({
   no: i + 1,
   move,
   group: groupOf(move),
@@ -39,6 +48,7 @@ export const DEX: DexEntry[] = MOVE_LIBRARY.map((move, i) => ({
 
 // わざの パターン名（「2〜5かい れんぞく こうげき」など）
 export function patternLabel(m: LibraryMove): string {
+  if (m.typeLabel) return m.typeLabel
   return MOVE_PATTERNS.find((p) => p.key === m.pattern)?.label ?? ''
 }
 
@@ -64,7 +74,7 @@ export function saveDexSeen(set: Set<string>): void {
   }
 }
 
-const libraryIds = new Set(MOVE_LIBRARY.map((m) => m.id))
+const libraryIds = new Set(DEX.map((d) => d.move.id))
 
 // わざを「見た」ことに する。ふえたら true
 export function markMovesSeen(ids: (string | undefined)[]): boolean {
