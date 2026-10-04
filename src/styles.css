@@ -3642,6 +3642,16 @@ input:focus {
   grid-template-columns: 1fr 1fr;
   gap: 6px;
 }
+/* さいきょうひっさつわざの ボタン */
+.stage-btn.sp.ult {
+  background: linear-gradient(135deg, #ffe27a, #ffb3d9 60%, #c9b8ff);
+  color: #5a3a00;
+  box-shadow: 0 0 0 2px #f0a500, var(--shadow);
+}
+.stage-btn.sp.ult:disabled {
+  filter: grayscale(0.8);
+  opacity: 0.6;
+}
 .stage2-moves .stage-btn {
   padding: 8px 6px;
   font-size: 12px;
@@ -5457,6 +5467,66 @@ input:focus {
   border-radius: 50%;
   background: #ff6fae;
   box-shadow: 0 0 0 6px rgba(255, 111, 174, 0.35);
+}
+.candy-radar-dot.butterfly {
+  background: #5cc8ff;
+  box-shadow: 0 0 0 6px rgba(92, 200, 255, 0.4);
+}
+/* ちょうちょアメ：そらを とんでいる のこり じかん */
+.butterfly-timer {
+  position: fixed;
+  top: calc(66px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 62;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 16px 6px 14px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #e6f7ff, #d7ecff);
+  border: 3px solid #5cc8ff;
+  box-shadow: 0 4px 14px rgba(40, 120, 180, 0.3);
+  color: #1d4e6e;
+  font-weight: 800;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.butterfly-timer-label {
+  font-size: 13px;
+}
+.butterfly-timer-sec {
+  font-size: 30px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.butterfly-timer-sec small {
+  font-size: 12px;
+  margin-left: 2px;
+}
+.butterfly-timer.ending {
+  border-color: #ff7a59;
+  color: #b23a1c;
+  animation: butterfly-blink 0.5s ease-in-out infinite alternate;
+}
+@keyframes butterfly-blink {
+  from { transform: translateX(-50%) scale(1); }
+  to { transform: translateX(-50%) scale(1.08); }
+}
+.butterfly-landed {
+  position: fixed;
+  top: calc(66px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 62;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #2f6b2f;
+  font-weight: 800;
+  font-size: 14px;
+  box-shadow: var(--shadow);
+  pointer-events: none;
 }
 .world-attribution {
   position: fixed;

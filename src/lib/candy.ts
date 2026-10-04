@@ -2,19 +2,25 @@
 //  あめ（キャンディ）：あるけるマップに いつも5個 おちている
 // -------------------------------------------------------------
 //  ひろうと、すきな虫の レベルを けいけんちなしで 1つ あげられる。
-//  ひろった ばしょには、べつの ばしょに あたらしい あめが 出る。
+//  それとは べつに「ちょうちょアメ」が いつも 1個 おちていて、ひろうと 20びょう そらを とべる。
+//  ひろった ばしょには、べつの ばしょに おなじ しゅるいの あたらしい あめが 出る。
 //  ばしょは マップの id ごとに localStorage に ほぞん（次に 開いても おなじ）。
 // =============================================================
 import type { WorldMapData } from '../fields/world/viewer'
 import { isRoad } from '../fields/world/navigation'
 
+export type CandyKind = 'normal' | 'butterfly'
+
 export interface CandySpot {
   id: string
   x: number
   y: number
+  kind?: CandyKind // ふるい ほぞんデータには ない（＝ふつうの あめ）
 }
 
-export const CANDY_COUNT = 5
+export const CANDY_COUNT = 5 // ふつうの あめ
+export const BUTTERFLY_CANDY_COUNT = 1 // ちょうちょアメ
+export const BUTTERFLY_FLY_SEC = 20 // ちょうちょアメで そらを とべる じかん
 // プレイヤーの あしもとから これより ちかいと ひろえる（元画像の ピクセル）
 export const CANDY_PICKUP_RADIUS = 16
 
@@ -50,22 +56,29 @@ function saveCandy(fieldId: string, spots: CandySpot[]): void {
   }
 }
 
-// 保存ずみの あめを 読みこむ。無ければ 5個 あたらしく つくる。
+export const isButterfly = (c: CandySpot): boolean => c.kind === 'butterfly'
+
+function newSpot(kind: CandyKind, map: WorldMapData, mask: Uint8Array): CandySpot {
+  return { id: makeId(), ...randomRoadPoint(map, mask), kind }
+}
+
+// 保存ずみの あめを 読みこむ。たりない ぶん（ふつう 5個・ちょうちょ 1個）は あたらしく つくる。
+// ふるい ほぞん（ふつうの あめ 5個だけ）には ちょうちょアメを 1個 たす。
 export function loadCandy(fieldId: string, map: WorldMapData, mask: Uint8Array): CandySpot[] {
+  let saved: CandySpot[] = []
   try {
     const raw = localStorage.getItem(keyFor(fieldId))
-    if (raw) {
-      const parsed = JSON.parse(raw) as CandySpot[]
-      if (Array.isArray(parsed) && parsed.length === CANDY_COUNT) return parsed
-    }
+    const parsed = raw ? (JSON.parse(raw) as CandySpot[]) : []
+    if (Array.isArray(parsed)) saved = parsed
   } catch {
     // こわれていたら 下で 作り直す
   }
-  const spots = Array.from({ length: CANDY_COUNT }, () => ({
-    id: makeId(),
-    ...randomRoadPoint(map, mask),
-  }))
-  saveCandy(fieldId, spots)
+  const normals = saved.filter((c) => !isButterfly(c)).slice(0, CANDY_COUNT)
+  const flies = saved.filter(isButterfly).slice(0, BUTTERFLY_CANDY_COUNT)
+  while (normals.length < CANDY_COUNT) normals.push(newSpot('normal', map, mask))
+  while (flies.length < BUTTERFLY_CANDY_COUNT) flies.push(newSpot('butterfly', map, mask))
+  const spots = [...normals, ...flies]
+  if (spots.length !== saved.length || spots.some((c, i) => c.id !== saved[i]?.id)) saveCandy(fieldId, spots)
   return spots
 }
 
@@ -78,7 +91,7 @@ export function respawnCandy(
   mask: Uint8Array,
 ): CandySpot[] {
   const next = spots.map((s) =>
-    s.id === pickedId ? { id: makeId(), ...randomRoadPoint(map, mask) } : s,
+    s.id === pickedId ? newSpot(isButterfly(s) ? 'butterfly' : 'normal', map, mask) : s,
   )
   saveCandy(fieldId, next)
   return next

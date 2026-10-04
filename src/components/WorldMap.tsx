@@ -9,6 +9,8 @@
 //  道を タップすると、つながっている 道を とおって じどうで あるく。
 //  ダッシュ：矢印キー/WASDで うごいている あいだに、がめんの どこかを おさえ続けると はやく なる
 //  （固定ボタンでは なく viewer.js がわで はんてい。くわしくは そちらの コメントを）
+//  ちょうちょアメ：ひろうと 20びょう アサギマダラに なって そらを とぶ（たてものも こえられる）。
+//  とんでいる あいだは むしに であわない。じかんぎれで いちばん ちかい 道に おりる。
 // =============================================================
 import { useEffect, useRef, useState } from 'react'
 import {
@@ -22,7 +24,14 @@ import { loadIllustratedMap, type ArtBackground, type ArtManifest } from '../fie
 import '../fields/world/viewer.css'
 import { boySheetUrl, drawBoySprite, loadImage } from '../fields/boySprite'
 import { encounterDistance } from '../lib/encounter'
-import { CANDY_PICKUP_RADIUS, loadCandy, respawnCandy, type CandySpot } from '../lib/candy'
+import {
+  BUTTERFLY_FLY_SEC,
+  CANDY_PICKUP_RADIUS,
+  isButterfly,
+  loadCandy,
+  respawnCandy,
+  type CandySpot,
+} from '../lib/candy'
 
 interface Props {
   base: string // 'fields/tsuruse/' のような ばしょ
@@ -42,6 +51,84 @@ export function forgetFieldPosition(base: string) {
 }
 
 const BOY_SCREEN_H = 60 // がめんの 上での 男の子の たかさ（CSS ピクセル）
+
+// アサギマダラの ドット絵（public/fields/asagi.png：よこ3コマ×たて4れつ、1コマ 128px）。
+// れつ：0=まえ（した むき）、1=ひだり むき、2=みぎ むき、3=うしろ（うえ むき）。元画像は MAP/asagi-sprite/
+const BUTTERFLY_CELL = 128
+const BUTTERFLY_SCREEN = 64 // がめんの 上での おおきさ
+const BUTTERFLY_ROW: Record<string, number> = { down: 0, left: 1, right: 2, up: 3 }
+const BUTTERFLY_FLAP = [0, 1, 2, 1] // はねを ぱたぱた（とまっていても はばたく）
+
+function butterflySheetUrl(): string {
+  return new URL('fields/asagi.png', new URL(import.meta.env.BASE_URL, document.baseURI)).href
+}
+
+// そらを とんでいる アサギマダラ（x,y は あしもと＝かげの いち）
+function drawButterfly(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement | null,
+  x: number,
+  y: number,
+  facing: string,
+  t: number,
+) {
+  const bob = Math.sin(t / 280) * 4
+  ctx.save()
+  ctx.fillStyle = 'rgba(35,59,65,0.25)'
+  ctx.beginPath()
+  ctx.ellipse(x, y, 13, 4, 0, 0, Math.PI * 2)
+  ctx.fill()
+  if (img) {
+    const row = BUTTERFLY_ROW[facing] ?? 0
+    const col = BUTTERFLY_FLAP[Math.floor(t / 90) % BUTTERFLY_FLAP.length]
+    ctx.drawImage(
+      img,
+      col * BUTTERFLY_CELL,
+      row * BUTTERFLY_CELL,
+      BUTTERFLY_CELL,
+      BUTTERFLY_CELL,
+      x - BUTTERFLY_SCREEN / 2,
+      y - BUTTERFLY_SCREEN - 16 + bob,
+      BUTTERFLY_SCREEN,
+      BUTTERFLY_SCREEN,
+    )
+  } else {
+    ctx.font = '40px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText('🦋', x, y - 40 + bob)
+  }
+  ctx.restore()
+}
+
+// 地図に おちている ちょうちょアメ（ふつうの あめ 🍬 と ちがう みため：あおく ひかる たま に アサギマダラ）
+function drawButterflyCandy(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement | null,
+  x: number,
+  y: number,
+  t: number,
+) {
+  const pulse = 0.5 + 0.5 * Math.sin(t / 300)
+  ctx.save()
+  const g = ctx.createRadialGradient(x, y, 2, x, y, 20)
+  g.addColorStop(0, 'rgba(255,255,255,0.95)')
+  g.addColorStop(0.55, `rgba(150,225,255,${0.75 + pulse * 0.2})`)
+  g.addColorStop(1, 'rgba(120,200,255,0)')
+  ctx.fillStyle = g
+  ctx.beginPath()
+  ctx.arc(x, y, 20 + pulse * 3, 0, Math.PI * 2)
+  ctx.fill()
+  if (img) {
+    ctx.drawImage(img, 0, 0, BUTTERFLY_CELL, BUTTERFLY_CELL, x - 15, y - 15, 30, 30)
+  } else {
+    ctx.font = '22px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText('🦋', x, y)
+  }
+  ctx.restore()
+}
 const STEP_SEC = 0.15 // この びょうすう ぶん あるくと つぎの コマ
 // あるく ときの ズーム だんかい（ひろい じゅんに ならべる）。しょきちは DEFAULT_ZOOM_IDX。
 // ＋ボタンで ちかづき（さいだい WALK_ZOOM_LEVELSの さいご）、－ボタンで とおざかる（さいしょう[0]）。
@@ -94,6 +181,13 @@ export function WorldMap({ base, paused = false, onEncounter, onError, onCandyPi
   const travelRef = useRef(0)
   const speedRef = useRef(12)
   const sheet = useRef<HTMLImageElement | null>(null)
+  const butterflySheet = useRef<HTMLImageElement | null>(null)
+  // ちょうちょアメで そらを とんでいる のこり じかん（ミリびょう。0 なら あるいている）
+  const flyRemainMs = useRef(0)
+  const lastFrameAt = useRef(0)
+  // がめんに 出す のこり びょう（1びょうごとに だけ こうしんする）
+  const [flySec, setFlySec] = useState(0)
+  const [landedNote, setLandedNote] = useState(false)
   const artBgRef = useRef<ArtBackground | null>(null)
   // いま おちている あめ（そのマップ限定、localStorage に ほぞん。ロード後に セットする）
   const [candies, setCandies] = useState<CandySpot[]>([])
@@ -193,6 +287,11 @@ export function WorldMap({ base, paused = false, onEncounter, onError, onCandyPi
       } catch {
         sheet.current = null
       }
+      try {
+        butterflySheet.current = await loadImage(butterflySheetUrl(), abort.signal)
+      } catch {
+        butterflySheet.current = null // よめなくても 🦋 で かわりに かく
+      }
       if (disposed || !host.current) return
       speedRef.current = map.speed
       // はじめて 入った ときは ながめ、バトルから もどった ときは ふつう
@@ -213,26 +312,51 @@ export function WorldMap({ base, paused = false, onEncounter, onError, onCandyPi
         startWalking: true,
         // であいの はんていも ここで する ので、絵が なくても かならず わたす
         drawPlayer: (ctx, s) => {
-          if (sheet.current) drawBoySprite(ctx, sheet.current, s, BOY_SCREEN_H, stepPx)
+          const t = performance.now()
+          const dt = lastFrameAt.current ? Math.min(100, t - lastFrameAt.current) : 0
+          lastFrameAt.current = t
+          // ちょうちょアメ：とまっている（バトル・メニューなど）あいだは じかんを へらさない
+          if (flyRemainMs.current > 0 && !pausedRef.current) {
+            flyRemainMs.current -= dt
+            if (flyRemainMs.current <= 0) {
+              flyRemainMs.current = 0
+              engine.current?.setFlying(false) // いちばん ちかい 道に おりる
+              // おりた とたんに であわない ように、ここから かぞえなおす
+              nextAt.current = s.travel + encounterDistance(speedRef.current)
+              setFlySec(0)
+              setLandedNote(true)
+            } else {
+              const sec = Math.ceil(flyRemainMs.current / 1000)
+              setFlySec((prev) => (prev === sec ? prev : sec))
+            }
+          }
+          const flying = flyRemainMs.current > 0
+          if (flying) drawButterfly(ctx, butterflySheet.current, s.x, s.y, s.facing, t)
+          else if (sheet.current) drawBoySprite(ctx, sheet.current, s, BOY_SCREEN_H, stepPx)
           else drawMarker(ctx, s.x, s.y)
           travelRef.current = s.travel
-          if (!pausedRef.current && s.moving && s.travel >= nextAt.current) {
+          // とんでいる あいだは むしに であわない（たてものの 上で バトルに なると もどる ばしょが ない）
+          if (flying) nextAt.current = Math.max(nextAt.current, s.travel + 1)
+          if (!flying && !pausedRef.current && s.moving && s.travel >= nextAt.current) {
             nextAt.current = s.travel + encounterDistance(speedRef.current)
             encounterCb.current?.()
           }
           // あめ：プレイヤーからの そうたい いちで がめんに かく（カメラは プレイヤーに ついてくる ので、
           // s.x/s.y（がめん）＋ワールド座標の さと で かんたんに もとまる）
-          const t = performance.now()
           for (const c of candiesRef.current) {
             const sx = s.x + (c.x - s.wx) * s.zoom
             const sy = s.y + (c.y - s.wy) * s.zoom
             const bob = Math.sin(t / 260 + c.x) * 3
-            ctx.save()
-            ctx.font = '26px sans-serif'
-            ctx.textAlign = 'center'
-            ctx.textBaseline = 'middle'
-            ctx.fillText('🍬', sx, sy + bob)
-            ctx.restore()
+            if (isButterfly(c)) {
+              drawButterflyCandy(ctx, butterflySheet.current, sx, sy + bob, t)
+            } else {
+              ctx.save()
+              ctx.font = '26px sans-serif'
+              ctx.textAlign = 'center'
+              ctx.textBaseline = 'middle'
+              ctx.fillText('🍬', sx, sy + bob)
+              ctx.restore()
+            }
             if (!pausedRef.current && !pickedGuard.current.has(c.id)) {
               const dist = Math.hypot(c.x - s.wx, c.y - s.wy)
               if (dist <= CANDY_PICKUP_RADIUS) {
@@ -240,7 +364,15 @@ export function WorldMap({ base, paused = false, onEncounter, onError, onCandyPi
                 const next = respawnCandy(base, candiesRef.current, c.id, map, mask)
                 candiesRef.current = next
                 setCandies(next)
-                onCandyPickRef.current?.(c.id)
+                if (isButterfly(c)) {
+                  // ちょうちょアメ：その ばで そらへ（とんでいる とちゅうなら 20びょうに もどす）
+                  flyRemainMs.current = BUTTERFLY_FLY_SEC * 1000
+                  engine.current?.setFlying(true)
+                  setFlySec(BUTTERFLY_FLY_SEC)
+                  setLandedNote(false)
+                } else {
+                  onCandyPickRef.current?.(c.id)
+                }
               }
             }
           }
@@ -253,6 +385,8 @@ export function WorldMap({ base, paused = false, onEncounter, onError, onCandyPi
       }
       engine.current = world
       world.setPaused(pausedRef.current)
+      // マウントの とちゅうで ちょうちょアメを ひろって いた ばあいに そろえる
+      if (flyRemainMs.current > 0) world.setFlying(true)
     })().catch((e) => {
       if (disposed || (e as Error)?.name === 'AbortError') return
       if (host.current) host.current.textContent = 'マップを よみこめませんでした。'
@@ -261,6 +395,12 @@ export function WorldMap({ base, paused = false, onEncounter, onError, onCandyPi
     return () => {
       disposed = true
       abort.abort()
+      // とんでいる とちゅうで マップを はなれたら、道に おろしてから いちを おぼえる
+      // （たてものの 上の いちを おぼえると、つぎは スタート地点から に なってしまう）
+      if (flyRemainMs.current > 0) {
+        engine.current?.setFlying(false)
+        flyRemainMs.current = 0
+      }
       const pos = engine.current?.getPosition()
       if (pos) lastPos.set(base, pos)
       engine.current?.destroy()
@@ -269,6 +409,12 @@ export function WorldMap({ base, paused = false, onEncounter, onError, onCandyPi
       artBgRef.current = null
     }
   }, [base])
+
+  useEffect(() => {
+    if (!landedNote) return
+    const id = window.setTimeout(() => setLandedNote(false), 2200)
+    return () => window.clearTimeout(id)
+  }, [landedNote])
 
   // あたらしい マップに かわったら ズームの だんかいも さいしょから
   useEffect(() => {
@@ -356,11 +502,21 @@ export function WorldMap({ base, paused = false, onEncounter, onError, onCandyPi
               ref={(el) => {
                 radarDotRefs.current[i] = el
               }}
-              className="candy-radar-dot"
+              className={'candy-radar-dot' + (isButterfly(c) ? ' butterfly' : '')}
             />
           ))}
         </div>
       )}
+      {flySec > 0 && !overview && (
+        <div className={'butterfly-timer' + (flySec <= 5 ? ' ending' : '')}>
+          <span className="butterfly-timer-label">🦋 そらを とんでいる！</span>
+          <span className="butterfly-timer-sec">
+            {flySec}
+            <small>びょう</small>
+          </span>
+        </div>
+      )}
+      {landedNote && !overview && <div className="butterfly-landed">🌿 じめんに おりたよ</div>}
       {/* OpenStreetMap の 地図データを つかっているので、ひょうじが ひつよう */}
       <a
         className="world-attribution"

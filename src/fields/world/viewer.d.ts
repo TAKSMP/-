@@ -54,6 +54,9 @@ export interface WorldHandle {
   // あるく ズームを その ばで かえる（walkZoom を じょうげんに クランプされる）
   setZoom(value: number): void
   setPaused(value: boolean): void
+  // そらを とぶ（ちょうちょアメ）。true の あいだは 道路の そとも うごける。false で いちばん ちかい 道に おりる
+  setFlying(value: boolean): void
+  isFlying(): boolean
   destroy(): void
 }
 
