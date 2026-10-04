@@ -229,6 +229,8 @@ export async function joinRoom(code: string, name: string, team: Team): Promise<
   const snap = await get(roomRef(code))
   if (!snap.exists()) throw new Error('その コードの 部屋が 見つかりません。')
   const state = snap.val() as RoomState
+  if ((state as { kind?: string }).kind === 'race')
+    throw new Error('それは レースの へやです。「レース」の「つうしんで あそぶ」から はいってね。')
   if (state.guest) throw new Error('その 部屋には もう 2人 そろっています。')
   const guest: RoomSide = { uid: user.uid, name, team, build: BUILD_ID }
   // さいしょの field は 乱数を つかわない ので、ここで つくって そのまま 書きこんで OK

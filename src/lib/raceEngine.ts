@@ -6,6 +6,8 @@
 //  ・アクセルは たいりょくゲージを つかう（ゲージの おおきさ＝たいりょく）。
 //    ゼロに なると ふめない。はなすと みんな おなじ はやさで もどる
 //  ・🎁を とると じぶんの わざが 1つ つかえる（マリオカートの アイテムの ように）
+//  ・ひとが うごかす むし（human）は なんびき いても いい（つうしんレース）。
+//    メッセージと おとは「だれあて か（to）」を つけて だし、がめん側で じぶんの ぶんだけ ひろう
 // =============================================================
 import { curvAt, LANE_LIMIT, wrapS, type Track } from './raceCourse'
 import type { RaceMove } from './raceMoves'
@@ -34,7 +36,9 @@ export interface RacerInit {
   name: string
   photo: string
   color: string
-  mine: boolean
+  human: boolean // ひとが アクセルを おす（false なら CPU）
+  skill: number // CPUの うまさ 0〜1（human なら つかわない）
+  tag?: string // むしの したに だす 名前（つうしんの プレイヤー名 など）
   level: number
   speedStat: number
   hpStat: number
@@ -52,9 +56,9 @@ export interface Racer extends RacerInit {
   stamina: number
   pressing: boolean
   accelOn: boolean // いま ほんとうに アクセルが きいているか
-  heading: number
   spinAngle: number
   travel: number // あしの うごき用
+  lap: number
   dashT: number
   dashPow: number
   turboT: number
@@ -70,6 +74,8 @@ export interface Racer extends RacerInit {
   aiHi: number
   aiLo: number
   aiHolding: boolean
+  aiStubborn: number // へとへとでも おしつづける のこり じかん（へたな CPU）
+  aiIdleUntil: number // ぼんやりして アクセルを わすれている あいだ
   laneBias: number
   finishTime: number | null
 }
@@ -107,18 +113,14 @@ export interface Box {
 
 export interface Fx {
   kind: 'text' | 'ring' | 'star' | 'swap' | 'puff'
-  racer?: string
-  x?: number
-  y?: number
-  s?: number
-  lat?: number
+  racer: string
   text?: string
   color?: string
   t0: number
   dur: number
 }
 
-export type RaceEvent =
+export type RaceEventKind =
   | 'pickup'
   | 'dash'
   | 'hit'
@@ -131,6 +133,24 @@ export type RaceEvent =
   | 'go'
   | 'count'
 
+export interface RaceEvent {
+  seq: number
+  ev: RaceEventKind
+  to: string // '*' なら みんな
+  t: number
+}
+
+export interface RaceMessage {
+  text: string
+  t: number
+  to: string
+}
+
+export interface RaceInput {
+  accel: boolean
+  use: boolean
+}
+
 export interface RaceState {
   track: Track
   laps: number
@@ -140,15 +160,16 @@ export interface RaceState {
   boxes: Box[]
   stars: { owner: string; at: number; name: string; ultimate: boolean }[]
   fx: Fx[]
-  messages: { text: string; t: number; mine: boolean }[]
-  events: RaceEvent[]
+  messages: RaceMessage[]
+  events: RaceEvent[] // さいきん 2びょうぶん（がめん側は seq で よみおわりを おぼえる）
+  seq: number
   clock: number // ずっと すすむ とけい（カウントダウンも ふくむ）
   t: number // スタートしてからの じかん
   countdown: number
-  myFinishAt: number | null
+  firstHumanFinishAt: number | null
+  humansDoneAt: number | null
   over: boolean
   nextId: number
-  myLap: number
 }
 
 function rand(a: number, b: number) {
@@ -171,9 +192,9 @@ export function createRace(track: Track, inits: RacerInit[], laps: number): Race
       stamina: tank,
       pressing: false,
       accelOn: false,
-      heading: 0,
       spinAngle: 0,
       travel: 0,
+      lap: 1,
       dashT: 0,
       dashPow: 0,
       turboT: 0,
@@ -186,9 +207,12 @@ export function createRace(track: Track, inits: RacerInit[], laps: number): Race
       item: null,
       rollT: 0,
       aiUseAt: 0,
-      aiHi: rand(0.45, 1),
-      aiLo: rand(0, 0.3),
+      // うまい CPU ほど ゲージを たっぷり ためてから ふみ、ぎりぎりまで つかう
+      aiHi: rand(0.45, 1) * (1 - r.skill * 0.3) + r.skill * 0.25,
+      aiLo: rand(0, 0.3) * (1 - r.skill * 0.7),
       aiHolding: true,
+      aiStubborn: 0,
+      aiIdleUntil: 0,
       laneBias: rand(-10, 10),
       finishTime: null,
     }
@@ -208,13 +232,14 @@ export function createRace(track: Track, inits: RacerInit[], laps: number): Race
     fx: [],
     messages: [],
     events: [],
+    seq: 0,
     clock: 0,
     t: 0,
     countdown: 3.6,
-    myFinishAt: null,
+    firstHumanFinishAt: null,
+    humansDoneAt: null,
     over: false,
     nextId: 1,
-    myLap: 1,
   }
 }
 
@@ -251,9 +276,15 @@ function nextTarget(st: RaceState, r: Racer): Racer | null {
   return ahead ?? behind
 }
 
-function say(st: RaceState, text: string, mine: boolean) {
-  st.messages.push({ text, t: st.clock, mine })
-  if (st.messages.length > 4) st.messages.shift()
+// ひとが うごかしている むしにだけ とどける
+function say(st: RaceState, r: Racer, text: string) {
+  if (!r.human) return
+  st.messages.push({ text, t: st.clock, to: r.id })
+  if (st.messages.length > 12) st.messages.shift()
+}
+function emit(st: RaceState, to: Racer | '*', ev: RaceEventKind) {
+  if (to !== '*' && !to.human) return
+  st.events.push({ seq: ++st.seq, ev, to: to === '*' ? '*' : to.id, t: st.clock })
 }
 
 function popText(st: RaceState, r: Racer, text: string, color = '#fff') {
@@ -267,10 +298,8 @@ function applyHit(st: RaceState, target: Racer, kind: 'spin' | 'sleep' | 'slow' 
     target.shieldT = 0
     popText(st, target, 'バリア！', '#8fe3ff')
     st.fx.push({ kind: 'ring', racer: target.id, color: '#8fe3ff', t0: st.clock, dur: 0.6 })
-    if (target.mine) {
-      say(st, `🛡️ バリアで「${moveName}」を ふせいだ！`, true)
-      st.events.push('shield')
-    }
+    say(st, target, `🛡️ バリアで「${moveName}」を ふせいだ！`)
+    emit(st, target, 'shield')
     return
   }
   if (kind === 'spin') {
@@ -289,13 +318,12 @@ function applyHit(st: RaceState, target: Racer, kind: 'spin' | 'sleep' | 'slow' 
     popText(st, target, 'しびしび', '#fff36b')
   }
   st.fx.push({ kind: 'puff', racer: target.id, t0: st.clock, dur: 0.5 })
-  if (target.mine) {
-    const what = { spin: 'ころんじゃった！', sleep: 'ねむっちゃった！', slow: 'おそく なっちゃった！', jam: 'アクセルが ふめない！' }[kind]
-    say(st, `💥 ${by.name}の「${moveName}」で ${what}`, true)
-    st.events.push('hitMe')
-  } else if (by.mine) {
-    say(st, `🎯 「${moveName}」が ${target.name}に あたった！`, true)
-    st.events.push('hit')
+  const what = { spin: 'ころんじゃった！', sleep: 'ねむっちゃった！', slow: 'おそく なっちゃった！', jam: 'アクセルが ふめない！' }[kind]
+  say(st, target, `💥 ${by.name}の「${moveName}」で ${what}`)
+  emit(st, target, 'hitMe')
+  if (by !== target) {
+    say(st, by, `🎯 「${moveName}」が ${target.name}に あたった！`)
+    emit(st, by, 'hit')
   }
 }
 
@@ -307,14 +335,14 @@ export function useMove(st: RaceState, r: Racer) {
   const ult = m.ultimate
   const k = ult ? 1.5 : 1
   st.fx.push({ kind: 'text', racer: r.id, text: `${m.emoji}${m.name}`, color: ult ? '#ffd23f' : '#fff', t0: st.clock, dur: 1.6 })
-  if (r.mine) say(st, `${m.emoji} 「${m.name}」！`, true)
+  say(st, r, `${m.emoji} 「${m.name}」！`)
 
   const dash = (sec: number, pow: number) => {
     r.dashPow = r.dashT > 0 ? Math.max(r.dashPow, pow) : pow
     r.dashT = Math.max(r.dashT, sec)
     r.spinT = 0
     r.sleepT = 0
-    if (r.mine) st.events.push('dash')
+    emit(st, r, 'dash')
   }
   const shoot = (hit: Shot['hit'], target: Racer | null) => {
     if (!target) return dash(1.5, DASH_POW)
@@ -332,7 +360,7 @@ export function useMove(st: RaceState, r: Racer) {
       name: m.name,
       ultimate: ult,
     })
-    if (r.mine) st.events.push('shoot')
+    emit(st, r, 'shoot')
   }
   // まえの むし ぜんいん（いなければ うしろの むし ぜんいん）
   const allAhead = (range: number) => {
@@ -351,7 +379,7 @@ export function useMove(st: RaceState, r: Racer) {
       break
     case 'turbo':
       r.turboT = Math.max(r.turboT, 7 * k)
-      if (r.mine) st.events.push('dash')
+      emit(st, r, 'dash')
       break
     case 'shot':
       if (ult) for (const o of allAhead(700).slice(0, 3)) shoot('spin', o)
@@ -385,7 +413,7 @@ export function useMove(st: RaceState, r: Racer) {
           ultimate: ult,
         })
       }
-      if (r.mine) st.events.push('shoot')
+      emit(st, r, 'shoot')
       break
     case 'wave': {
       const list = allAhead(ult ? 2000 : 900)
@@ -395,7 +423,7 @@ export function useMove(st: RaceState, r: Racer) {
     }
     case 'star':
       st.stars.push({ owner: r.id, at: st.clock + 1.2, name: m.name, ultimate: ult })
-      if (r.mine) say(st, '🌠 1いの むしを ねらって いるよ…', true)
+      say(st, r, '🌠 1いの むしを ねらって いるよ…')
       break
     case 'poisonTrap': {
       const lats = m.wide || ult ? [-30, 0, 30] : [r.lat]
@@ -406,13 +434,13 @@ export function useMove(st: RaceState, r: Racer) {
     case 'refill':
       r.stamina = Math.min(r.tank, r.stamina + r.tank * (ult ? 1 : 0.65))
       popText(st, r, 'げんき もりもり！', '#ffd23f')
-      if (r.mine) st.events.push('refill')
+      emit(st, r, 'refill')
       break
     case 'endless':
       r.endlessT = Math.max(r.endlessT, 6 * k)
       r.stamina = Math.min(r.tank, r.stamina + r.tank * 0.3)
       popText(st, r, 'たいりょく むげん！', '#ffd23f')
-      if (r.mine) st.events.push('refill')
+      emit(st, r, 'refill')
       break
     case 'steal': {
       const t = nextTarget(st, r)
@@ -423,10 +451,8 @@ export function useMove(st: RaceState, r: Racer) {
         t.stamina -= got
         r.stamina = Math.min(r.tank, r.stamina + got + r.tank * 0.2)
         popText(st, t, 'すいとられた〜', '#ff9ec4')
-        if (t.mine) {
-          say(st, `🧲 ${r.name}の「${m.name}」で たいりょくを すいとられた！`, true)
-          st.events.push('hitMe')
-        }
+        say(st, t, `🧲 ${r.name}の「${m.name}」で たいりょくを すいとられた！`)
+        emit(st, t, 'hitMe')
       }
       dash(1.2 * k, DASH_POW)
       break
@@ -435,7 +461,7 @@ export function useMove(st: RaceState, r: Racer) {
       r.shieldT = Math.max(r.shieldT, 9 * k)
       r.slowT = 0
       r.jamT = 0
-      if (r.mine) st.events.push('shield')
+      emit(st, r, 'shield')
       break
     case 'swap': {
       const t = st.racers
@@ -453,26 +479,37 @@ export function useMove(st: RaceState, r: Racer) {
       st.fx.push({ kind: 'swap', racer: t.id, t0: st.clock, dur: 0.7 })
       ;[r.s, t.s] = [t.s, r.s]
       ;[r.lat, t.lat] = [t.lat, r.lat]
-      if (t.mine) {
-        say(st, `🔄 ${r.name}の「${m.name}」で いれかえられた！`, true)
-        st.events.push('hitMe')
-      } else if (r.mine) say(st, `🔄 ${t.name}と いれかわった！`, true)
+      say(st, t, `🔄 ${r.name}の「${m.name}」で いれかえられた！`)
+      emit(st, t, 'hitMe')
+      say(st, r, `🔄 ${t.name}と いれかわった！`)
       break
     }
   }
 }
 
-// ── AI：🎁の わざを いつ つかうか ─────────────────────────────
+// ── CPU：🎁の わざを いつ つかうか ─────────────────────────────
 function aiWantsToUse(st: RaceState, r: Racer, rank: number): boolean {
   const m = r.item
   if (!m || st.clock < r.aiUseAt) return false
+  // へたな CPU は なにも かんがえずに つかう
+  if (r.skill < 0.35) return true
+  const waited = st.clock - r.aiUseAt
   switch (m.effect) {
     case 'refill':
-      return r.stamina < r.tank * 0.35
-    case 'shield':
-      return true
+      return r.stamina < r.tank * 0.35 || waited > 12
+    case 'endless':
+      return r.stamina > r.tank * 0.4 || waited > 8
     case 'swap':
-      return rank > 1
+      return rank > 1 || waited > 6
+    case 'shot':
+    case 'slowShot':
+    case 'sleepShot':
+    case 'jam':
+    case 'steal': {
+      // うまい CPU は まえの むしが ちかい ときに ねらう
+      const t = nextTarget(st, r)
+      return (!!t && t.s > r.s && t.s - r.s < 650) || waited > 5
+    }
     default:
       return true
   }
@@ -499,22 +536,49 @@ function rollItem(st: RaceState, r: Racer, rank: number): RaceMove | null {
   return r.moves[r.moves.length - 1]
 }
 
+// ── CPU：アクセルを おすか ─────────────────────────────
+function aiPress(st: RaceState, r: Racer, dt: number, corner: number): boolean {
+  const total = st.track.L * st.laps
+  const sk = r.skill
+  // さいごの ひとふんばり（うまい CPU ほど のこりを ぜんぶ つかう）
+  if (r.s > total - st.track.L * (0.1 + sk * 0.25)) return r.stamina > 0.05
+  // ぼんやり（へたな CPU は ときどき アクセルを わすれる）
+  if (st.clock < r.aiIdleUntil) return false
+  if (Math.random() < (1 - sk) * 0.25 * dt) r.aiIdleUntil = st.clock + rand(0.8, 2.5)
+  // へとへとでも しばらく おしつづけて しまう（そのあいだ ゲージは もどらない）
+  if (r.stamina <= 0.01) {
+    if (r.aiHolding && r.aiStubborn <= 0) r.aiStubborn = (1 - sk) * 2.6
+    if (r.aiStubborn > 0) {
+      r.aiStubborn -= dt
+      if (r.aiStubborn > 0) return true
+    }
+    r.aiHolding = false
+  }
+  if (r.aiHolding && r.stamina <= r.aiLo * r.tank) r.aiHolding = false
+  if (!r.aiHolding && r.stamina >= r.aiHi * r.tank) r.aiHolding = true
+  // うまい CPU は きつい カーブでは ふまない（カーブでは アクセルが ききにくい）
+  if (sk >= 0.5 && corner > 0.65) return false
+  return r.aiHolding
+}
+
 // ── 1コマ すすめる ─────────────────────────────
-export function stepRace(st: RaceState, dt: number, input: { accel: boolean; use: boolean }) {
+export function stepRace(st: RaceState, dt: number, inputs: Record<string, RaceInput>) {
   st.clock += dt
   const tr = st.track
   if (st.countdown > 0) {
     const before = Math.ceil(st.countdown)
     st.countdown -= dt
     const after = Math.ceil(st.countdown)
-    if (after !== before) st.events.push(after > 0 ? 'count' : 'go')
+    if (after !== before) emit(st, '*', after > 0 ? 'count' : 'go')
     return
   }
   st.t += dt
   const total = tr.L * st.laps
   const ranked = standings(st)
   const rankOf = new Map(ranked.map((r, i) => [r.id, i + 1]))
-  const me = st.racers.find((r) => r.mine)
+  const humans = st.racers.filter((r) => r.human && running(r))
+  const humanMax = humans.length ? Math.max(...humans.map((h) => h.s)) : null
+  const humanMin = humans.length ? Math.min(...humans.map((h) => h.s)) : null
 
   for (const r of st.racers) {
     const rank = rankOf.get(r.id) ?? 1
@@ -525,21 +589,21 @@ export function stepRace(st: RaceState, dt: number, input: { accel: boolean; use
       r.rollT -= dt
       if (r.rollT <= 0) {
         r.rollT = 0
-        r.aiUseAt = st.clock + rand(0.6, 3.5)
+        // へたな CPU ほど つかうのが おそい
+        r.aiUseAt = st.clock + rand(0.6, 3.5) * (1 + (1 - r.skill) * 1.2)
       }
     }
 
+    const c = Math.min(1, Math.abs(curvAt(tr, r.s + 30)) * 150) // 0=まっすぐ 1=きつい カーブ
     // ── アクセルを おすか
+    const input = inputs[r.id]
     if (!running(r)) r.pressing = false
-    else if (r.mine) r.pressing = input.accel
+    else if (r.human) r.pressing = !!input?.accel
     else {
-      const lastStretch = r.s > total - tr.L * 0.3
-      if (r.aiHolding && r.stamina <= r.aiLo * r.tank) r.aiHolding = false
-      if (!r.aiHolding && r.stamina >= r.aiHi * r.tank) r.aiHolding = true
-      r.pressing = lastStretch ? r.stamina > 0.05 : r.aiHolding
+      r.pressing = aiPress(st, r, dt, c)
       if (aiWantsToUse(st, r, rank)) useMove(st, r)
     }
-    if (r.mine && input.use) useMove(st, r)
+    if (r.human && input?.use) useMove(st, r)
 
     const stunned = r.spinT > 0 || r.sleepT > 0
     r.accelOn = r.pressing && r.stamina > 0 && r.jamT <= 0 && !stunned
@@ -549,16 +613,15 @@ export function stepRace(st: RaceState, dt: number, input: { accel: boolean; use
     } else if (!r.pressing) r.stamina = Math.min(r.tank, r.stamina + REGEN * dt)
 
     // ── はやさ
-    const c = Math.min(1, Math.abs(curvAt(tr, r.s + 30)) * 150) // 0=まっすぐ 1=きつい カーブ
     let target = r.cruise * (r.turboT > 0 ? 1.22 : 1) * (1 - 0.1 * c)
     if (r.accelOn) target += BOOST * (1 - 0.45 * c)
     if (r.dashT > 0) target += r.dashPow
     if (r.slowT > 0) target *= 0.5
-    // すこしだけ まえと うしろの さを ちぢめる（ちいさい子でも たのしめる ように）
-    if (!r.mine && me && running(r) && running(me)) {
-      const gap = r.s - me.s
-      if (gap > 350) target *= 0.95
-      else if (gap < -500) target *= 1.04
+    // CPUが ひとから はなれすぎない ように すこしだけ ちぢめる（へたな CPU ほど つよく）
+    if (!r.human && running(r) && humanMax !== null && humanMin !== null) {
+      const ease = 1 - r.skill
+      if (r.s - humanMax > 350) target *= 1 - 0.02 - 0.05 * ease
+      else if (humanMin - r.s > 500) target *= 1 + 0.01 + 0.03 * ease
     }
     if (!running(r)) target = r.cruise * 0.8
     if (r.spinT > 0) target = 18
@@ -611,20 +674,20 @@ export function stepRace(st: RaceState, dt: number, input: { accel: boolean; use
     if (r.spinT > 0) r.spinAngle += dt * 14
     else r.spinAngle *= 0.8
 
-    if (r.mine && running(r)) {
+    if (running(r)) {
       const lap = Math.min(st.laps, Math.floor(Math.max(0, r.s) / tr.L) + 1)
-      if (lap > st.myLap) {
-        st.myLap = lap
-        st.events.push('lap')
-        say(st, lap === st.laps ? '🔔 さいごの 1しゅう！' : `🏁 ${lap}しゅうめ！`, true)
+      if (lap > r.lap) {
+        r.lap = lap
+        emit(st, r, 'lap')
+        say(st, r, lap === st.laps ? '🔔 さいごの 1しゅう！' : `🏁 ${lap}しゅうめ！`)
       }
     }
     if (running(r) && before < total && r.s >= total) {
       r.finishTime = st.t
       r.pressing = false
-      if (r.mine) {
-        st.myFinishAt = st.clock
-        st.events.push('finish')
+      if (r.human) {
+        if (st.firstHumanFinishAt === null) st.firstHumanFinishAt = st.clock
+        emit(st, r, 'finish')
       }
     }
 
@@ -638,7 +701,7 @@ export function stepRace(st: RaceState, dt: number, input: { accel: boolean; use
           if (m) {
             r.item = m
             r.rollT = ROLL_SEC
-            if (r.mine) st.events.push('pickup')
+            emit(st, r, 'pickup')
           }
           break
         }
@@ -711,15 +774,147 @@ export function stepRace(st: RaceState, dt: number, input: { accel: boolean; use
 
   st.fx = st.fx.filter((f) => st.clock - f.t0 < f.dur)
   st.messages = st.messages.filter((m) => st.clock - m.t < 3.2)
+  st.events = st.events.filter((e) => st.clock - e.t < 2)
 
-  // ── おわり（じぶんが ゴールして すこし たったら）
+  // ── おわり
+  //  ・みんな ゴールした
+  //  ・ひと ぜんいんが ゴールして 7びょう（のこりの CPU は いまの じゅんばんで ゴール あつかい）
+  //  ・さいしょの ひとが ゴールして 60びょう（つうしんで うごかなくなった ひとが いても おわる）
+  if (st.humansDoneAt === null && st.racers.some((r) => r.human) && st.racers.every((r) => !r.human || !running(r)))
+    st.humansDoneAt = st.clock
   const allDone = st.racers.every((r) => !running(r))
-  if (allDone || (st.myFinishAt !== null && st.clock - st.myFinishAt > 7) || st.t > 900) {
-    if (!st.over) {
-      // まだ ゴールしていない むしは、いまの じゅんばんで ゴールした ことにする
-      let tt = st.t
-      for (const r of standings(st)) if (r.finishTime === null) r.finishTime = tt += 0.5
-      st.over = true
-    }
+  const timeUp =
+    (st.humansDoneAt !== null && st.clock - st.humansDoneAt > 7) ||
+    (st.firstHumanFinishAt !== null && st.clock - st.firstHumanFinishAt > 60) ||
+    st.t > 900
+  if ((allDone || timeUp) && !st.over) {
+    // まだ ゴールしていない むしは、いまの じゅんばんで ゴールした ことにする
+    let tt = st.t
+    for (const r of standings(st)) if (r.finishTime === null) r.finishTime = tt += 0.5
+    st.over = true
   }
+}
+
+// ── ゲストの がめん用：ホストから とどいた すがたを うつす ─────────────
+//  ホストだけが stepRace で けいさんし、ゲストは この スナップショットを
+//  うけとって、つぎが とどくまで はやさぶん すすめて なめらかに 見せる。
+export interface RaceSnap {
+  c: number // clock
+  t: number
+  cd: number // countdown
+  ov: boolean
+  // [s, lat, latV, speed, stamina, accelOn, pressing, dashT, turboT, spinT, sleepT, slowT, jamT, endlessT, shieldT, itemIndex, rollT, finishTime, lap]
+  r: number[][]
+  sh: [number, number, number, string, number, number][] // [id, s, lat, emoji, ultimate, すすむ むき]
+  tp: [number, number, number, string][] // [id, s, lat, emoji]
+  bx: string // '1'=とれる '0'=まち
+  fx: Fx[]
+  m: RaceMessage[]
+  e: RaceEvent[]
+}
+
+const r1 = (v: number) => Math.round(v * 10) / 10
+const r2 = (v: number) => Math.round(v * 100) / 100
+
+export function encodeSnap(st: RaceState): RaceSnap {
+  return {
+    c: r2(st.clock),
+    t: r2(st.t),
+    cd: r2(st.countdown),
+    ov: st.over,
+    r: st.racers.map((r) => [
+      r1(r.s),
+      r1(r.lat),
+      r1(r.latV),
+      r1(r.speed),
+      r2(r.stamina),
+      r.accelOn ? 1 : 0,
+      r.pressing ? 1 : 0,
+      r2(r.dashT),
+      r2(r.turboT),
+      r2(r.spinT),
+      r2(r.sleepT),
+      r2(r.slowT),
+      r2(r.jamT),
+      r2(r.endlessT),
+      r2(r.shieldT),
+      r.item ? r.moves.indexOf(r.item) : -1,
+      r2(r.rollT),
+      r.finishTime === null ? -1 : r1(r.finishTime),
+      r.lap,
+    ]),
+    sh: st.shots.map((s) => {
+      const tgt = s.kind === 'homing' ? st.racers.find((r) => r.id === s.target) : null
+      const dir = tgt && trackDiff(st, tgt.s, s.s) < 0 ? -1 : 1
+      return [s.id, r1(s.s), r1(s.lat), s.emoji, s.ultimate ? 1 : 0, dir]
+    }),
+    tp: st.traps.map((p) => [p.id, r1(p.s), r1(p.lat), p.emoji]),
+    bx: st.boxes.map((b) => (b.readyAt > st.clock ? '0' : '1')).join(''),
+    fx: st.fx,
+    m: st.messages,
+    e: st.events,
+  }
+}
+
+// うけとった ときの いちを おぼえて おき、まいコマ そこへ ちかづける
+export interface GuestSync {
+  at: number // うけとった ときの performance.now()
+  snap: RaceSnap
+}
+
+export function applySnap(st: RaceState, g: GuestSync, now: number, dt: number) {
+  const sn = g.snap
+  const age = Math.min(0.5, (now - g.at) / 1000) // とどいてからの じかん（ながく とまったら のばさない）
+  st.clock = sn.c + age
+  st.t = sn.t + (sn.cd > 0 ? 0 : age)
+  st.countdown = sn.cd > 0 ? Math.max(0, sn.cd - age) : 0
+  st.over = sn.ov
+  sn.r.forEach((a, i) => {
+    const r = st.racers[i]
+    if (!r) return
+    const moving = sn.cd <= 0
+    const wantS = a[0] + (moving ? a[3] * age : 0)
+    const err = wantS - r.s
+    r.s = Math.abs(err) > 120 ? wantS : r.s + err * Math.min(1, dt * 10)
+    r.lat += (a[1] + a[2] * age - r.lat) * Math.min(1, dt * 10)
+    r.latV = a[2]
+    r.speed = a[3]
+    r.stamina = a[4]
+    r.accelOn = a[5] === 1
+    r.pressing = a[6] === 1
+    r.dashT = a[7]
+    r.turboT = a[8]
+    r.spinT = a[9]
+    r.sleepT = a[10]
+    r.slowT = a[11]
+    r.jamT = a[12]
+    r.endlessT = a[13]
+    r.shieldT = a[14]
+    r.item = a[15] >= 0 ? (r.moves[a[15]] ?? null) : null
+    r.rollT = Math.max(0, a[16] - age)
+    r.finishTime = a[17] >= 0 ? a[17] : null
+    r.lap = a[18]
+    r.travel += r.speed * dt
+    if (r.spinT > 0) r.spinAngle += dt * 14
+    else r.spinAngle *= 0.8
+  })
+  st.shots = (sn.sh ?? []).map(([id, s, lat, emoji, ult, dir]) => ({
+    id,
+    owner: '',
+    kind: 'homing' as const,
+    hit: 'spin' as const,
+    s: s + (dir ?? 1) * SHOT_SPEED * age,
+    lat,
+    life: 1,
+    traveled: 0,
+    emoji,
+    name: '',
+    ultimate: ult === 1,
+  }))
+  st.traps = (sn.tp ?? []).map(([id, s, lat, emoji]) => ({ id, owner: '', s, lat, born: 0, emoji, name: '' }))
+  const bx = sn.bx ?? ''
+  st.boxes.forEach((b, i) => (b.readyAt = bx[i] === '0' ? Infinity : 0))
+  st.fx = sn.fx ?? []
+  st.messages = sn.m ?? []
+  st.events = sn.e ?? []
 }

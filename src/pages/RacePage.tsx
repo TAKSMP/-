@@ -1,19 +1,30 @@
 // =============================================================
-//  むしレース（あたらしい ばん）
+//  こうえんレース
 // -------------------------------------------------------------
-//  うえから みた こうえんの コースを、6ぴきで いっしょに はしる。
+//  うえから みた こうえんの コースを、2〜6ぴきで いっしょに はしる。
+//  ・ひとりで あそぶ：のこりの わくは CPU（虫を えらぶ／おまかせ、つよさ 1〜10）
+//  ・つうしんで あそぶ：ともだちと さいだい 6にん（RaceNet.tsx）
 //  ・ストーリーモードの レベル・わざを そのまま ひきつぐ
 //    すばやさ → アクセルなしの はやさ／たいりょく → アクセルゲージ
-//  ・わざは おなじ 名前で、レース用の こうか（raceMoves.ts）に なる
 //  ストーリーの セーブは よむだけ（レースで レベルは かわらない）。
 // =============================================================
 import { useMemo, useState } from 'react'
 import type { CaughtBug } from '../types'
-import { mainPhoto } from '../lib/storage'
-import { levelOf, loadStory, movesOf, statsWithLevel, cageOf, MAX_LEVEL } from '../lib/story'
-import { cruiseOf, tankOf, type RacerInit } from '../lib/raceEngine'
-import { EFFECT_INFO, raceMoveDesc, toRaceMove } from '../lib/raceMoves'
+import { levelOf, loadStory } from '../lib/story'
+import type { RacerInit } from '../lib/raceEngine'
+import {
+  cpuRacerInits,
+  loadRaceSetup,
+  myRacerInit,
+  RACE_COLORS,
+  saveRaceSetup,
+  shuffle,
+  type RaceSetup,
+} from '../lib/raceSetup'
 import { RaceTrack, type RaceResult } from '../components/RaceTrack'
+import { RaceSlots } from '../components/RaceSlots'
+import { LapPicker, MyBugGrid, MyRacerCard, RaceHowto, RaceResults } from '../components/RaceParts'
+import { RaceNet } from './RaceNet'
 import { Confetti } from '../components/Confetti'
 import { sfx } from '../lib/sound'
 
@@ -22,46 +33,12 @@ interface Props {
   onGoCapture: () => void
 }
 
-const MAX_RACERS = 6
-const COLORS = ['#ff6b6b', '#3d8bff', '#ffb703', '#8e5cf7', '#2fbf71', '#ff7ac6']
-const MEDALS = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣']
-
-type Phase = 'pick' | 'lineup' | 'racing' | 'result'
-
-function shuffle<T>(a: T[]): T[] {
-  const x = [...a]
-  for (let i = x.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[x[i], x[j]] = [x[j], x[i]]
-  }
-  return x
-}
-
-// ゲージの ながさ（0〜1）
-const cruiseBar = (c: number) => Math.max(0.06, Math.min(1, (c - cruiseOf(1)) / (cruiseOf(50) - cruiseOf(1))))
-const tankBar = (t: number) => Math.max(0.06, Math.min(1, (t - 4) / 10))
+type Mode = 'menu' | 'solo' | 'net'
 
 export function RacePage({ bugs, onGoCapture }: Props) {
-  const save = useMemo(() => loadStory(), [])
-  const [phase, setPhase] = useState<Phase>('pick')
-  const [myBug, setMyBug] = useState<CaughtBug | null>(null)
-  const [racers, setRacers] = useState<RacerInit[]>([])
-  const [laps, setLaps] = useState(1)
-  const [raceNo, setRaceNo] = useState(0)
-  const [results, setResults] = useState<RaceResult[]>([])
-  const [confetti, setConfetti] = useState(false)
+  const [mode, setMode] = useState<Mode>('menu')
 
-  // そだてた虫（むしかご・レベルが たかい）を さきに ならべる
-  const sorted = useMemo(() => {
-    const cage = new Set(cageOf(save))
-    return [...bugs].sort(
-      (a, b) =>
-        levelOf(save, b.id).level - levelOf(save, a.id).level ||
-        Number(cage.has(b.id)) - Number(cage.has(a.id)),
-    )
-  }, [bugs, save])
-
-  if (bugs.length < 2) {
+  if (bugs.length < 1) {
     return (
       <div className="battle-empty">
         <div className="quiz-start-emoji">🏁🐛</div>
@@ -83,44 +60,79 @@ export function RacePage({ bugs, onGoCapture }: Props) {
     )
   }
 
-  function makeRacer(bug: CaughtBug, level: number, mine: boolean, color: string): RacerInit {
-    const s = statsWithLevel(bug, level)
-    return {
-      id: bug.id,
-      name: bug.name,
-      photo: mainPhoto(bug),
-      color,
-      mine,
-      level,
-      speedStat: s.speed,
-      hpStat: s.hp,
-      moves: movesOf(save, bug, level).map(toRaceMove),
-    }
+  if (mode === 'solo') return <SoloRace bugs={bugs} onBack={() => setMode('menu')} />
+  if (mode === 'net') return <RaceNet bugs={bugs} onBack={() => setMode('menu')} />
+
+  return (
+    <div className="race">
+      <div className="race-mode-menu">
+        <button
+          className="game-card race"
+          disabled={bugs.length < 2}
+          onClick={() => {
+            sfx.tap()
+            setMode('solo')
+          }}
+        >
+          <span className="game-emoji">🏁</span>
+          <span className="game-title">ひとりで あそぶ</span>
+          <span className="game-desc">
+            {bugs.length < 2 ? '虫を 2ひき いじょう あつめてね' : 'CPUの 虫たちと きょうそう！ なんびき・つよさを えらべるよ'}
+          </span>
+        </button>
+        <button
+          className="game-card battle"
+          onClick={() => {
+            sfx.tap()
+            setMode('net')
+          }}
+        >
+          <span className="game-emoji">📡</span>
+          <span className="game-title">つうしんで あそぶ</span>
+          <span className="game-desc">ともだちと さいだい 6にんで きょうそう！ たりない ぶんは CPU</span>
+        </button>
+      </div>
+    </div>
+  )
+}
+
+type Phase = 'pick' | 'setup' | 'racing' | 'result'
+
+function SoloRace({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => void }) {
+  const save = useMemo(() => loadStory(), [])
+  const [phase, setPhase] = useState<Phase>('pick')
+  const [myBug, setMyBug] = useState<CaughtBug | null>(null)
+  const [setup, setSetupState] = useState<RaceSetup>(() => loadRaceSetup())
+  const [racers, setRacers] = useState<RacerInit[]>([])
+  const [raceNo, setRaceNo] = useState(0)
+  const [results, setResults] = useState<RaceResult[]>([])
+  const [confetti, setConfetti] = useState(false)
+
+  const setSetup = (s: RaceSetup) => {
+    setSetupState(s)
+    saveRaceSetup(s)
   }
 
-  // あいては ランダム。レベルは じぶんの むしの ちかく（±2）
-  function buildRacers(mine: CaughtBug): RacerInit[] {
-    const myLv = levelOf(save, mine.id).level
-    const others = shuffle(bugs.filter((b) => b.id !== mine.id)).slice(0, MAX_RACERS - 1)
-    const colors = shuffle(COLORS)
-    const list = [
-      makeRacer(mine, myLv, true, colors[0]),
-      ...others.map((b, i) =>
-        makeRacer(b, Math.max(1, Math.min(MAX_LEVEL, myLv + Math.floor(Math.random() * 5) - 2)), false, colors[i + 1]),
-      ),
-    ]
-    return shuffle(list) // スタートの ならびも シャッフル
+  const me = myBug ? myRacerInit(myBug, save, 'p0', RACE_COLORS[0]) : null
+  const myLv = myBug ? levelOf(save, myBug.id).level : 1
+
+  // CPUの わくを うめて、スタートの ならびを シャッフル
+  function buildRacers(): RacerInit[] {
+    if (!myBug) return []
+    const colors = shuffle(RACE_COLORS)
+    const mine = myRacerInit(myBug, save, 'p0', colors[0])
+    const cpus = cpuRacerInits(setup.slots.slice(0, setup.count - 1), bugs, save, {
+      baseLv: myLv,
+      usedBugIds: [myBug.id],
+      firstIndex: 1,
+      colors,
+    })
+    return shuffle([mine, ...cpus])
   }
 
-  function pickMine(bug: CaughtBug) {
+  function start(fresh: boolean) {
     sfx.tap()
-    setMyBug(bug)
-    setRacers(buildRacers(bug))
-    setPhase('lineup')
-  }
-
-  function startRace() {
-    sfx.tap()
+    if (fresh || racers.length === 0) setRacers(buildRacers())
     setRaceNo((n) => n + 1)
     setPhase('racing')
   }
@@ -128,15 +140,12 @@ export function RacePage({ bugs, onGoCapture }: Props) {
   function finish(res: RaceResult[]) {
     setResults(res)
     setPhase('result')
-    if (res.find((r) => r.id === myBug?.id)?.rank === 1) {
+    if (res.find((r) => r.id === 'p0')?.rank === 1) {
       setConfetti(true)
       setTimeout(() => setConfetti(false), 600)
       sfx.win()
     } else sfx.lose()
   }
-
-  const me = racers.find((r) => r.mine)
-  const byId = new Map(racers.map((r) => [r.id, r]))
 
   return (
     <div className="race">
@@ -146,114 +155,53 @@ export function RacePage({ bugs, onGoCapture }: Props) {
         <div className="battle-step">
           <h2 className="battle-step-title">① レースに でる虫を えらぼう</h2>
           <p className="race-lead">ストーリーで そだてた レベルと わざで はしるよ！</p>
-          <div className="race-pick-grid">
-            {sorted.map((b) => {
-              const lv = levelOf(save, b.id).level
-              const s = statsWithLevel(b, lv)
-              return (
-                <button key={b.id} className="race-pick" onClick={() => pickMine(b)}>
-                  <img src={mainPhoto(b)} alt={b.name} loading="lazy" />
-                  <span className="race-pick-lv">Lv {lv}</span>
-                  <span className="race-pick-name">{b.name}</span>
-                  <span className="race-pick-stats">
-                    💨{s.speed} ❤️{s.hp}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
+          <MyBugGrid
+            bugs={bugs}
+            save={save}
+            onPick={(b) => {
+              sfx.tap()
+              setMyBug(b)
+              setPhase('setup')
+            }}
+          />
+          <button
+            className="btn btn-ghost battle-back"
+            onClick={() => {
+              sfx.tap()
+              onBack()
+            }}
+          >
+            ← もどる
+          </button>
         </div>
       )}
 
-      {phase === 'lineup' && me && (
+      {phase === 'setup' && me && myBug && (
         <div className="battle-step">
-          <h2 className="battle-step-title">② こうえんレース 出走メンバー</h2>
-
-          <div className="race-me-card">
-            <div className="race-me-head">
-              <img src={me.photo} alt={me.name} />
-              <div>
-                <div className="race-me-name">⭐ {me.name}</div>
-                <div className="race-me-lv">Lv {me.level}</div>
-              </div>
-            </div>
-            <div className="race-stat">
-              <span>💨 ゆっくり スピード</span>
-              <div className="race-stat-bar">
-                <div style={{ width: cruiseBar(cruiseOf(me.speedStat)) * 100 + '%' }} />
-              </div>
-              <small>すばやさ {me.speedStat}</small>
-            </div>
-            <div className="race-stat">
-              <span>🔥 アクセル ゲージ</span>
-              <div className="race-stat-bar gauge">
-                <div style={{ width: tankBar(tankOf(me.hpStat)) * 100 + '%' }} />
-              </div>
-              <small>たいりょく {me.hpStat}</small>
-            </div>
-            <div className="race-moves">
-              <div className="race-moves-title">🎁を とると つかえる わざ</div>
-              {me.moves.map((m) => (
-                <div key={m.id} className={'race-move' + (m.ultimate ? ' ult' : '')}>
-                  <span className="race-move-emoji">{m.emoji}</span>
-                  <span className="race-move-body">
-                    <b>{m.name}</b>
-                    <span className="race-move-kind">
-                      {EFFECT_INFO[m.effect].emoji} {EFFECT_INFO[m.effect].label}
-                    </span>
-                    <small>{raceMoveDesc(m)}</small>
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="race-lineup">
-            {racers
-              .filter((r) => !r.mine)
-              .map((r) => (
-                <div key={r.id} className="race-chip" style={{ borderColor: r.color }}>
-                  <img src={r.photo} alt={r.name} />
-                  <span className="race-chip-name">{r.name}</span>
-                  <span className="race-chip-lv">Lv {r.level}</span>
-                </div>
-              ))}
-          </div>
-
-          <div className="race-howto">
-            <p>🔥 <b>アクセル</b>を おしている あいだ はやく なるよ。でも たいりょくが へるよ。</p>
-            <p>✋ はなすと たいりょくが もどるよ。おさなくても ゆっくり すすむよ。</p>
-            <p>🎁 <b>？</b>の はこを とると わざが つかえるよ。</p>
-          </div>
-
-          <div className="race-laps">
-            <span>なんしゅう？</span>
-            {[1, 2, 3].map((n) => (
-              <button
-                key={n}
-                className={'race-lap-btn' + (laps === n ? ' on' : '')}
-                onClick={() => {
-                  sfx.tap()
-                  setLaps(n)
-                }}
-              >
-                {n}しゅう
-              </button>
-            ))}
-          </div>
-
+          <h2 className="battle-step-title">② メンバーを きめよう</h2>
+          <MyRacerCard me={me} />
+          <RaceSlots
+            count={setup.count}
+            minCount={2}
+            onCount={(count) => setSetup({ ...setup, count })}
+            fixed={[{ key: 'me', name: me.name, photo: me.photo, level: me.level, label: 'きみ' }]}
+            slots={setup.slots}
+            onSlots={(slots) => setSetup({ ...setup, slots })}
+            bugs={bugs}
+            excludeIds={[myBug.id]}
+            baseLv={myLv}
+          />
+          <RaceHowto />
+          <LapPicker
+            laps={setup.laps}
+            onLaps={(laps) => {
+              sfx.tap()
+              setSetup({ ...setup, laps })
+            }}
+          />
           <div className="race-lineup-actions">
-            <button className="btn btn-big btn-primary" onClick={startRace}>
+            <button className="btn btn-big btn-primary" onClick={() => start(true)}>
               レース スタート 🏁
-            </button>
-            <button
-              className="btn btn-ghost"
-              onClick={() => {
-                sfx.tap()
-                if (myBug) setRacers(buildRacers(myBug))
-              }}
-            >
-              🎲 あいてを かえる
             </button>
             <button
               className="btn btn-ghost"
@@ -268,59 +216,28 @@ export function RacePage({ bugs, onGoCapture }: Props) {
         </div>
       )}
 
-      {phase === 'racing' && <RaceTrack key={raceNo} racers={racers} laps={laps} onFinish={finish} />}
+      {phase === 'racing' && (
+        <RaceTrack key={raceNo} racers={racers} laps={setup.laps} viewerId="p0" onFinish={finish} />
+      )}
 
       {phase === 'result' && (
         <div className="race-result">
-          {(() => {
-            const mine = results.find((r) => r.id === me?.id)
-            const top = byId.get(results[0]?.id ?? '')
-            return mine?.rank === 1 ? (
-              <p className="race-result-msg win">🎉 きみの「{me?.name}」が 1い！</p>
-            ) : (
-              <p className="race-result-msg">
-                1いは「{top?.name}」！ きみの虫は {mine?.rank}い だったよ
-              </p>
-            )
-          })()}
-          <div className="race-rank-list">
-            {results.map((r, i) => {
-              const info = byId.get(r.id)
-              if (!info) return null
-              return (
-                <div key={r.id} className={'race-rank-item' + (info.mine ? ' mine' : '')}>
-                  <span className="race-rank-medal">{MEDALS[i] ?? i + 1 + 'い'}</span>
-                  <img src={info.photo} alt={info.name} />
-                  <span className="race-rank-name">
-                    {info.name} <small>Lv{info.level}</small>
-                  </span>
-                  <span className="race-rank-time">{r.time.toFixed(1)}びょう</span>
-                </div>
-              )
-            })}
-          </div>
+          <RaceResults results={results} racers={racers} viewerId="p0" />
           <div className="race-result-actions">
-            <button className="btn btn-big btn-primary" onClick={startRace}>
-              もういちど レース 🔄
+            <button className="btn btn-big btn-primary" onClick={() => start(false)}>
+              おなじ メンバーで もういちど 🔄
             </button>
-            <button
-              className="btn btn-big"
-              onClick={() => {
-                sfx.tap()
-                if (myBug) setRacers(buildRacers(myBug))
-                setPhase('lineup')
-              }}
-            >
-              あいてを かえて レース 🎲
+            <button className="btn btn-big" onClick={() => start(true)}>
+              あたらしい メンバーで レース 🎲
             </button>
             <button
               className="btn btn-ghost"
               onClick={() => {
                 sfx.tap()
-                setPhase('pick')
+                setPhase('setup')
               }}
             >
-              べつの 虫で はしる
+              メンバーを かえる
             </button>
           </div>
         </div>

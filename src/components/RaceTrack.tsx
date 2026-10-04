@@ -7,7 +7,19 @@
 // =============================================================
 import { useEffect, useRef, useState } from 'react'
 import { buildTrack, renderPark, trackPos, WORLD_H, WORLD_W, type Track } from '../lib/raceCourse'
-import { createRace, standings, stepRace, type Racer, type RacerInit, type RaceState } from '../lib/raceEngine'
+import {
+  applySnap,
+  createRace,
+  encodeSnap,
+  standings,
+  stepRace,
+  type GuestSync,
+  type Racer,
+  type RaceInput,
+  type RacerInit,
+  type RaceSnap,
+  type RaceState,
+} from '../lib/raceEngine'
 import { EFFECT_INFO } from '../lib/raceMoves'
 import { sfx } from '../lib/sound'
 
@@ -17,9 +29,20 @@ export interface RaceResult {
   time: number
 }
 
+// つうしんレースの つなぎ。ホストは けいさんして くばる／ゲストは うけとって うつすだけ
+export interface RaceNetLink {
+  role: 'host' | 'guest'
+  remoteInputs?: () => Record<string, RaceInput> // ホスト：ほかの ひとの アクセル
+  publish?: (snap: RaceSnap) => void // ホスト：いまの すがたを くばる
+  subscribe?: (cb: (snap: RaceSnap) => void) => () => void // ゲスト
+  sendInput?: (accel: boolean, useCount: number) => void // ゲスト
+}
+
 interface Props {
   racers: RacerInit[]
   laps: number
+  viewerId: string // この がめんで うごかす むし
+  net?: RaceNetLink
   onFinish: (results: RaceResult[]) => void
 }
 
@@ -71,13 +94,16 @@ interface Hud {
   hasItem: boolean
 }
 
-export function RaceTrack({ racers, laps, onFinish }: Props) {
+export function RaceTrack({ racers, laps, viewerId, net, onFinish }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const gaugeRef = useRef<HTMLDivElement>(null)
   const gaugeHintRef = useRef<HTMLSpanElement>(null)
   const accelRef = useRef(false)
   const useRef_ = useRef(false)
+  const useCountRef = useRef(0)
+  const netRef = useRef(net)
+  netRef.current = net
   const stateRef = useRef<RaceState | null>(null)
   const finishRef = useRef(onFinish)
   finishRef.current = onFinish
@@ -119,7 +145,13 @@ export function RaceTrack({ racers, laps, onFinish }: Props) {
     resize()
     window.addEventListener('resize', resize)
 
-    const me = st.racers.find((r) => r.mine)!
+    const me = st.racers.find((r) => r.id === viewerId) ?? st.racers[0]
+    const link = netRef.current
+    const guest = link?.role === 'guest'
+    let latest: GuestSync | null = null
+    const unsub = guest ? link?.subscribe?.((snap) => (latest = { at: performance.now(), snap })) : undefined
+    let lastSeq = 0
+    let lastPublish = -1
     const p0 = trackPos(track, me.s, me.lat)
     let camX = p0.x
     let camY = p0.y
@@ -132,15 +164,33 @@ export function RaceTrack({ racers, laps, onFinish }: Props) {
 
     const loop = (now: number) => {
       raf = requestAnimationFrame(loop)
-      acc += Math.min(0.1, (now - last) / 1000)
+      const frameDt = Math.min(0.1, (now - last) / 1000)
+      acc += frameDt
       last = now
-      while (acc >= DT) {
-        stepRace(st, DT, { accel: accelRef.current, use: useRef_.current })
+      if (guest) {
+        if (latest) applySnap(st, latest, now, frameDt)
         useRef_.current = false
-        acc -= DT
+      } else {
+        const ins: Record<string, RaceInput> = { ...(link?.remoteInputs?.() ?? {}) }
+        ins[me.id] = { accel: accelRef.current, use: useRef_.current }
+        useRef_.current = false
+        while (acc >= DT) {
+          stepRace(st, DT, ins)
+          for (const k in ins) ins[k] = { ...ins[k], use: false } // わざは 1かいだけ
+          acc -= DT
+        }
+        // つうしん：0.1びょうごとに くばる（おわった ときは すぐ）
+        if (link?.publish && (st.clock - lastPublish >= 0.1 || st.over)) {
+          if (!(st.over && lastPublish === Infinity)) link.publish(encodeSnap(st))
+          lastPublish = st.over ? Infinity : st.clock
+        }
       }
-      // おと
-      for (const ev of st.events) {
+      // おと（じぶんあての ものだけ）
+      for (const e of st.events) {
+        if (e.seq <= lastSeq) continue
+        lastSeq = e.seq
+        if (e.to !== '*' && e.to !== me.id) continue
+        const ev = e.ev
         if (ev === 'count') sfx.tap()
         else if (ev === 'go') sfx.battleStart()
         else if (ev === 'pickup') sfx.badge()
@@ -152,8 +202,6 @@ export function RaceTrack({ racers, laps, onFinish }: Props) {
         else if (ev === 'shoot') sfx.dodge()
         else if (ev === 'lap') sfx.nav()
       }
-      st.events.length = 0
-
       draw()
 
       // ゲージ（DOMを ちょくせつ かえる）
@@ -179,13 +227,13 @@ export function RaceTrack({ racers, laps, onFinish }: Props) {
       if (me.rollT > 0) rollFlip = Math.floor(st.clock * 12)
       const rollingMove = me.rollT > 0 && me.moves.length ? me.moves[rollFlip % me.moves.length] : null
       const shown = rollingMove ?? me.item
-      const key = `${rank}|${st.myLap}|${shown?.id ?? ''}|${me.rollT > 0}`
+      const key = `${rank}|${me.lap}|${shown?.id ?? ''}|${me.rollT > 0}`
       if (key !== hudKey) {
         hudKey = key
         setHud({
           rank,
           total: st.racers.length,
-          lap: st.myLap,
+          lap: me.lap,
           itemName: shown?.name ?? '',
           itemEmoji: shown?.emoji ?? '',
           itemDesc: shown && !rollingMove ? EFFECT_INFO[shown.effect].label : '',
@@ -195,7 +243,7 @@ export function RaceTrack({ racers, laps, onFinish }: Props) {
       }
       if (st.over && !finished) {
         finished = true
-        const res = standings(st).map((r, i) => ({ id: r.id, rank: i + 1, time: r.finishTime ?? 0 }))
+        const res = standings(st).map((r, i) => ({ id: r.id, rank: i + 1, time: Math.round((r.finishTime ?? 0) * 10) / 10 }))
         setTimeout(() => finishRef.current(res), 300)
       }
     }
@@ -348,8 +396,8 @@ export function RaceTrack({ racers, laps, onFinish }: Props) {
         ctx.fillText(txt, cssW / 2, cssH * 0.4)
         ctx.restore()
       }
-      // メッセージ
-      const msgs = st.messages.slice(-2)
+      // メッセージ（じぶんあて）
+      const msgs = st.messages.filter((m) => m.to === me.id).slice(-2)
       ctx.font = '800 14px sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
@@ -478,8 +526,21 @@ export function RaceTrack({ racers, laps, onFinish }: Props) {
         ctx.textBaseline = 'middle'
         ctx.fillText(marks.join(''), 0, -27 + Math.sin(t * 5) * 2)
       }
+      // ほかの ひとの なまえ
+      if (r.tag && r.id !== me.id) {
+        ctx.font = '800 12px sans-serif'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        const w = ctx.measureText(r.tag).width + 12
+        ctx.fillStyle = r.color
+        ctx.beginPath()
+        ctx.roundRect(-w / 2, 22, w, 17, 8)
+        ctx.fill()
+        ctx.fillStyle = '#fff'
+        ctx.fillText(r.tag, 0, 31)
+      }
       // じぶんの しるし
-      if (r.mine) {
+      if (r.id === me.id) {
         ctx.fillStyle = '#ffd23f'
         ctx.strokeStyle = '#7a5a00'
         ctx.lineWidth = 2
@@ -520,14 +581,15 @@ export function RaceTrack({ racers, laps, onFinish }: Props) {
       const sp = trackPos(track, 0)
       ctx.fillStyle = '#222'
       ctx.fillRect(x0 + sp.x * sc - 1, y0 + sp.y * sc - 4, 3, 8)
-      const order = [...st.racers].sort((a) => (a.mine ? 1 : -1))
+      const order = [...st.racers].sort((a) => (a.id === me.id ? 1 : -1))
       for (const r of order) {
         const p = trackPos(track, r.s, r.lat)
         ctx.fillStyle = r.color
-        ctx.strokeStyle = r.mine ? '#000' : '#fff'
-        ctx.lineWidth = r.mine ? 2 : 1.2
+        const mine = r.id === me.id
+        ctx.strokeStyle = mine ? '#000' : '#fff'
+        ctx.lineWidth = mine ? 2 : 1.2
         ctx.beginPath()
-        ctx.arc(x0 + p.x * sc, y0 + p.y * sc, r.mine ? 5 : 3.6, 0, Math.PI * 2)
+        ctx.arc(x0 + p.x * sc, y0 + p.y * sc, mine ? 5 : 3.6, 0, Math.PI * 2)
         ctx.fill()
         ctx.stroke()
       }
@@ -537,11 +599,10 @@ export function RaceTrack({ racers, laps, onFinish }: Props) {
 
     const onKey = (e: KeyboardEvent, down: boolean) => {
       if (e.code === 'Space' || e.code === 'ArrowUp') {
-        accelRef.current = down
-        setAccelDown(down)
+        if (!e.repeat) press(down)
         e.preventDefault()
-      } else if (down && (e.code === 'Enter' || e.code === 'KeyZ' || e.code === 'KeyX')) {
-        useRef_.current = true
+      } else if (down && !e.repeat && (e.code === 'Enter' || e.code === 'KeyZ' || e.code === 'KeyX')) {
+        fireMove()
         e.preventDefault()
       }
     }
@@ -551,6 +612,7 @@ export function RaceTrack({ racers, laps, onFinish }: Props) {
     window.addEventListener('keyup', ku)
     return () => {
       cancelAnimationFrame(raf)
+      unsub?.()
       window.removeEventListener('resize', resize)
       window.removeEventListener('keydown', kd)
       window.removeEventListener('keyup', ku)
@@ -558,9 +620,17 @@ export function RaceTrack({ racers, laps, onFinish }: Props) {
     // racers / laps は レースの あいだ かわらない
   }, [])
 
-  const press = (down: boolean) => {
+  // アクセルと わざ（ゲストは ホストへ おくる）
+  function press(down: boolean) {
+    if (accelRef.current === down) return
     accelRef.current = down
     setAccelDown(down)
+    netRef.current?.sendInput?.(down, useCountRef.current)
+  }
+  function fireMove() {
+    useRef_.current = true
+    useCountRef.current += 1
+    netRef.current?.sendInput?.(accelRef.current, useCountRef.current)
   }
 
   return (
@@ -580,7 +650,7 @@ export function RaceTrack({ racers, laps, onFinish }: Props) {
           disabled={!hud.hasItem}
           onPointerDown={(e) => {
             e.preventDefault()
-            useRef_.current = true
+            fireMove()
           }}
         >
           {hud.itemEmoji ? (
