@@ -2,7 +2,8 @@
 //  あめ（キャンディ）：あるけるマップに いつも5個 おちている
 // -------------------------------------------------------------
 //  ひろうと、すきな虫の レベルを けいけんちなしで 1つ あげられる。
-//  それとは べつに「ちょうちょアメ」が いつも 1個 おちていて、ひろうと 100びょう そらを とべる。
+//  それとは べつに「ちょうちょアメ」が いつも 1個 おちていて、ひろうと アサギマダラ（100びょう）か、
+//  3ぶんの1の かくりつで オオゴマダラ（50びょう）に なって そらを とべる。
 //  ひろった ばしょには、べつの ばしょに おなじ しゅるいの あたらしい あめが 出る。
 //  ばしょは マップの id ごとに localStorage に ほぞん（次に 開いても おなじ）。
 // =============================================================
@@ -20,7 +21,21 @@ export interface CandySpot {
 
 export const CANDY_COUNT = 5 // ふつうの あめ
 export const BUTTERFLY_CANDY_COUNT = 1 // ちょうちょアメ
-export const BUTTERFLY_FLY_SEC = 100 // ちょうちょアメで そらを とべる じかん
+export const BUTTERFLY_FLY_SEC = 100 // ちょうちょアメで そらを とべる じかん（アサギマダラ）
+// ちょうちょアメを ひろった とき 3ぶんの1 で オオゴマダラに なる（とべる じかんは はんぶんの 50びょう）
+export const OOGOMA_CHANCE = 1 / 3
+export const OOGOMA_FLY_SEC = 50
+
+export type FlyKind = 'asagi' | 'oogoma'
+export const FLY_INFO: Record<FlyKind, { name: string; sec: number }> = {
+  asagi: { name: 'アサギマダラ', sec: BUTTERFLY_FLY_SEC },
+  oogoma: { name: 'オオゴマダラ', sec: OOGOMA_FLY_SEC },
+}
+
+// ひろった しゅんかんに どちらの ちょうちょに なるかを きめる
+export function rollFlyKind(): FlyKind {
+  return Math.random() < OOGOMA_CHANCE ? 'oogoma' : 'asagi'
+}
 // プレイヤーの あしもとから これより ちかいと ひろえる（元画像の ピクセル）
 export const CANDY_PICKUP_RADIUS = 16
 

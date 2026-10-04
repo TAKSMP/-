@@ -26,7 +26,9 @@ import '../fields/world/viewer.css'
 import { boySheetUrl, drawBoySprite, loadImage } from '../fields/boySprite'
 import { encounterDistance } from '../lib/encounter'
 import {
-  BUTTERFLY_FLY_SEC,
+  FLY_INFO,
+  rollFlyKind,
+  type FlyKind,
   CANDY_PICKUP_RADIUS,
   isButterfly,
   loadCandy,
@@ -70,8 +72,9 @@ const BUTTERFLY_SCREEN = 64 // がめんの 上での おおきさ
 const BUTTERFLY_ROW: Record<string, number> = { down: 0, left: 1, right: 2, up: 3 }
 const BUTTERFLY_FLAP = [0, 1, 2, 1] // はねを ぱたぱた（とまっていても はばたく）
 
-function butterflySheetUrl(): string {
-  return new URL('fields/asagi.png', new URL(import.meta.env.BASE_URL, document.baseURI)).href
+function butterflySheetUrl(kind: FlyKind): string {
+  const file = kind === 'oogoma' ? 'fields/oogoma.png' : 'fields/asagi.png'
+  return new URL(file, new URL(import.meta.env.BASE_URL, document.baseURI)).href
 }
 
 // そらを とんでいる アサギマダラ（x,y は あしもと＝かげの いち）
@@ -199,7 +202,12 @@ export function WorldMap({
   const travelRef = useRef(0)
   const speedRef = useRef(12)
   const sheet = useRef<HTMLImageElement | null>(null)
+  // ちょうちょの ドット絵：アサギマダラ（ちょうちょアメの アイコンにも つかう）と オオゴマダラ
   const butterflySheet = useRef<HTMLImageElement | null>(null)
+  const oogomaSheet = useRef<HTMLImageElement | null>(null)
+  // いま とんでいる ちょうちょ（ひろう たびに きめなおす）
+  const flyKindRef = useRef<FlyKind>('asagi')
+  const [flyKind, setFlyKind] = useState<FlyKind>('asagi')
   // ちょうちょちゃんビル（buildings.json が ある マップだけ）
   const buildingsRef = useRef<BuildingShape[] | null>(null)
   const buildingIdx = useRef(-1)
@@ -322,9 +330,14 @@ export function WorldMap({
         setBuildingOn(true)
       }
       try {
-        butterflySheet.current = await loadImage(butterflySheetUrl(), abort.signal)
+        butterflySheet.current = await loadImage(butterflySheetUrl('asagi'), abort.signal)
       } catch {
         butterflySheet.current = null // よめなくても 🦋 で かわりに かく
+      }
+      try {
+        oogomaSheet.current = await loadImage(butterflySheetUrl('oogoma'), abort.signal)
+      } catch {
+        oogomaSheet.current = null
       }
       if (disposed || !host.current) return
       speedRef.current = map.speed
@@ -400,7 +413,10 @@ export function WorldMap({
             }
           }
           const flying = flyRemainMs.current > 0
-          if (flying) drawButterfly(ctx, butterflySheet.current, s.x, s.y, s.facing, t)
+          if (flying) {
+            const img = flyKindRef.current === 'oogoma' ? oogomaSheet.current : butterflySheet.current
+            drawButterfly(ctx, img, s.x, s.y, s.facing, t)
+          }
           else if (sheet.current) drawBoySprite(ctx, sheet.current, s, BOY_SCREEN_H, stepPx)
           else drawMarker(ctx, s.x, s.y)
           travelRef.current = s.travel
@@ -435,9 +451,12 @@ export function WorldMap({
                 setCandies(next)
                 if (isButterfly(c)) {
                   // ちょうちょアメ：その ばで そらへ（とんでいる とちゅうなら 20びょうに もどす）
-                  flyRemainMs.current = BUTTERFLY_FLY_SEC * 1000
+                  const kind = rollFlyKind()
+                  flyKindRef.current = kind
+                  setFlyKind(kind)
+                  flyRemainMs.current = FLY_INFO[kind].sec * 1000
                   engine.current?.setFlying(true)
-                  setFlySec(BUTTERFLY_FLY_SEC)
+                  setFlySec(FLY_INFO[kind].sec)
                   setLandedNote(false)
                 } else {
                   onCandyPickRef.current?.(c.id)
@@ -591,7 +610,9 @@ export function WorldMap({
       )}
       {flySec > 0 && !overview && (
         <div className={'butterfly-timer' + (flySec <= 5 ? ' ending' : '')}>
-          <span className="butterfly-timer-label">🦋 そらを とんでいる！</span>
+          <span className="butterfly-timer-label">
+            🦋 {FLY_INFO[flyKind].name}で とんでいる！
+          </span>
           <span className="butterfly-timer-sec">
             {flySec}
             <small>びょう</small>
