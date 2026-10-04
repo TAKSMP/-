@@ -34,6 +34,7 @@ export interface RaceMove {
   ultimate: boolean // さいきょうわざ（こうかが つよい）
   wide: boolean // あいて ぜんいん むけ（ひとりでなく みんなに きく）
   count: number // multiShot の たまの かず
+  uses: number // レースで つかえる かいすう（もとの わざの かいすう）
 }
 
 export const EFFECT_INFO: Record<RaceEffect, { emoji: string; label: string; desc: string; attack: boolean }> = {
@@ -102,6 +103,7 @@ export function toRaceMove(m: SpecialMoveV2): RaceMove {
     ultimate: !!m.ultimate,
     wide: m.target === 'allFoes' || m.target === 'allOthers',
     count: Math.max(2, Math.min(3, n)),
+    uses: Math.max(1, Math.round(m.uses || 1)),
   }
 }
 

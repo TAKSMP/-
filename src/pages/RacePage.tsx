@@ -23,7 +23,7 @@ import {
 } from '../lib/raceSetup'
 import { RaceTrack, type RaceResult } from '../components/RaceTrack'
 import { RaceSlots } from '../components/RaceSlots'
-import { LapPicker, MyBugGrid, MyRacerCard, RaceHowto, RaceResults } from '../components/RaceParts'
+import { LapPicker, MyBugGrid, MyRacerCard, RaceHowto, RaceResults, StagePicker } from '../components/RaceParts'
 import { RaceNet } from './RaceNet'
 import { Confetti } from '../components/Confetti'
 import { sfx } from '../lib/sound'
@@ -180,6 +180,13 @@ function SoloRace({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => void }) {
         <div className="battle-step">
           <h2 className="battle-step-title">② メンバーを きめよう</h2>
           <MyRacerCard me={me} />
+          <StagePicker
+            stage={setup.stage}
+            onStage={(stage) => {
+              sfx.tap()
+              setSetup({ ...setup, stage })
+            }}
+          />
           <RaceSlots
             count={setup.count}
             minCount={2}
@@ -190,6 +197,7 @@ function SoloRace({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => void }) {
             bugs={bugs}
             excludeIds={[myBug.id]}
             baseLv={myLv}
+            storyLevel={(id) => levelOf(save, id).level}
           />
           <RaceHowto />
           <LapPicker
@@ -217,7 +225,15 @@ function SoloRace({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => void }) {
       )}
 
       {phase === 'racing' && (
-        <RaceTrack key={raceNo} racers={racers} laps={setup.laps} viewerId="p0" onFinish={finish} />
+        <RaceTrack
+          key={raceNo}
+          racers={racers}
+          laps={setup.laps}
+          stageId={setup.stage}
+          viewerId="p0"
+          onFinish={finish}
+          onQuit={() => setPhase('setup')}
+        />
       )}
 
       {phase === 'result' && (

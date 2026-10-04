@@ -6,6 +6,7 @@ import { mainPhoto } from '../lib/storage'
 import { cageOf, levelOf, statsWithLevel, type StorySave } from '../lib/story'
 import { cruiseOf, tankOf, type RacerInit } from '../lib/raceEngine'
 import { EFFECT_INFO, raceMoveDesc } from '../lib/raceMoves'
+import { STAGES, stageThumb } from '../lib/raceStages'
 import type { RaceResult } from './RaceTrack'
 
 const MEDALS = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣']
@@ -70,12 +71,14 @@ export function MyRacerCard({ me, compact }: { me: RacerInit; compact?: boolean 
       </div>
       {!compact && (
         <div className="race-moves">
-          <div className="race-moves-title">🎁を とると つかえる わざ</div>
+          <div className="race-moves-title">レースで つかえる わざ（すきな ときに。×は つかえる かいすう）</div>
           {me.moves.map((m) => (
             <div key={m.id} className={'race-move' + (m.ultimate ? ' ult' : '')}>
               <span className="race-move-emoji">{m.emoji}</span>
               <span className="race-move-body">
-                <b>{m.name}</b>
+                <b>
+                  {m.name} <span className="race-move-uses">×{m.uses}</span>
+                </b>
                 <span className="race-move-kind">
                   {EFFECT_INFO[m.effect].emoji} {EFFECT_INFO[m.effect].label}
                 </span>
@@ -97,7 +100,7 @@ export function RaceHowto() {
       </p>
       <p>✋ はなすと たいりょくが もどるよ。おさなくても ゆっくり すすむよ。</p>
       <p>
-        🎁 <b>？</b>の はこを とると わざが つかえるよ。
+        ✨ <b>わざ</b>は すきな ときに ボタンで だせるよ。だせる かいすうは きまっているよ。
       </p>
     </div>
   )
@@ -161,5 +164,29 @@ export function RaceResults({
         })}
       </div>
     </>
+  )
+}
+
+export function StagePicker({ stage, onStage }: { stage: string; onStage?: (id: string) => void }) {
+  return (
+    <div className="race-stages">
+      <div className="race-stages-title">ステージを えらぼう</div>
+      <div className="race-stage-list">
+        {STAGES.map((s) => (
+          <button
+            key={s.id}
+            className={'race-stage' + (s.id === stage ? ' on' : '')}
+            disabled={!onStage}
+            onClick={() => onStage?.(s.id)}
+          >
+            <img src={stageThumb(s.id)} alt={s.name} />
+            <span className="race-stage-name">
+              {s.emoji} {s.name}
+            </span>
+            <span className="race-stage-desc">{s.desc}</span>
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }

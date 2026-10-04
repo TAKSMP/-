@@ -2,7 +2,8 @@
 //  レースの メンバー せってい（なんびき・CPUの わく）
 // -------------------------------------------------------------
 //  ・さいしょの わくは ひと（じぶん・つうしんで はいった ともだち）
-//  ・のこりは CPU。虫を「えらぶ」か「おまかせ」、つよさ（1〜10）を きめる
+//  ・のこりは CPU。虫を「えらぶ」（その虫の ストーリーの つよさ の まま）か
+//    「おまかせ」（つよさ 1〜10 を きめる）
 //  onCount / onSlots が ない ときは 見るだけ（つうしんの ゲスト）
 // =============================================================
 import { useState } from 'react'
@@ -29,9 +30,10 @@ interface Props {
   bugs: CaughtBug[]
   excludeIds?: string[]
   baseLv: number
+  storyLevel?: (bugId: string) => number // えらんだ 虫の ストーリーの Lv
 }
 
-export function RaceSlots({ count, minCount, onCount, fixed, slots, onSlots, bugs, excludeIds = [], baseLv }: Props) {
+export function RaceSlots({ count, minCount, onCount, fixed, slots, onSlots, bugs, excludeIds = [], baseLv, storyLevel }: Props) {
   const [picking, setPicking] = useState<number | null>(null)
   const readOnly = !onSlots
   const cpuCount = Math.max(0, count - fixed.length)
@@ -127,6 +129,15 @@ export function RaceSlots({ count, minCount, onCount, fixed, slots, onSlots, bug
                         : 'だれが でるかな？'}
                 </small>
               </div>
+              {s.mode === 'pick' ? (
+                <div className="rs-level">
+                  <span>ストーリーの</span>
+                  <span className="rs-story-lv">
+                    Lv {(bug && storyLevel?.(bug.id)) ?? s.storyLv ?? '?'}
+                  </span>
+                  <small>そうさは じどう</small>
+                </div>
+              ) : (
               <div className="rs-level">
                 <span>CPU つよさ</span>
                 <div className="rs-level-step">
@@ -156,6 +167,7 @@ export function RaceSlots({ count, minCount, onCount, fixed, slots, onSlots, bug
                 </div>
                 <small>虫 Lv {cpuBugLevel(baseLv, s.level)}</small>
               </div>
+              )}
             </div>
           )
         })}
@@ -179,7 +191,7 @@ export function RaceSlots({ count, minCount, onCount, fixed, slots, onSlots, bug
                     className={'race-pick' + (slots[picking]?.bugId === b.id ? ' on' : '')}
                     onClick={() => {
                       sfx.tap()
-                      setSlot(picking, { mode: 'pick', bugId: b.id })
+                      setSlot(picking, { mode: 'pick', bugId: b.id, storyLv: storyLevel?.(b.id) })
                       setPicking(null)
                     }}
                   >

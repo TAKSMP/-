@@ -6,7 +6,8 @@
 //  かわった ときだけ かえる（60かい／びょう かきかえない）。
 // =============================================================
 import { useEffect, useRef, useState } from 'react'
-import { buildTrack, renderPark, trackPos, WORLD_H, WORLD_W, type Track } from '../lib/raceCourse'
+import { trackPos, WORLD_H, WORLD_W } from '../lib/raceCourse'
+import { stageById, stagePark, stageTrack } from '../lib/raceStages'
 import {
   applySnap,
   createRace,
@@ -35,35 +36,20 @@ export interface RaceNetLink {
   remoteInputs?: () => Record<string, RaceInput> // ホスト：ほかの ひとの アクセル
   publish?: (snap: RaceSnap) => void // ホスト：いまの すがたを くばる
   subscribe?: (cb: (snap: RaceSnap) => void) => () => void // ゲスト
-  sendInput?: (accel: boolean, useCount: number) => void // ゲスト
+  sendInput?: (accel: boolean, useCount: number, move: number) => void // ゲスト
 }
 
 interface Props {
   racers: RacerInit[]
   laps: number
+  stageId: string
   viewerId: string // この がめんで うごかす むし
   net?: RaceNetLink
   onFinish: (results: RaceResult[]) => void
+  onQuit: () => void
 }
 
-const VIEW_W = 560 // がめんの よこに みえる せかいの はば
 const DT = 1 / 60
-
-let trackCache: Track | null = null
-const parkCache = new Map<number, HTMLCanvasElement>()
-function getTrack() {
-  if (!trackCache) trackCache = buildTrack()
-  return trackCache
-}
-function getPark(scale: number) {
-  const key = Math.round(scale * 4) / 4
-  let cv = parkCache.get(key)
-  if (!cv) {
-    cv = renderPark(getTrack(), key)
-    parkCache.set(key, cv)
-  }
-  return cv
-}
 
 // しゃしんを まるく きりぬいて おく（まいコマ clip すると おもい）
 function circlePhoto(src: string, done: (c: HTMLCanvasElement) => void) {
@@ -83,44 +69,48 @@ function circlePhoto(src: string, done: (c: HTMLCanvasElement) => void) {
   img.src = src
 }
 
+interface HudMove {
+  emoji: string
+  name: string
+  label: string
+  left: number
+  ult: boolean
+}
+
 interface Hud {
   rank: number
   total: number
   lap: number
-  itemName: string
-  itemEmoji: string
-  itemDesc: string
-  rolling: boolean
-  hasItem: boolean
+  moves: HudMove[]
+  ready: boolean // わざが つかえる（スタート ご・まち じかん なし・ゴール まえ）
 }
 
-export function RaceTrack({ racers, laps, viewerId, net, onFinish }: Props) {
-  const wrapRef = useRef<HTMLDivElement>(null)
+export function RaceTrack({ racers, laps, stageId, viewerId, net, onFinish, onQuit }: Props) {
+  const stageRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const gaugeRef = useRef<HTMLDivElement>(null)
   const gaugeHintRef = useRef<HTMLSpanElement>(null)
   const accelRef = useRef(false)
-  const useRef_ = useRef(false)
+  const moveRef = useRef<number | null>(null)
   const useCountRef = useRef(0)
+  const lastMoveRef = useRef(-1) // さいごに おした わざ（アクセルを おくる ときも いっしょに おくる）
   const netRef = useRef(net)
   netRef.current = net
   const stateRef = useRef<RaceState | null>(null)
   const finishRef = useRef(onFinish)
   finishRef.current = onFinish
-  const [hud, setHud] = useState<Hud>({
-    rank: 1,
-    total: racers.length,
-    lap: 1,
-    itemName: '',
-    itemEmoji: '',
-    itemDesc: '',
-    rolling: false,
-    hasItem: false,
-  })
+  const [hud, setHud] = useState<Hud>({ rank: 1, total: racers.length, lap: 1, moves: [], ready: false })
   const [accelDown, setAccelDown] = useState(false)
 
+  // レース ちゅうは がめん いっぱい（したの タブや スクロールを とめる）
   useEffect(() => {
-    const track = getTrack()
+    document.body.classList.add('race-full')
+    return () => document.body.classList.remove('race-full')
+  }, [])
+
+  useEffect(() => {
+    const track = stageTrack(stageId)
+    const ground = stageById(stageId).pal.grass
     const st = createRace(track, racers, laps)
     stateRef.current = st
     const photos = new Map<string, HTMLCanvasElement>()
@@ -132,18 +122,21 @@ export function RaceTrack({ racers, laps, viewerId, net, onFinish }: Props) {
     let cssH = 0
     let dpr = 1
     let park: HTMLCanvasElement | null = null
+    let zoom = 1
     const resize = () => {
-      const w = wrapRef.current?.clientWidth ?? 360
-      cssW = w
-      cssH = Math.round(Math.max(380, Math.min(w * 1.25, window.innerHeight * 0.66)))
+      const box = stageRef.current
+      cssW = Math.max(200, box?.clientWidth ?? 360)
+      cssH = Math.max(200, box?.clientHeight ?? 500)
       dpr = Math.min(2.5, window.devicePixelRatio || 1)
       cv.width = Math.round(cssW * dpr)
       cv.height = Math.round(cssH * dpr)
-      cv.style.height = cssH + 'px'
-      park = getPark(Math.min(1.75, (cssW / VIEW_W) * dpr))
+      // よこ 520・たて 640 くらいが みえる ように（ひろい がめんでも ちかすぎない）
+      zoom = Math.min(cssW / 520, cssH / 640)
+      park = stagePark(stageId, Math.min(1.75, zoom * dpr))
     }
     resize()
-    window.addEventListener('resize', resize)
+    const ro = new ResizeObserver(resize)
+    if (stageRef.current) ro.observe(stageRef.current)
 
     const me = st.racers.find((r) => r.id === viewerId) ?? st.racers[0]
     const link = netRef.current
@@ -160,7 +153,6 @@ export function RaceTrack({ racers, laps, viewerId, net, onFinish }: Props) {
     let raf = 0
     let finished = false
     let hudKey = ''
-    let rollFlip = 0
 
     const loop = (now: number) => {
       raf = requestAnimationFrame(loop)
@@ -169,14 +161,14 @@ export function RaceTrack({ racers, laps, viewerId, net, onFinish }: Props) {
       last = now
       if (guest) {
         if (latest) applySnap(st, latest, now, frameDt)
-        useRef_.current = false
+        moveRef.current = null
       } else {
         const ins: Record<string, RaceInput> = { ...(link?.remoteInputs?.() ?? {}) }
-        ins[me.id] = { accel: accelRef.current, use: useRef_.current }
-        useRef_.current = false
+        ins[me.id] = { accel: accelRef.current, move: moveRef.current }
+        moveRef.current = null
         while (acc >= DT) {
           stepRace(st, DT, ins)
-          for (const k in ins) ins[k] = { ...ins[k], use: false } // わざは 1かいだけ
+          for (const k in ins) ins[k] = { ...ins[k], move: null } // わざは 1かいだけ
           acc -= DT
         }
         // つうしん：0.1びょうごとに くばる（おわった ときは すぐ）
@@ -193,7 +185,6 @@ export function RaceTrack({ racers, laps, viewerId, net, onFinish }: Props) {
         const ev = e.ev
         if (ev === 'count') sfx.tap()
         else if (ev === 'go') sfx.battleStart()
-        else if (ev === 'pickup') sfx.badge()
         else if (ev === 'dash') sfx.special('attackUp')
         else if (ev === 'hit') sfx.hit()
         else if (ev === 'hitMe') sfx.special('powerStrike')
@@ -224,21 +215,22 @@ export function RaceTrack({ racers, laps, viewerId, net, onFinish }: Props) {
       // HUD（かわった ときだけ）
       const order = standings(st)
       const rank = order.indexOf(me) + 1
-      if (me.rollT > 0) rollFlip = Math.floor(st.clock * 12)
-      const rollingMove = me.rollT > 0 && me.moves.length ? me.moves[rollFlip % me.moves.length] : null
-      const shown = rollingMove ?? me.item
-      const key = `${rank}|${me.lap}|${shown?.id ?? ''}|${me.rollT > 0}`
+      const ready = st.countdown <= 0 && me.moveCd <= 0 && me.finishTime === null
+      const key = `${rank}|${me.lap}|${me.usesLeft.join(',')}|${ready}`
       if (key !== hudKey) {
         hudKey = key
         setHud({
           rank,
           total: st.racers.length,
           lap: me.lap,
-          itemName: shown?.name ?? '',
-          itemEmoji: shown?.emoji ?? '',
-          itemDesc: shown && !rollingMove ? EFFECT_INFO[shown.effect].label : '',
-          rolling: !!rollingMove,
-          hasItem: !!me.item && me.rollT <= 0,
+          moves: me.moves.map((m, i) => ({
+            emoji: m.emoji,
+            name: m.name,
+            label: EFFECT_INFO[m.effect].label,
+            left: me.usesLeft[i] ?? 0,
+            ult: m.ultimate,
+          })),
+          ready,
         })
       }
       if (st.over && !finished) {
@@ -249,7 +241,6 @@ export function RaceTrack({ racers, laps, viewerId, net, onFinish }: Props) {
     }
 
     const draw = () => {
-      const zoom = cssW / VIEW_W
       // カメラ：じぶんの むしの すこし さきを みる
       const mp = trackPos(track, me.s + Math.min(110, me.speed * 0.5), me.lat)
       camX += (mp.x - camX) * 0.12
@@ -260,39 +251,12 @@ export function RaceTrack({ racers, laps, viewerId, net, onFinish }: Props) {
       const cy = Math.max(halfH, Math.min(WORLD_H - halfH, camY))
       const k = zoom * dpr
       ctx.setTransform(1, 0, 0, 1, 0, 0)
-      ctx.fillStyle = '#7cbf5a'
+      ctx.fillStyle = ground
       ctx.fillRect(0, 0, cv.width, cv.height)
       ctx.setTransform(k, 0, 0, k, (cssW / 2 - cx * zoom) * dpr, (cssH / 2 - cy * zoom) * dpr)
       if (park) ctx.drawImage(park, 0, 0, park.width, park.height, 0, 0, WORLD_W, WORLD_H)
 
       const t = st.clock
-      // 🎁
-      for (const b of st.boxes) {
-        if (b.readyAt > t) continue
-        const p = trackPos(track, b.s, b.lat)
-        ctx.save()
-        ctx.translate(p.x, p.y + Math.sin(t * 4 + b.lat) * 2)
-        ctx.rotate(t * 1.6)
-        ctx.fillStyle = 'rgba(0,0,0,0.18)'
-        ctx.fillRect(-11, -9, 24, 24)
-        const g = ctx.createLinearGradient(-12, -12, 12, 12)
-        g.addColorStop(0, `hsl(${(t * 120) % 360},90%,65%)`)
-        g.addColorStop(1, `hsl(${(t * 120 + 140) % 360},90%,60%)`)
-        ctx.fillStyle = g
-        ctx.beginPath()
-        ctx.roundRect(-12, -12, 24, 24, 5)
-        ctx.fill()
-        ctx.strokeStyle = '#fff'
-        ctx.lineWidth = 2.5
-        ctx.stroke()
-        ctx.rotate(-t * 1.6)
-        ctx.fillStyle = '#fff'
-        ctx.font = 'bold 16px sans-serif'
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        ctx.fillText('?', 0, 1)
-        ctx.restore()
-      }
       // どくだまり
       for (const tp of st.traps) {
         const p = trackPos(track, tp.s, tp.lat)
@@ -601,8 +565,12 @@ export function RaceTrack({ racers, laps, viewerId, net, onFinish }: Props) {
       if (e.code === 'Space' || e.code === 'ArrowUp') {
         if (!e.repeat) press(down)
         e.preventDefault()
+      } else if (down && !e.repeat && /^Digit[1-6]$/.test(e.code)) {
+        fireMove(Number(e.code.slice(5)) - 1)
+        e.preventDefault()
       } else if (down && !e.repeat && (e.code === 'Enter' || e.code === 'KeyZ' || e.code === 'KeyX')) {
-        fireMove()
+        const i = stateRef.current?.racers.find((r) => r.id === viewerId)?.usesLeft.findIndex((n) => n > 0) ?? -1
+        if (i >= 0) fireMove(i)
         e.preventDefault()
       }
     }
@@ -613,7 +581,7 @@ export function RaceTrack({ racers, laps, viewerId, net, onFinish }: Props) {
     return () => {
       cancelAnimationFrame(raf)
       unsub?.()
-      window.removeEventListener('resize', resize)
+      ro.disconnect()
       window.removeEventListener('keydown', kd)
       window.removeEventListener('keyup', ku)
     }
@@ -625,69 +593,79 @@ export function RaceTrack({ racers, laps, viewerId, net, onFinish }: Props) {
     if (accelRef.current === down) return
     accelRef.current = down
     setAccelDown(down)
-    netRef.current?.sendInput?.(down, useCountRef.current)
+    netRef.current?.sendInput?.(down, useCountRef.current, lastMoveRef.current)
   }
-  function fireMove() {
-    useRef_.current = true
+  function fireMove(i: number) {
+    moveRef.current = i
+    lastMoveRef.current = i
     useCountRef.current += 1
-    netRef.current?.sendInput?.(accelRef.current, useCountRef.current)
+    netRef.current?.sendInput?.(accelRef.current, useCountRef.current, i)
   }
 
   return (
-    <div className="rt-wrap" ref={wrapRef}>
-      <canvas ref={canvasRef} className="rt-canvas" />
-      <div className="rt-hud">
-        <span className="rt-rank">
-          <b>{hud.rank}</b>い<small>／{hud.total}</small>
-        </span>
-        <span className="rt-lap">
-          {Math.min(hud.lap, laps)}／{laps}しゅう
-        </span>
+    <div className="rt-wrap" onContextMenu={(e) => e.preventDefault()}>
+      <div className="rt-stage" ref={stageRef}>
+        <canvas ref={canvasRef} className="rt-canvas" />
+        <div className="rt-hud">
+          <button
+            className="rt-quit"
+            onClick={() => {
+              if (window.confirm('レースを やめる？')) onQuit()
+            }}
+          >
+            ✕
+          </button>
+          <span className="rt-rank">
+            <b>{hud.rank}</b>い<small>／{hud.total}</small>
+          </span>
+          <span className="rt-lap">
+            {Math.min(hud.lap, laps)}／{laps}しゅう
+          </span>
+        </div>
       </div>
-      <div className="rt-controls" onContextMenu={(e) => e.preventDefault()}>
-        <button
-          className={'rt-move' + (hud.hasItem ? ' ready' : '') + (hud.rolling ? ' rolling' : '')}
-          disabled={!hud.hasItem}
-          onPointerDown={(e) => {
-            e.preventDefault()
-            fireMove()
-          }}
-        >
-          {hud.itemEmoji ? (
-            <>
-              <span className="rt-move-emoji">{hud.itemEmoji}</span>
-              <span className="rt-move-name">{hud.itemName}</span>
-              {hud.itemDesc && <span className="rt-move-desc">{hud.itemDesc}</span>}
-            </>
-          ) : (
-            <>
-              <span className="rt-move-emoji">🎁</span>
-              <span className="rt-move-name">？を とって わざ</span>
-            </>
-          )}
-        </button>
-        <div className="rt-gauge">
-          <div className="rt-gauge-bar">
-            <div className="rt-gauge-fill" ref={gaugeRef} />
-          </div>
+      <div className="rt-controls">
+        <div className="rt-gauge-bar">
+          <div className="rt-gauge-fill" ref={gaugeRef} />
           <span className="rt-gauge-label" ref={gaugeHintRef}>
             たいりょく
           </span>
         </div>
-        <button
-          className={'rt-accel' + (accelDown ? ' down' : '')}
-          onPointerDown={(e) => {
-            e.preventDefault()
-            e.currentTarget.setPointerCapture(e.pointerId)
-            press(true)
-          }}
-          onPointerUp={() => press(false)}
-          onPointerCancel={() => press(false)}
-          onLostPointerCapture={() => press(false)}
-        >
-          <span className="rt-accel-icon">🔥</span>
-          アクセル
-        </button>
+        <div className="rt-bottom">
+          <div className={'rt-moves' + (hud.moves.length > 3 ? ' many' : '')}>
+            {hud.moves.map((m, i) => (
+              <button
+                key={i}
+                className={'rt-move' + (m.ult ? ' ult' : '') + (m.left > 0 && hud.ready ? ' ready' : '')}
+                disabled={m.left <= 0}
+                onPointerDown={(e) => {
+                  e.preventDefault()
+                  if (m.left > 0) fireMove(i)
+                }}
+              >
+                <span className="rt-move-emoji">{m.emoji}</span>
+                <span className="rt-move-body">
+                  <span className="rt-move-name">{m.name}</span>
+                  <span className="rt-move-desc">{m.label}</span>
+                </span>
+                <span className="rt-move-left">×{m.left}</span>
+              </button>
+            ))}
+          </div>
+          <button
+            className={'rt-accel' + (accelDown ? ' down' : '')}
+            onPointerDown={(e) => {
+              e.preventDefault()
+              e.currentTarget.setPointerCapture(e.pointerId)
+              press(true)
+            }}
+            onPointerUp={() => press(false)}
+            onPointerCancel={() => press(false)}
+            onLostPointerCapture={() => press(false)}
+          >
+            <span className="rt-accel-icon">🔥</span>
+            アクセル
+          </button>
+        </div>
       </div>
     </div>
   )

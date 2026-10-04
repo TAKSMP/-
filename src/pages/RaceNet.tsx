@@ -8,7 +8,7 @@
 // =============================================================
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CaughtBug } from '../types'
-import { loadStory } from '../lib/story'
+import { levelOf, loadStory } from '../lib/story'
 import type { RacerInit } from '../lib/raceEngine'
 import {
   cpuRacerInits,
@@ -38,7 +38,7 @@ import {
 } from '../lib/netRace'
 import { RaceTrack, type RaceNetLink, type RaceResult } from '../components/RaceTrack'
 import { RaceSlots, type FixedRacer } from '../components/RaceSlots'
-import { LapPicker, MyBugGrid, MyRacerCard, RaceHowto, RaceResults } from '../components/RaceParts'
+import { LapPicker, MyBugGrid, MyRacerCard, RaceHowto, RaceResults, StagePicker } from '../components/RaceParts'
 import { Confetti } from '../components/Confetti'
 import { sfx } from '../lib/sound'
 
@@ -94,7 +94,15 @@ export function RaceNet({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => voi
   const baseLv = playerList.length
     ? Math.round(playerList.reduce((a, [, p]) => a + p.racer.level, 0) / playerList.length)
     : 1
-  const setup: RaceRoomSetup = isHost ? hostSetup : (roomSetup ?? { count: 2, laps: 1, slots: [] })
+  const setup: RaceRoomSetup = isHost ? hostSetup : (roomSetup ?? { count: 2, laps: 1, stage: 'hiroba', slots: [] })
+  const storyLv = (id: string) => levelOf(save, id).level
+  // へやに のせる せってい（えらんだ 虫の Lv も いれて、ゲストにも 見える ように）
+  const roomSetupOf = (h: RaceSetup): RaceRoomSetup => ({
+    count: h.count,
+    laps: h.laps,
+    stage: h.stage,
+    slots: h.slots.map((sl) => (sl.mode === 'pick' && sl.bugId ? { ...sl, storyLv: storyLv(sl.bugId) } : sl)),
+  })
 
   // ── へやを みはる
   useEffect(() => {
@@ -126,7 +134,7 @@ export function RaceNet({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => voi
 
   // ── ホスト：せっていを へやに のせる／ひとが ふえたら わくも ふやす
   useEffect(() => {
-    if (code && isHost) setRaceSetup(code, { count: hostSetup.count, laps: hostSetup.laps, slots: hostSetup.slots })
+    if (code && isHost) setRaceSetup(code, roomSetupOf(hostSetup))
   }, [code, isHost, hostSetup])
   useEffect(() => {
     if (isHost && playerList.length > hostSetup.count) setHostSetup({ ...hostSetup, count: playerList.length })
@@ -157,11 +165,7 @@ export function RaceNet({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => voi
     setBusy(true)
     setError('')
     try {
-      const r = await createRaceRoom(name, myNetRacer(myBug), {
-        count: hostSetup.count,
-        laps: hostSetup.laps,
-        slots: hostSetup.slots,
-      })
+      const r = await createRaceRoom(name, myNetRacer(myBug), roomSetupOf(hostSetup))
       setIsHost(true)
       setUid(r.uid)
       setCode(r.code)
@@ -230,7 +234,13 @@ export function RaceNet({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => voi
       colors,
     })
     try {
-      await startNetRace(code, { no: Date.now(), laps: hostSetup.laps, racers: shuffle([...humans, ...cpus]), uids })
+      await startNetRace(code, {
+        no: Date.now(),
+        laps: hostSetup.laps,
+        stage: hostSetup.stage,
+        racers: shuffle([...humans, ...cpus]),
+        uids,
+      })
     } catch (e) {
       setError('スタート できませんでした：' + (e instanceof Error ? e.message : String(e)))
     }
@@ -243,12 +253,13 @@ export function RaceNet({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => voi
       return {
         role: 'host',
         remoteInputs: () => {
-          const out: Record<string, { accel: boolean; use: boolean }> = {}
+          const out: Record<string, { accel: boolean; move: number | null }> = {}
           for (const [rid, u] of Object.entries(race.uids ?? {})) {
             if (u === uid) continue
             const inp = inputsRef.current[u]
             const n = inp?.u ?? 0
-            out[rid] = { accel: inp?.a === 1, use: n > (lastUseRef.current[u] ?? 0) }
+            const fresh = n > (lastUseRef.current[u] ?? 0) && (inp?.m ?? -1) >= 0
+            out[rid] = { accel: inp?.a === 1, move: fresh ? (inp?.m ?? null) : null }
             lastUseRef.current[u] = n
           }
           return out
@@ -258,7 +269,7 @@ export function RaceNet({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => voi
     return {
       role: 'guest',
       subscribe: (cb) => watchRacePart(code, 'snap', (v) => v && cb(v as never)),
-      sendInput: (accel, useCount) => sendRaceInput(code, uid, accel, useCount),
+      sendInput: (accel, useCount, move) => sendRaceInput(code, uid, accel, useCount, move),
     }
   }, [code, race, isHost, uid])
 
@@ -411,6 +422,17 @@ export function RaceNet({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => voi
             <small>{isHost ? 'ともだちに おしえてね（さいだい 6にん）' : 'ホストが スタートするのを まってね'}</small>
           </div>
           {status === 'racing' && !myRacerId && <p className="race-lead">いまは レース ちゅう。つぎの レースから はしれるよ！</p>}
+          <StagePicker
+            stage={setup.stage ?? 'hiroba'}
+            onStage={
+              isHost
+                ? (stage) => {
+                    sfx.tap()
+                    setHostSetup({ ...hostSetup, stage })
+                  }
+                : undefined
+            }
+          />
           <RaceSlots
             count={setup.count}
             minCount={Math.max(2, playerList.length)}
@@ -421,6 +443,7 @@ export function RaceNet({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => voi
             bugs={isHost ? bugs : []}
             excludeIds={myBug ? [myBug.id] : []}
             baseLv={baseLv}
+            storyLevel={isHost ? storyLv : undefined}
           />
           <LapPicker
             laps={setup.laps}
@@ -434,6 +457,7 @@ export function RaceNet({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => voi
             }
           />
           <RaceHowto />
+          {isHost && <p className="race-net-note">きみが ホストだよ。レース ちゅうに この がめんを とじると みんなの レースが とまるよ。</p>}
           <div className="race-lineup-actions">
             {isHost && (
               <button className="btn btn-big btn-primary" onClick={hostStart}>
@@ -449,8 +473,20 @@ export function RaceNet({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => voi
 
       {phase === 'racing' && race && myRacerId && link && (
         <>
-          <RaceTrack key={race.no} racers={race.racers} laps={race.laps} viewerId={myRacerId} net={link} onFinish={finish} />
-          {isHost && <p className="race-net-note">きみが ホストだよ。この がめんを とじると みんなの レースが とまるよ。</p>}
+          <RaceTrack
+            key={race.no}
+            racers={race.racers}
+            laps={race.laps}
+            stageId={race.stage ?? 'hiroba'}
+            viewerId={myRacerId}
+            net={link}
+            onFinish={finish}
+            onQuit={() => {
+              // ホストが やめたら みんな へやに もどる／ゲストは へやを でる
+              if (isHost && code) backToLobby(code)
+              else leave()
+            }}
+          />
         </>
       )}
 

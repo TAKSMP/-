@@ -28,12 +28,14 @@ export interface RacePlayer {
 export interface RaceRoomSetup {
   count: number
   laps: number
+  stage: string
   slots: CpuSlot[]
 }
 
 export interface RaceRoomRace {
   no: number // なんかいめの レースか（もういちど の たびに ふえる）
   laps: number
+  stage: string
   racers: RacerInit[]
   uids: Record<string, string> // むしの id → ひとの uid
 }
@@ -41,6 +43,7 @@ export interface RaceRoomRace {
 export interface RaceInputDoc {
   a: number // アクセル 1/0
   u: number // わざボタンを おした かいすう
+  m: number // さいごに おした わざの ばんごう
 }
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -119,8 +122,8 @@ export function publishSnap(code: string, snap: RaceSnap): void {
   set(child(roomRef(code), 'snap'), sanitize(snap)).catch((e) => console.warn('つうしんレース：snap', e))
 }
 
-export function sendRaceInput(code: string, uid: string, accel: boolean, useCount: number): void {
-  const doc: RaceInputDoc = { a: accel ? 1 : 0, u: useCount }
+export function sendRaceInput(code: string, uid: string, accel: boolean, useCount: number, move: number): void {
+  const doc: RaceInputDoc = { a: accel ? 1 : 0, u: useCount, m: move }
   set(child(roomRef(code), `input/${uid}`), doc).catch(() => {})
 }
 

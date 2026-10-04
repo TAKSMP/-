@@ -3,7 +3,8 @@
 // -------------------------------------------------------------
 //  ・とおる てん（CONTROL）を なめらかな 線で つないで みちに する
 //  ・みちは 4ずつ くぎった てんの ならびで もつ（すすんだ きょり → ばしょ が すぐ わかる）
-//  ・こうえんの 絵（いけ・ふんすい・あそびば・はなばたけ・木）は 1かいだけ かいて つかいまわす
+//  ・ここには みちの けいさんと、こうえんの 絵の 部品（木・いけ・ベンチ…）を おく。
+//    ステージごとの コースと 絵の くみたては raceStages.ts
 //  画像ファイルは つかわず、ぜんぶ canvas で えがく（オフラインでも 出る）。
 // =============================================================
 
@@ -12,35 +13,6 @@ export const WORLD_H = 1800
 export const ROAD_HALF = 60 // みちの はば の はんぶん
 export const LANE_LIMIT = 45 // 虫が はしれる よこはば（まんなかから）
 const STEP = 4
-
-// コースの とおる てん（とけいまわり）。スタートは さいしょの てんの すこし さき
-const CONTROL: [number, number][] = [
-  [520, 1560],
-  [1100, 1590],
-  [1650, 1545],
-  [2050, 1400],
-  [2230, 1110],
-  [2130, 830],
-  [1840, 760],
-  [1580, 900],
-  [1310, 1060],
-  [1030, 1010],
-  [900, 790],
-  [1050, 570],
-  [1400, 525],
-  [1760, 505],
-  [2060, 410],
-  [2140, 240],
-  [1820, 160],
-  [1300, 200],
-  [800, 180],
-  [420, 270],
-  [215, 560],
-  [300, 860],
-  [560, 960],
-  [440, 1170],
-  [290, 1390],
-]
 
 export interface Track {
   L: number // 1しゅうの ながさ
@@ -58,7 +30,7 @@ function catmull(p0: number, p1: number, p2: number, p3: number, t: number) {
   return 0.5 * (2 * p1 + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3)
 }
 
-export function buildTrack(): Track {
+export function buildTrack(CONTROL: [number, number][]): Track {
   // ① なめらかな 線を こまかく とる
   const raw: [number, number][] = []
   const m = CONTROL.length
@@ -146,7 +118,7 @@ export function curvAt(t: Track, s: number): number {
 }
 
 // いちばん ちかい みちまでの きょり（こうえんの ものを みちに かさねない ため）
-function distToRoad(t: Track, px: number, py: number): number {
+export function distToRoad(t: Track, px: number, py: number): number {
   let best = Infinity
   for (let i = 0; i < t.n; i += 3) {
     const d = (t.x[i] - px) ** 2 + (t.y[i] - py) ** 2
@@ -155,7 +127,7 @@ function distToRoad(t: Track, px: number, py: number): number {
   return Math.sqrt(best)
 }
 
-function rng(seed: number) {
+export function rng(seed: number) {
   let s = seed >>> 0
   return () => {
     s = (s * 1664525 + 1013904223) >>> 0
@@ -166,9 +138,9 @@ function rng(seed: number) {
 // -------------------------------------------------------------
 //  こうえんの 絵
 // -------------------------------------------------------------
-type Ctx = CanvasRenderingContext2D
+export type Ctx = CanvasRenderingContext2D
 
-function tree(c: Ctx, x: number, y: number, r: number, leaf: string, leafHi: string) {
+export function tree(c: Ctx, x: number, y: number, r: number, leaf: string, leafHi: string) {
   c.fillStyle = 'rgba(30,60,20,0.22)'
   c.beginPath()
   c.ellipse(x + r * 0.35, y + r * 0.4, r * 1.05, r * 0.9, 0, 0, Math.PI * 2)
@@ -191,7 +163,7 @@ function tree(c: Ctx, x: number, y: number, r: number, leaf: string, leafHi: str
   c.fill()
 }
 
-function bush(c: Ctx, x: number, y: number, r: number, rnd: () => number) {
+export function bush(c: Ctx, x: number, y: number, r: number, rnd: () => number) {
   c.fillStyle = 'rgba(30,60,20,0.18)'
   c.beginPath()
   c.ellipse(x + 4, y + 5, r * 1.3, r * 0.8, 0, 0, Math.PI * 2)
@@ -212,7 +184,7 @@ function bush(c: Ctx, x: number, y: number, r: number, rnd: () => number) {
   }
 }
 
-function pond(c: Ctx, x: number, y: number, rx: number, ry: number, rnd: () => number) {
+export function pond(c: Ctx, x: number, y: number, rx: number, ry: number, rnd: () => number) {
   c.fillStyle = '#c9b98a'
   c.beginPath()
   c.ellipse(x, y, rx + 14, ry + 12, 0.1, 0, Math.PI * 2)
@@ -275,7 +247,7 @@ function pond(c: Ctx, x: number, y: number, rx: number, ry: number, rnd: () => n
   }
 }
 
-function fountain(c: Ctx, x: number, y: number) {
+export function fountain(c: Ctx, x: number, y: number) {
   // しきいし の ひろば
   c.fillStyle = '#e9dfc9'
   c.beginPath()
@@ -319,7 +291,7 @@ function fountain(c: Ctx, x: number, y: number) {
   for (const a of [0.4, 2.0, 3.6, 5.2]) bench(c, x + Math.cos(a) * 125, y + Math.sin(a) * 125, a + Math.PI / 2)
 }
 
-function bench(c: Ctx, x: number, y: number, rot: number) {
+export function bench(c: Ctx, x: number, y: number, rot: number) {
   c.save()
   c.translate(x, y)
   c.rotate(rot)
@@ -334,7 +306,7 @@ function bench(c: Ctx, x: number, y: number, rot: number) {
   c.restore()
 }
 
-function sandbox(c: Ctx, x: number, y: number) {
+export function sandbox(c: Ctx, x: number, y: number) {
   c.fillStyle = '#b0773f'
   c.fillRect(x - 85, y - 60, 170, 120)
   c.fillStyle = '#f2dc9a'
@@ -353,7 +325,7 @@ function sandbox(c: Ctx, x: number, y: number) {
   c.fillRect(x + 36, y - 34, 14, 8)
 }
 
-function slide(c: Ctx, x: number, y: number) {
+export function slide(c: Ctx, x: number, y: number) {
   c.save()
   c.translate(x, y)
   c.fillStyle = 'rgba(0,0,0,0.18)'
@@ -378,7 +350,7 @@ function slide(c: Ctx, x: number, y: number) {
   c.restore()
 }
 
-function swings(c: Ctx, x: number, y: number) {
+export function swings(c: Ctx, x: number, y: number) {
   c.fillStyle = 'rgba(0,0,0,0.15)'
   c.fillRect(x - 86, y - 10, 180, 30)
   c.fillStyle = '#d9534f'
@@ -407,7 +379,7 @@ function swings(c: Ctx, x: number, y: number) {
   }
 }
 
-function jungleGym(c: Ctx, x: number, y: number) {
+export function jungleGym(c: Ctx, x: number, y: number) {
   c.fillStyle = 'rgba(0,0,0,0.15)'
   c.fillRect(x - 52, y - 46, 112, 104)
   c.strokeStyle = '#2f9e6e'
@@ -431,7 +403,7 @@ function jungleGym(c: Ctx, x: number, y: number) {
     }
 }
 
-function flowerBed(c: Ctx, x: number, y: number, w: number, h: number, colors: string[], rnd: () => number) {
+export function flowerBed(c: Ctx, x: number, y: number, w: number, h: number, colors: string[], rnd: () => number) {
   c.fillStyle = '#9b6b43'
   c.beginPath()
   c.roundRect(x - w / 2 - 6, y - h / 2 - 6, w + 12, h + 12, 16)
@@ -466,7 +438,7 @@ function flowerBed(c: Ctx, x: number, y: number, w: number, h: number, colors: s
   }
 }
 
-function lamp(c: Ctx, x: number, y: number) {
+export function lamp(c: Ctx, x: number, y: number) {
   c.fillStyle = 'rgba(0,0,0,0.2)'
   c.beginPath()
   c.ellipse(x + 6, y + 6, 8, 5, 0, 0, Math.PI * 2)
@@ -481,156 +453,3 @@ function lamp(c: Ctx, x: number, y: number) {
   c.fill()
 }
 
-// こうえん ぜんたいを 1まいの canvas に かく（scale で こまかさを えらぶ）
-export function renderPark(t: Track, scale: number): HTMLCanvasElement {
-  const cv = document.createElement('canvas')
-  cv.width = Math.round(WORLD_W * scale)
-  cv.height = Math.round(WORLD_H * scale)
-  const c = cv.getContext('2d')!
-  c.scale(scale, scale)
-  const rnd = rng(20261004)
-
-  // しばふ（かりこんだ しまもよう）
-  c.fillStyle = '#8fd16a'
-  c.fillRect(0, 0, WORLD_W, WORLD_H)
-  c.fillStyle = '#86c962'
-  for (let x = 0; x < WORLD_W; x += 160) c.fillRect(x, 0, 80, WORLD_H)
-  c.fillStyle = 'rgba(70,140,50,0.35)'
-  for (let i = 0; i < 1600; i++) {
-    const x = rnd() * WORLD_W
-    const y = rnd() * WORLD_H
-    c.fillRect(x, y, 2, 6)
-    c.fillRect(x + 3, y + 1, 2, 5)
-  }
-  // そとがわの さく
-  c.strokeStyle = '#b5884f'
-  c.lineWidth = 10
-  c.strokeRect(14, 14, WORLD_W - 28, WORLD_H - 28)
-
-  // おおきな もの（みちの うちがわに おく）
-  pond(c, 1420, 715, 250, 105, rnd)
-  fountain(c, 610, 640)
-  sandbox(c, 900, 1290)
-  slide(c, 1190, 1240)
-  swings(c, 1520, 1230)
-  jungleGym(c, 1830, 1260)
-  flowerBed(c, 1080, 360, 260, 90, ['#ff6b8b', '#ffd23f', '#fff'], rnd)
-  flowerBed(c, 1450, 350, 280, 90, ['#c49eff', '#ff9ec4', '#ffd23f'], rnd)
-  flowerBed(c, 1800, 330, 200, 70, ['#ff9f1c', '#fff', '#ff6b8b'], rnd)
-  flowerBed(c, 1960, 1060, 120, 160, ['#ff6b8b', '#fff'], rnd)
-
-  // みち（ふちいし → つち → まんなかの うすい すじ）
-  const path = () => {
-    c.beginPath()
-    c.moveTo(t.x[0], t.y[0])
-    for (let i = 1; i < t.n; i++) c.lineTo(t.x[i], t.y[i])
-    c.closePath()
-  }
-  c.lineJoin = 'round'
-  c.lineCap = 'round'
-  path()
-  c.strokeStyle = 'rgba(0,0,0,0.12)'
-  c.lineWidth = ROAD_HALF * 2 + 28
-  c.stroke()
-  c.strokeStyle = '#c8bca2'
-  c.lineWidth = ROAD_HALF * 2 + 18
-  c.stroke()
-  c.strokeStyle = '#e6d3a1'
-  c.lineWidth = ROAD_HALF * 2
-  c.stroke()
-  c.strokeStyle = '#dcc690'
-  c.lineWidth = ROAD_HALF * 1.2
-  c.stroke()
-  // ふちいし の つぶつぶ
-  c.fillStyle = '#b4a888'
-  for (let i = 0; i < t.n; i += 5) {
-    for (const side of [-1, 1]) {
-      const px = t.x[i] - t.ty[i] * side * (ROAD_HALF + 5)
-      const py = t.y[i] + t.tx[i] * side * (ROAD_HALF + 5)
-      c.beginPath()
-      c.arc(px, py, 3.2, 0, Math.PI * 2)
-      c.fill()
-    }
-  }
-  // すなの こまかい もよう
-  c.fillStyle = 'rgba(160,130,80,0.25)'
-  for (let i = 0; i < t.n; i += 2) {
-    const lat = (rnd() - 0.5) * ROAD_HALF * 1.8
-    c.fillRect(t.x[i] - t.ty[i] * lat, t.y[i] + t.tx[i] * lat, 2.5, 2.5)
-  }
-  // まがりかどの しるし（あか しろの ふち）
-  for (let i = 0; i < t.n; i++) {
-    if (Math.abs(t.curv[i]) < 0.0045) continue
-    const side = t.curv[i] > 0 ? 1 : -1
-    const px = t.x[i] - t.ty[i] * side * (ROAD_HALF + 3)
-    const py = t.y[i] + t.tx[i] * side * (ROAD_HALF + 3)
-    c.fillStyle = Math.floor(i / 4) % 2 ? '#ff5a5a' : '#fff'
-    c.beginPath()
-    c.arc(px, py, 5, 0, Math.PI * 2)
-    c.fill()
-  }
-  // スタート／ゴールの チェッカー
-  {
-    const p = trackPos(t, 0)
-    c.save()
-    c.translate(p.x, p.y)
-    c.rotate(Math.atan2(p.ty, p.tx))
-    const sq = 10
-    for (let r = 0; r < 2; r++)
-      for (let k = -ROAD_HALF; k < ROAD_HALF; k += sq) {
-        c.fillStyle = (Math.floor(k / sq) + r) % 2 ? '#222' : '#fff'
-        c.fillRect(-sq + r * sq, k, sq, sq)
-      }
-    c.restore()
-    // ゲート
-    for (const side of [-1, 1]) {
-      const gx = p.x - p.ty * side * (ROAD_HALF + 22)
-      const gy = p.y + p.tx * side * (ROAD_HALF + 22)
-      c.fillStyle = '#ff6b6b'
-      c.beginPath()
-      c.arc(gx, gy, 10, 0, Math.PI * 2)
-      c.fill()
-    }
-  }
-
-  // みちの わきの ベンチと がいとう
-  for (let s = 150; s < t.L; s += 230) {
-    const side = Math.floor(s / 230) % 2 ? 1 : -1
-    const p = trackPos(t, s, side * (ROAD_HALF + 30))
-    if (Math.floor(s / 230) % 3 === 0) bench(c, p.x, p.y, Math.atan2(p.ty, p.tx) + (side > 0 ? Math.PI : 0))
-    else lamp(c, p.x, p.y)
-  }
-
-  // 木と しげみ（みちや ほかの ものに かさならない ところだけ）
-  const keepOut: [number, number, number][] = [
-    [1420, 715, 270],
-    [610, 640, 160],
-    [900, 1290, 105],
-    [1190, 1270, 90],
-    [1520, 1250, 110],
-    [1830, 1260, 80],
-    [1080, 360, 140],
-    [1450, 350, 150],
-    [1800, 330, 110],
-    [1960, 1060, 100],
-  ]
-  const placed: [number, number, number][] = []
-  for (let tries = 0; tries < 2600 && placed.length < 230; tries++) {
-    const x = 40 + rnd() * (WORLD_W - 80)
-    const y = 40 + rnd() * (WORLD_H - 80)
-    const r = 22 + rnd() * 26
-    if (distToRoad(t, x, y) < ROAD_HALF + 30 + r) continue
-    if (keepOut.some(([kx, ky, kr]) => Math.hypot(kx - x, ky - y) < kr + r * 0.6)) continue
-    if (placed.some(([px, py, pr]) => Math.hypot(px - x, py - y) < (pr + r) * 0.85)) continue
-    placed.push([x, y, r])
-  }
-  placed.sort((a, b) => a[1] - b[1])
-  for (const [x, y, r] of placed) {
-    if (r < 30) bush(c, x, y, r * 0.8, rnd)
-    else {
-      const autumn = rnd() < 0.12
-      tree(c, x, y, r, autumn ? '#e08a3c' : rnd() < 0.5 ? '#3f8f32' : '#4fa03c', autumn ? '#f2ad5c' : '#6fbf50')
-    }
-  }
-  return cv
-}

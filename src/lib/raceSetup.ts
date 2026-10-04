@@ -2,7 +2,8 @@
 //  レースの メンバー づくり（ひとりで／つうしん どちらでも つかう）
 // -------------------------------------------------------------
 //  ・CPUの わくは「えらぶ（虫を してい）」か「おまかせ（ランダム）」
-//  ・CPUの レベル 1〜10 ＝ うまさ（アクセル・わざの つかいかた）＋ 虫の つよさ
+//  ・えらんだ 虫は、その虫の いまの ストーリーの つよさ（Lv・わざ）の まま はしる
+//  ・おまかせは つよさ 1〜10 ＝ うまさ（アクセル・わざの つかいかた）＋ 虫の つよさ
 //    虫の Lv は きじゅんの Lv（じぶんの むし）から 1→ひくめ、5→おなじ、10→たかめ
 // =============================================================
 import type { CaughtBug } from '../types'
@@ -18,8 +19,12 @@ export const RACE_COLORS = ['#ff6b6b', '#3d8bff', '#ffb703', '#8e5cf7', '#2fbf71
 export interface CpuSlot {
   mode: 'pick' | 'random'
   bugId?: string
-  level: number // 1〜10
+  level: number // 1〜10（おまかせ の とき）
+  storyLv?: number // えらんだ 虫の ストーリーの Lv（つうしんの ゲストに 見せる ため）
 }
+
+// えらんだ 虫の うまさ（ふつう）
+const PICK_SKILL = 0.55
 
 export const defaultCpuSlot = (): CpuSlot => ({ mode: 'random', level: 5 })
 
@@ -80,12 +85,20 @@ export function cpuRacerInits(
   for (const s of slots) if (s.mode === 'pick' && s.bugId) used.add(s.bugId)
   let pool = shuffle(bugs.filter((b) => !used.has(b.id)))
   return slots.map((slot, i) => {
-    let bug = slot.mode === 'pick' ? bugs.find((b) => b.id === slot.bugId) : undefined
-    if (!bug) {
-      if (!pool.length) pool = shuffle(bugs) // 虫が たりない ときは おなじ虫も でる
-      bug = pool.shift()!
-    }
     const idx = o.firstIndex + i
+    const picked = slot.mode === 'pick' ? bugs.find((b) => b.id === slot.bugId) : undefined
+    if (picked) {
+      // えらんだ 虫は ストーリーの いまの すがた の まま（そうさは CPU）
+      return makeRacerInit(picked, levelOf(save, picked.id).level, save, {
+        id: `p${idx}`,
+        color: o.colors[idx % o.colors.length],
+        human: false,
+        skill: PICK_SKILL,
+        tag: 'CPU',
+      })
+    }
+    if (!pool.length) pool = shuffle(bugs) // 虫が たりない ときは おなじ虫も でる
+    const bug = pool.shift()!
     return makeRacerInit(bug, cpuBugLevel(o.baseLv, slot.level), save, {
       id: `p${idx}`,
       color: o.colors[idx % o.colors.length],
@@ -102,11 +115,12 @@ const SETUP_KEY = 'chomushi.race.setup.v1'
 export interface RaceSetup {
   count: number
   laps: number
+  stage: string
   slots: CpuSlot[] // つねに MAX_RACERS - 1 こ
 }
 
 export function loadRaceSetup(): RaceSetup {
-  const base: RaceSetup = { count: 6, laps: 1, slots: Array.from({ length: MAX_RACERS - 1 }, defaultCpuSlot) }
+  const base: RaceSetup = { count: 6, laps: 1, stage: 'hiroba', slots: Array.from({ length: MAX_RACERS - 1 }, defaultCpuSlot) }
   try {
     const raw = localStorage.getItem(SETUP_KEY)
     if (!raw) return base
@@ -123,6 +137,7 @@ export function loadRaceSetup(): RaceSetup {
     return {
       count: Math.max(MIN_RACERS, Math.min(MAX_RACERS, Math.round(Number(d.count) || 6))),
       laps: Math.max(1, Math.min(3, Math.round(Number(d.laps) || 1))),
+      stage: typeof d.stage === 'string' ? d.stage : 'hiroba',
       slots,
     }
   } catch {
