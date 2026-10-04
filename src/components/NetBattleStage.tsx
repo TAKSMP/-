@@ -363,7 +363,7 @@ export function NetBattleStage({ code, role, onQuit }: Props) {
               {cur.moves.map((m, i) => (
                 <button
                   key={m.id + i}
-                  className="stage-btn sp"
+                  className={'stage-btn sp' + (m.ultimate ? ' ult' : '')}
                   disabled={cur.usesLeft[i] <= 0}
                   onClick={() => chooseMove(cur, i, m)}
                 >

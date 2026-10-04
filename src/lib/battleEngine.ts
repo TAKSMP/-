@@ -205,7 +205,8 @@ export function makeFighter(
   side: Side,
   photo: string,
 ): Fighter {
-  const moves = stats.moves.slice(0, 3)
+  // ふつうの わざ 3つ ＋ さいきょうわざ（べつわく）さいだい3つ
+  const moves = stats.moves.slice(0, 6)
   return {
     uid,
     side,

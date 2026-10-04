@@ -45,7 +45,9 @@ import {
   movesOf,
   newMoveFor,
   questId,
-  ultimateLevelsCrossed,
+  addUltimate,
+  missingUltimates,
+  ultimatesOf,
   ultimateMoveFor,
   questUnlocked,
   QUEST_MAPS,
@@ -132,10 +134,8 @@ function celebrationsFor(
       },
     },
   ]
-  // Lv30／40／50 を こえたら さいきょうわざ。その レベルの ふつうの わざ おぼえは かわりに しない
-  const ultimates = ultimateLevelsCrossed(res.before.level, res.after.level)
   const learnLv = learnLevelCrossed(res.before.level, res.after.level)
-  if (learnLv !== null && !ultimates.some((u) => u.level === learnLv)) {
+  if (learnLv !== null) {
     const all = allMovesOf(saveAfter, bug)
     const before = moveSlots(res.before.level)
     const after = moveSlots(res.after.level)
@@ -154,22 +154,14 @@ function celebrationsFor(
       })
     }
   }
-  for (const u of ultimates) {
-    const all = allMovesOf(saveAfter, bug)
-    const nm = ultimateMoveFor(bug, u.group, all)
+  // Lv30／40／50 の さいきょうわざ。ふつうの わざ 3つとは べつわく なので、えらばずに かならず おぼえる。
+  // （まだ もっていない ぶんを まとめて しらべるので、まえに おぼえそびれて いても ここで おぼえる）
+  for (const u of missingUltimates(saveAfter, bug.id, res.after.level)) {
+    const nm = ultimateMoveFor(bug, u.group, ultimatesOf(saveAfter, bug.id, res.after.level))
     if (!nm) continue
-    const slots = moveSlots(res.after.level)
     out.push({
       kind: 'learn',
-      info: {
-        bugId: bug.id,
-        name: bug.name,
-        buddy,
-        move: nm,
-        current: all.slice(0, slots),
-        // わざが まだ 3つ そろって いない ときだけ、えらばずに ついか
-        forcedIndex: all.length < slots ? all.length : null,
-      },
+      info: { bugId: bug.id, name: bug.name, buddy, move: nm, current: [], forcedIndex: null },
     })
   }
   return out
@@ -337,6 +329,17 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     setPos(currentIndex(save, st))
     setPhase('map')
     setNotice(null)
+  }
+
+  // さいきょうわざを べつわくに おぼえる
+  function learnUltimate() {
+    if (!learn) return
+    sfx.special('attackUp')
+    const next = addUltimate(save, learn.bugId, learn.move)
+    setSave(next)
+    saveStory(next)
+    setNotice(`👑 ${learn.name}は さいきょうわざ「${learn.move.name}」を おぼえた！`)
+    popCelebration()
   }
 
   // あたらしい わざと とりかえる
@@ -786,9 +789,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
           {learn.name}は
           <br />
           {learn.move.ultimate
-            ? learn.forcedIndex !== null
-              ? 'さいきょう ひっさつわざを おぼえた！'
-              : 'さいきょう ひっさつわざを おぼえられる！'
+            ? 'さいきょう ひっさつわざを おぼえた！'
             : learn.forcedIndex !== null
               ? 'あたらしい わざを おぼえた！'
               : 'あたらしい わざを おぼえられる！'}
@@ -801,7 +802,14 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
           </span>
           <p className="story-learn-desc">{learn.move.desc}</p>
         </div>
-        {learn.forcedIndex !== null ? (
+        {learn.move.ultimate ? (
+          <>
+            <p className="story-learn-q">さいきょうわざは いまの わざ とは べつに ふえるよ！</p>
+            <button className="btn btn-big btn-primary" onClick={learnUltimate}>
+              やった！ 👑
+            </button>
+          </>
+        ) : learn.forcedIndex !== null ? (
           <button
             className="btn btn-big btn-primary"
             onClick={() => swapMove(learn.forcedIndex as number)}

@@ -320,6 +320,7 @@ export interface StorySave {
   goal: Record<string, boolean> // マップ → ゴールに ついたか
   seen: Record<string, string[]> // マップ → もう 出会った マス（しゃしんを 見せる）
   moves?: Record<string, SpecialMoveV2[]> // 虫のID → おぼえなおした わざ3つ
+  ultimates?: Record<string, SpecialMoveV2[]> // 虫のID → さいきょうわざ（わざ3つとは べつわく。さいだい3つ）
   party?: Record<string, string[]> // （ふるい形）マップごとの なかま
   cage?: string[] // むしかご：なかまに した虫の ID（ずっと のこる）
   lastCompanionId?: string // 直近 バトルに つれていった なかまの ID（つれていく？ がめんの ひだり はしに 出す）
@@ -331,20 +332,42 @@ const emptySave = (): StorySave => ({
   goal: {},
   seen: {},
   moves: {},
+  ultimates: {},
   cage: [],
 })
+
+// ふるい ばん（2026-10-03）では さいきょうわざが ふつうの わざの わくに はいっていた。
+// よみこむ ときに べつわくへ うつす（あいた わくは allMovesOf が もとの わざで うめる）
+function splitUltimates(
+  moves: Record<string, SpecialMoveV2[]>,
+  ultimates: Record<string, SpecialMoveV2[]>,
+): { moves: Record<string, SpecialMoveV2[]>; ultimates: Record<string, SpecialMoveV2[]> } {
+  const outMoves: Record<string, SpecialMoveV2[]> = {}
+  const outUlt: Record<string, SpecialMoveV2[]> = { ...ultimates }
+  for (const [id, list] of Object.entries(moves)) {
+    const ult = list.filter((m) => m.ultimate)
+    outMoves[id] = list.filter((m) => !m.ultimate)
+    for (const m of ult) {
+      const have = outUlt[id] ?? []
+      if (!have.some((x) => x.ultimate === m.ultimate)) outUlt[id] = [...have, m]
+    }
+  }
+  return { moves: outMoves, ultimates: outUlt }
+}
 
 export function loadStory(): StorySave {
   try {
     const raw = localStorage.getItem(SAVE_KEY)
     if (!raw) return emptySave()
     const d = JSON.parse(raw) as Partial<StorySave>
+    const split = splitUltimates(d.moves ?? {}, d.ultimates ?? {})
     return {
       levels: d.levels ?? {},
       cleared: d.cleared ?? {},
       goal: d.goal ?? {},
       seen: d.seen ?? {},
-      moves: d.moves ?? {},
+      moves: split.moves,
+      ultimates: split.ultimates,
       // ふるい形（マップごとの なかま）は むしかごに まとめて ひきつぐ
       cage:
         d.cage ??
@@ -474,14 +497,16 @@ export function resetStage(save: StorySave, stageId: string): StorySave {
 export function resetLevel(save: StorySave, bugId: string): StorySave {
   const levels = { ...save.levels }
   const moves = { ...(save.moves ?? {}) }
+  const ultimates = { ...(save.ultimates ?? {}) }
   delete levels[bugId]
   delete moves[bugId] // おぼえた わざも もとに もどす
-  return { ...save, levels, moves }
+  delete ultimates[bugId]
+  return { ...save, levels, moves, ultimates }
 }
 
 // ぜんぶの虫の レベルを 1に もどす
 export function resetAllLevels(save: StorySave): StorySave {
-  return { ...save, levels: {}, moves: {} }
+  return { ...save, levels: {}, moves: {}, ultimates: {} }
 }
 
 // -------------------------------------------------------------
@@ -496,18 +521,40 @@ export function moveSlots(level: number): number {
   return Math.min(MAX_MOVES, 1 + Math.floor(level / LEARN_EVERY))
 }
 
-// もっている わざ ぜんぶ（おぼえなおして いれば そっち）
+// もっている ふつうの わざ ぜんぶ（おぼえなおして いれば そっち）。さいきょうわざは ふくまない。
+// わくが へっていたら（さいきょうわざを べつわくに うつした あと など）もとの わざで うめる
 export function allMovesOf(save: StorySave, bug: CaughtBug): SpecialMoveV2[] {
-  return save.moves?.[bug.id] ?? battleStatsV2(bug).moves
+  const base = battleStatsV2(bug).moves
+  const stored = save.moves?.[bug.id]?.filter((m) => !m.ultimate)
+  if (!stored) return base
+  const out = [...stored]
+  for (const m of base) {
+    if (out.length >= MAX_MOVES) break
+    if (!out.some((x) => x.id === m.id || x.name === m.name)) out.push(m)
+  }
+  return out
 }
 
-// いま つかえる わざ（レベルぶんだけ）
+// その虫が おぼえている さいきょうわざ（その レベルで つかえる ものだけ。こうげき→へんか→かいふく の じゅん）。
+// いつも さいしんの せってい（つかえる かいすう など）で かえす
+export function ultimatesOf(save: StorySave, bugId: string, level: number): SpecialMoveV2[] {
+  const owned = save.ultimates?.[bugId] ?? []
+  return ULTIMATE_LEVELS.filter((u) => u.level <= level)
+    .map((u) => owned.find((m) => m.ultimate === u.group))
+    .filter((m): m is SpecialMoveV2 => !!m)
+    .map((m) => {
+      const def = ULTIMATE_MOVES.find((x) => x.id === m.id)
+      return def ? { ...def } : m
+    })
+}
+
+// いま つかえる わざ（ふつうの わざ レベルぶん ＋ さいきょうわざ）
 export function movesOf(
   save: StorySave,
   bug: CaughtBug,
   level: number,
 ): SpecialMoveV2[] {
-  return allMovesOf(save, bug).slice(0, moveSlots(level))
+  return [...allMovesOf(save, bug).slice(0, moveSlots(level)), ...ultimatesOf(save, bug.id, level)]
 }
 
 // -------------------------------------------------------------
@@ -595,12 +642,21 @@ export const ULTIMATE_LEVELS: { level: number; group: UltimateGroup }[] = [
   { level: 50, group: 'heal' },
 ]
 
-// before → after の あいだで とおりすぎた さいきょうわざの レベル
-export function ultimateLevelsCrossed(
-  before: number,
-  after: number,
+// その レベルまでに おぼえて いるはずなのに まだ もっていない さいきょうわざの しゅるい
+// （レベルアップの たびに しらべるので、とちゅうで アプリを とじても つぎで おぼえられる）
+export function missingUltimates(
+  save: StorySave,
+  bugId: string,
+  level: number,
 ): { level: number; group: UltimateGroup }[] {
-  return ULTIMATE_LEVELS.filter((u) => u.level > before && u.level <= after)
+  const owned = save.ultimates?.[bugId] ?? []
+  return ULTIMATE_LEVELS.filter((u) => u.level <= level && !owned.some((m) => m.ultimate === u.group))
+}
+
+// さいきょうわざを べつわくに おぼえる（おなじ しゅるいは 1つだけ）
+export function addUltimate(save: StorySave, bugId: string, move: SpecialMoveV2): StorySave {
+  const have = (save.ultimates?.[bugId] ?? []).filter((m) => m.ultimate !== move.ultimate)
+  return { ...save, ultimates: { ...(save.ultimates ?? {}), [bugId]: [...have, move] } }
 }
 
 // その虫に にあう、まだ もっていない さいきょうわざを 1つ えらぶ（虫ごとに いつも おなじ）
