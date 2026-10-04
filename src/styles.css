@@ -5198,6 +5198,12 @@ input:focus {
   z-index: 62;
   margin: 0;
 }
+/* アサギマダラで とんでいる あいだ（と おりた ばかりの ひょうじ）は、
+   おなじ いちに ある のこりじかんと かさなる ので うえの コメントは 出さない */
+.butterfly-timer ~ .field-notice,
+.butterfly-landed ~ .field-notice {
+  display: none;
+}
 
 /* --- マップに 出る むしを えらぶ --- */
 .fieldbugs-lead {
