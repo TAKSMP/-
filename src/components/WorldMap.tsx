@@ -9,7 +9,8 @@
 //  道を タップすると、つながっている 道を とおって じどうで あるく。
 //  ダッシュ：矢印キー/WASDで うごいている あいだに、がめんの どこかを おさえ続けると はやく なる
 //  （固定ボタンでは なく viewer.js がわで はんてい。くわしくは そちらの コメントを）
-//  ちょうちょアメ：ひろうと 20びょう アサギマダラに なって そらを とぶ（たてものも こえられる）。
+//  ちょうちょアメ：ひろうと 100びょう アサギマダラに なって そらを とぶ（たてものも こえられる）。
+//  ちょうちょちゃんビル：たてものが 1つ ひかっていて、さわると onBuildingReach（レベルを 3かい あげられる）。
 //  とんでいる あいだは むしに であわない。じかんぎれで いちばん ちかい 道に おりる。
 // =============================================================
 import { useEffect, useRef, useState } from 'react'
@@ -32,6 +33,15 @@ import {
   respawnCandy,
   type CandySpot,
 } from '../lib/candy'
+import {
+  BUILDING_TOUCH_RADIUS,
+  buildingMaskCanvas,
+  currentBuildingIndex,
+  loadBuildings,
+  nextBuildingIndex,
+  touchesBuilding,
+  type BuildingShape,
+} from '../lib/chouchouBuilding'
 
 interface Props {
   base: string // 'fields/tsuruse/' のような ばしょ
@@ -39,6 +49,7 @@ interface Props {
   onEncounter?: () => void
   onError?: (e: unknown) => void
   onCandyPick?: (id: string) => void
+  onBuildingReach?: () => void // ちょうちょちゃんビルに さわった
 }
 
 // バトルから もどった とき つづきから あるく
@@ -171,7 +182,14 @@ function drawMarker(ctx: CanvasRenderingContext2D, x: number, y: number) {
   ctx.stroke()
 }
 
-export function WorldMap({ base, paused = false, onEncounter, onError, onCandyPick }: Props) {
+export function WorldMap({
+  base,
+  paused = false,
+  onEncounter,
+  onError,
+  onCandyPick,
+  onBuildingReach,
+}: Props) {
   const host = useRef<HTMLDivElement>(null)
   const engine = useRef<WorldHandle | null>(null)
   const encounterCb = useRef(onEncounter)
@@ -182,6 +200,13 @@ export function WorldMap({ base, paused = false, onEncounter, onError, onCandyPi
   const speedRef = useRef(12)
   const sheet = useRef<HTMLImageElement | null>(null)
   const butterflySheet = useRef<HTMLImageElement | null>(null)
+  // ちょうちょちゃんビル（buildings.json が ある マップだけ）
+  const buildingsRef = useRef<BuildingShape[] | null>(null)
+  const buildingIdx = useRef(-1)
+  const buildingMask = useRef<HTMLCanvasElement | null>(null)
+  const onBuildingReachRef = useRef(onBuildingReach)
+  const [buildingOn, setBuildingOn] = useState(false)
+  const buildingDotRef = useRef<HTMLSpanElement | null>(null)
   // ちょうちょアメで そらを とんでいる のこり じかん（ミリびょう。0 なら あるいている）
   const flyRemainMs = useRef(0)
   const lastFrameAt = useRef(0)
@@ -208,6 +233,7 @@ export function WorldMap({ base, paused = false, onEncounter, onError, onCandyPi
   pausedRef.current = paused
   candiesRef.current = candies
   onCandyPickRef.current = onCandyPick
+  onBuildingReachRef.current = onBuildingReach
 
   function toggleOverview() {
     const next = !overview
@@ -287,6 +313,14 @@ export function WorldMap({ base, paused = false, onEncounter, onError, onCandyPi
       } catch {
         sheet.current = null
       }
+      // ちょうちょちゃんビル：いまの ビルを きめて、ひからせる かたちを つくって おく
+      const buildings = await loadBuildings(new URL('buildings.json', baseUrl).href, abort.signal)
+      buildingsRef.current = buildings
+      if (buildings) {
+        buildingIdx.current = currentBuildingIndex(base, buildings.length)
+        buildingMask.current = buildingMaskCanvas(buildings[buildingIdx.current], '#ffe14d')
+        setBuildingOn(true)
+      }
       try {
         butterflySheet.current = await loadImage(butterflySheetUrl(), abort.signal)
       } catch {
@@ -328,6 +362,41 @@ export function WorldMap({ base, paused = false, onEncounter, onError, onCandyPi
             } else {
               const sec = Math.ceil(flyRemainMs.current / 1000)
               setFlySec((prev) => (prev === sec ? prev : sec))
+            }
+          }
+          // ちょうちょちゃんビル：ひかる たてもの（キャラより したに かく）
+          const blds = buildingsRef.current
+          if (blds && buildingIdx.current >= 0 && buildingMask.current) {
+            const b = blds[buildingIdx.current]
+            const bx = s.x + (b.x - s.wx) * s.zoom
+            const by = s.y + (b.y - s.wy) * s.zoom
+            const bw = b.w * s.zoom
+            const bh = b.h * s.zoom
+            const pulse = 0.5 + 0.5 * Math.sin(t / 320)
+            ctx.save()
+            ctx.globalAlpha = 0.5 + pulse * 0.4
+            ctx.shadowColor = 'rgba(255, 200, 40, 0.95)'
+            ctx.shadowBlur = 14 + pulse * 16
+            ctx.drawImage(buildingMask.current, bx, by, bw, bh)
+            ctx.drawImage(buildingMask.current, bx, by, bw, bh)
+            ctx.restore()
+            ctx.save()
+            ctx.font = 'bold 13px sans-serif'
+            ctx.textAlign = 'center'
+            ctx.textBaseline = 'bottom'
+            ctx.lineWidth = 4
+            ctx.strokeStyle = 'rgba(255,255,255,0.95)'
+            ctx.fillStyle = '#b35a00'
+            const label = '🦋 ちょうちょちゃんビル'
+            const ly = by - 6 - pulse * 3
+            ctx.strokeText(label, bx + bw / 2, ly)
+            ctx.fillText(label, bx + bw / 2, ly)
+            ctx.restore()
+            // さわったら レベルアップへ。ビルは べつの たてものに うつる
+            if (!pausedRef.current && touchesBuilding(b, s.wx, s.wy, BUILDING_TOUCH_RADIUS)) {
+              buildingIdx.current = nextBuildingIndex(base, blds.length, buildingIdx.current)
+              buildingMask.current = buildingMaskCanvas(blds[buildingIdx.current], '#ffe14d')
+              onBuildingReachRef.current?.()
             }
           }
           const flying = flyRemainMs.current > 0
@@ -438,6 +507,14 @@ export function WorldMap({ base, paused = false, onEncounter, onError, onCandyPi
         const hh = h.clientHeight
         const t = performance.now()
         const blink = 0.55 + 0.45 * Math.sin(t / 220)
+        const blds = buildingsRef.current
+        const bel = buildingDotRef.current
+        if (blds && buildingIdx.current >= 0 && bel) {
+          const b = blds[buildingIdx.current]
+          const bx = w / 2 + (b.x + b.w / 2 - cam.cx) * cam.zoom
+          const by = hh / 2 + (b.y + b.h / 2 - cam.cy) * cam.zoom
+          bel.style.transform = `translate(${bx}px, ${by}px) translate(-50%, -50%) scale(${1 + blink * 0.3})`
+        }
         candiesRef.current.forEach((c, i) => {
           const el = radarDotRefs.current[i]
           if (!el) return
@@ -496,6 +573,11 @@ export function WorldMap({ base, paused = false, onEncounter, onError, onCandyPi
       )}
       {overview && radarOn && (
         <div className="candy-radar-layer">
+          {buildingOn && (
+            <span ref={buildingDotRef} className="building-radar-dot">
+              🏢🦋
+            </span>
+          )}
           {candies.map((c, i) => (
             <span
               key={c.id}

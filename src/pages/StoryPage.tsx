@@ -216,6 +216,15 @@ function expSegments(fromLevel: number, fromExp: number, gained: number): ExpSeg
   return segs
 }
 
+// あめ／ちょうちょちゃんビルで レベルを あげる がめんの じょうたい
+interface CandyReward {
+  source: 'candy' | 'building'
+  left: number
+}
+
+// ちょうちょちゃんビルに たどりつくと、ふしぎなアメ 3こ ぶん レベルを あげられる
+const BUILDING_LEVEL_UPS = 3
+
 export function StoryPage({ bugs, onGoCapture }: Props) {
   const [phase, setPhase] = useState<Phase>('pickBug')
   const [mapMode, setMapMode] = useState<MapMode>('quest')
@@ -225,8 +234,11 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   const [field, setField] = useState<FieldDef | null>(null)
   // むしとりモード：ON の あいだ、であった虫は バトルの かわりに むしとりチャレンジ
   const [catchMode, setCatchMode] = useState(false)
-  // あめを ひろって、どの虫の レベルを あげるか えらぶ がめん
-  const [candyReward, setCandyReward] = useState(false)
+  // あめを ひろって、どの虫の レベルを あげるか えらぶ がめん。
+  // left：あと なんかい あげられるか（あめ＝1、ちょうちょちゃんビル＝3）
+  const [candyReward, setCandyReward] = useState<CandyReward | null>(null)
+  // レベルアップの えんしゅつ中は がめんを とじて おき、おわったら のこりの かいすうで また ひらく
+  const [candyLeftover, setCandyLeftover] = useState<CandyReward | null>(null)
   const [save, setSave] = useState<StorySave>(() => loadStory())
   const [pos, setPos] = useState(0)
   const [moving, setMoving] = useState(false)
@@ -278,6 +290,14 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
       if (victoryTimer.current) clearTimeout(victoryTimer.current)
     }
   }, [])
+
+  // レベルアップの えんしゅつ（けいけんちバー・レベルアップ・わざ）が ぜんぶ おわったら、
+  // のこりが あれば また えらぶ がめんを ひらく（ちょうちょちゃんビルの 3かい など）
+  useEffect(() => {
+    if (!candyLeftover || victory || celebrations.length > 0 || recruit) return
+    setCandyReward(candyLeftover)
+    setCandyLeftover(null)
+  }, [candyLeftover, victory, celebrations.length, recruit])
 
   const places = storyPlaces(bugs)
 
@@ -395,7 +415,9 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     const res = addExp(save, b.id, gained)
     setSave(res.save)
     saveStory(res.save)
-    setCandyReward(false)
+    const left = (candyReward?.left ?? 1) - 1
+    setCandyLeftover(candyReward && left > 0 ? { ...candyReward, left } : null)
+    setCandyReward(null)
     sfx.badge()
     setVictory({
       bars: [
@@ -1227,7 +1249,8 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   if (phase === 'field' && field && myBug) {
     const pool = bugsForField(field.id, bugs)
     // レベルアップや わざの がめんを 見ている あいだは あるかない（うしろで であわない ように）
-    const fieldPaused = celebrations.length > 0 || !!recruit || !!victory || cageOpen || candyReward
+    const fieldPaused =
+      celebrations.length > 0 || !!recruit || !!victory || cageOpen || !!candyReward || !!candyLeftover
     return (
       <>
         {field.engine === 'world' ? (
@@ -1238,7 +1261,11 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
             onError={() => setNotice('マップを よみこめませんでした')}
             onCandyPick={() => {
               sfx.discover()
-              setCandyReward(true)
+              setCandyReward({ source: 'candy', left: 1 })
+            }}
+            onBuildingReach={() => {
+              sfx.badge()
+              setCandyReward({ source: 'building', left: BUILDING_LEVEL_UPS })
             }}
           />
         ) : (
@@ -1310,10 +1337,31 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
         {recruitModal}
         {cageModal}
         {candyReward && (
-          <div className="modal-backdrop" onClick={() => setCandyReward(false)}>
-            <div className="modal story-cage" onClick={(e) => e.stopPropagation()}>
-              <h3>🍬 あめを ひろった！</h3>
-              <p className="story-recruit-sub">どの虫の レベルを 1つ あげる？</p>
+          <div
+            className="modal-backdrop"
+            // ビルの ときは のこりが きえない ように、そとを タップしても とじない
+            onClick={() => candyReward.source === 'candy' && setCandyReward(null)}
+          >
+            <div
+              className={'modal story-cage' + (candyReward.source === 'building' ? ' story-building' : '')}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {candyReward.source === 'building' ? (
+                <>
+                  <div className="story-building-emoji">🏢🦋</div>
+                  <h3>ちょうちょちゃんビルに たどりついた！</h3>
+                  <p className="story-recruit-sub">
+                    ふしぎなアメ 3こ ぶん、レベルを あげられるよ！
+                    <br />
+                    <b className="story-building-left">のこり {candyReward.left}かい</b> どの虫を あげる？
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h3>🍬 あめを ひろった！</h3>
+                  <p className="story-recruit-sub">どの虫の レベルを 1つ あげる？</p>
+                </>
+              )}
               <ul className="story-cage-list">
                 {bugs.map((b) => (
                   <li key={b.id}>
@@ -1335,9 +1383,14 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
                   </li>
                 ))}
               </ul>
-              <button className="btn btn-big" onClick={() => setCandyReward(false)}>
-                やめる
+              <button className="btn btn-big" onClick={() => setCandyReward(null)}>
+                {candyReward.source === 'building' && candyReward.left < BUILDING_LEVEL_UPS
+                  ? 'おわる'
+                  : 'やめる'}
               </button>
+              {candyReward.source === 'building' && (
+                <p className="story-building-note">やめると のこりの かいすうは なくなるよ</p>
+              )}
             </div>
           </div>
         )}

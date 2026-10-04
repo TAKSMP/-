@@ -5468,6 +5468,38 @@ input:focus {
   background: #ff6fae;
   box-shadow: 0 0 0 6px rgba(255, 111, 174, 0.35);
 }
+.building-radar-dot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #ffe14d;
+  border: 2px solid #f0a500;
+  font-size: 13px;
+  white-space: nowrap;
+  box-shadow: 0 0 0 6px rgba(255, 225, 77, 0.45);
+}
+/* ちょうちょちゃんビルに たどりついた がめん */
+.story-building-emoji {
+  font-size: 40px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.modal.story-building {
+  background: linear-gradient(160deg, #fffbe6, #ffeef7 60%, #eaf6ff);
+  border: 3px solid #ffd23f;
+}
+.story-building-left {
+  color: #c06000;
+  font-size: 16px;
+}
+.story-building-note {
+  margin: 6px 0 0;
+  font-size: 11px;
+  opacity: 0.7;
+  text-align: center;
+}
 .candy-radar-dot.butterfly {
   background: #5cc8ff;
   box-shadow: 0 0 0 6px rgba(92, 200, 255, 0.4);
