@@ -5,6 +5,7 @@ import { BattlePage } from './BattlePage'
 import { BattlePage2 } from './BattlePage2'
 import { StoryPage } from './StoryPage'
 import { RacePage } from './RacePage'
+import { RacePageOld } from './RacePageOld'
 import { NetBattlePage } from './NetBattlePage'
 import { sfx } from '../lib/sound'
 
@@ -13,7 +14,7 @@ interface Props {
   onGoCapture: () => void
 }
 
-type Game = null | 'quiz' | 'battle' | 'battle2' | 'story' | 'race' | 'net'
+type Game = null | 'quiz' | 'battle' | 'battle2' | 'story' | 'race' | 'raceOld' | 'net'
 
 // 「あそぶ」ページ。クイズと バトルの ゲームをえらべる。
 export function PlayPage({ bugs, onGoCapture }: Props) {
@@ -114,10 +115,31 @@ export function PlayPage({ bugs, onGoCapture }: Props) {
           ← あそぶ に もどる
         </button>
         <header className="page-head">
-          <h1>🏁 むしレース</h1>
-          <p className="sub">あつめた虫で かけっこ！</p>
+          <h1>🏁 こうえんレース</h1>
+          <p className="sub">そだてた虫で こうえんの コースを きょうそう！</p>
         </header>
         <RacePage bugs={bugs} onGoCapture={onGoCapture} />
+      </div>
+    )
+  }
+
+  if (game === 'raceOld') {
+    return (
+      <div className="page play">
+        <button
+          className="btn btn-ghost play-back"
+          onClick={() => {
+            sfx.tap()
+            setGame(null)
+          }}
+        >
+          ← あそぶ に もどる
+        </button>
+        <header className="page-head">
+          <h1>🏁 むしレース（まえのばん）</h1>
+          <p className="sub">あつめた虫で かけっこ！</p>
+        </header>
+        <RacePageOld bugs={bugs} onGoCapture={onGoCapture} />
       </div>
     )
   }
@@ -209,7 +231,22 @@ export function PlayPage({ bugs, onGoCapture }: Props) {
         >
           <span className="game-emoji">🏁</span>
           <span className="game-title">レース</span>
-          <span className="game-desc">虫たちで かけっこ！ だれが 1いかな</span>
+          <span className="game-desc">
+            こうえんの コースを 6ぴきで きょうそう！ アクセルと わざで 1いを めざせ
+          </span>
+        </button>
+        <button
+          className="game-card race"
+          onClick={() => {
+            sfx.tap()
+            setGame('raceOld')
+          }}
+        >
+          <span className="game-emoji">🐌</span>
+          <span className="game-title">レース（まえのばん）</span>
+          <span className="game-desc">
+            くらべる ため のこしてあります（あとで けします）
+          </span>
         </button>
         <button
           className="game-card battle"
