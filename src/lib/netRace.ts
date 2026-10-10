@@ -1,7 +1,7 @@
 // =============================================================
 //  つうしんレース（Firebase Realtime Database ごし、さいだい6にん）
 // -------------------------------------------------------------
-//  ・へやは つうしんバトルと おなじ rooms/{コード} に つくる
+//  ・へやは つうしんバトルと おなじ rooms/{あいことば} に つくる
 //    （データベースの ルールで 書きこめるのが ここだけ）。kind: 'race' で みわける
 //  ・へやを つくった ひと（ホスト）だけが レースを けいさんして、
 //    0.1びょうごとに いまの すがた（snap）を 書きこむ。ほかの ひとは
@@ -12,6 +12,7 @@ import { child, get, onDisconnect, onValue, ref, remove, set, update } from 'fir
 import { db, ensureSignedIn } from './firebase'
 import type { RacerInit, RaceSnap } from './raceEngine'
 import type { CpuSlot } from './raceSetup'
+import { pickFreeRoomCode, ROOM_STALE_MS } from './roomWords'
 
 export const BUILD_ID: string = __BUILD_ID__
 
@@ -46,14 +47,6 @@ export interface RaceInputDoc {
   m: number // さいごに おした わざの ばんごう
 }
 
-const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-
-function randomRoomCode(): string {
-  let s = ''
-  for (let i = 0; i < 4; i++) s += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]
-  return s
-}
-
 const roomRef = (code: string) => ref(db, `rooms/${code.toUpperCase()}`)
 
 // Firebase は undefined を きらうので、JSON往復で きれいに する
@@ -63,12 +56,11 @@ function sanitize<T>(v: T): T {
 
 export async function createRaceRoom(name: string, racer: NetRacer, setup: RaceRoomSetup): Promise<{ code: string; uid: string }> {
   const user = await ensureSignedIn()
-  let code = randomRoomCode()
-  for (let i = 0; i < 5; i++) {
-    const existing = await get(child(roomRef(code), 'status'))
-    if (!existing.exists()) break
-    code = randomRoomCode()
-  }
+  // あいことばは えいごの ことば。ふるい まま のこった へやは あいている あつかい
+  const code = await pickFreeRoomCode(async (c) => {
+    const snap = await get(child(roomRef(c), 'createdAt'))
+    return snap.exists() && Date.now() - Number(snap.val()) < ROOM_STALE_MS
+  })
   const player: RacePlayer = { name, joinedAt: Date.now(), racer, build: BUILD_ID }
   await set(
     roomRef(code),
@@ -88,7 +80,7 @@ export async function createRaceRoom(name: string, racer: NetRacer, setup: RaceR
 export async function joinRaceRoom(code: string, name: string, racer: NetRacer): Promise<string> {
   const user = await ensureSignedIn()
   const snap = await get(roomRef(code))
-  if (!snap.exists()) throw new Error('その コードの へやが 見つかりません。')
+  if (!snap.exists()) throw new Error('その あいことばの へやが 見つかりません。つづりを たしかめてね。')
   const room = snap.val() as { kind?: string; status?: string; players?: Record<string, RacePlayer> }
   if (room.kind !== 'race') throw new Error('それは つうしんバトルの へやです。「つうしんバトル」から はいってね。')
   if (room.status !== 'waiting') throw new Error('その へやは もう レース ちゅうです。おわるまで まってね。')

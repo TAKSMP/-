@@ -27,6 +27,7 @@ import {
 import type { CaughtBug, SpecialMoveV2 } from '../types'
 import { levelOf, movesOf, statsWithLevel, type StorySave } from './story'
 import { mainPhoto } from './storage'
+import { pickFreeRoomCode, ROOM_STALE_MS } from './roomWords'
 
 export interface BugSnapshot {
   name: string
@@ -106,12 +107,10 @@ export interface RoomState {
   commands?: { host?: Command[]; guest?: Command[] }
 }
 
-const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // まぎらわしい 0/O 1/I は のぞく
-
-function randomRoomCode(): string {
-  let s = ''
-  for (let i = 0; i < 4; i++) s += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]
-  return s
+// その あいことばの へやが いま あるか（ふるい まま のこった へやは あいている あつかい）
+async function roomTaken(code: string): Promise<boolean> {
+  const snap = await get(child(roomRef(code), 'createdAt'))
+  return snap.exists() && Date.now() - Number(snap.val()) < ROOM_STALE_MS
 }
 
 function roomRef(code: string) {
@@ -203,16 +202,11 @@ export function hydrateField(lite: LiteField, hostTeam: Team, guestTeam: Team): 
   }
 }
 
-// 部屋を つくる（じぶんが ホスト）。へやコードを かえす。
+// 部屋を つくる（じぶんが ホスト）。あいことば（へやの なまえ）を かえす。
 export async function createRoom(name: string, team: Team): Promise<string> {
   const user = await ensureSignedIn()
-  let code = randomRoomCode()
-  // ものすごく まれに かぶったら つくりなおす（さいだい5かい）
-  for (let i = 0; i < 5; i++) {
-    const existing = await get(child(roomRef(code), 'status'))
-    if (!existing.exists()) break
-    code = randomRoomCode()
-  }
+  // あいことばは えいごの ことば（roomWords.ts）。つかわれて いたら べつの ことばに する
+  const code = await pickFreeRoomCode(roomTaken)
   const state: RoomState = {
     createdAt: Date.now(),
     status: 'waiting',
@@ -223,11 +217,11 @@ export async function createRoom(name: string, team: Team): Promise<string> {
   return code
 }
 
-// コードを 入れて 部屋に 入る（じぶんが ゲスト）
+// あいことばを 入れて 部屋に 入る（じぶんが ゲスト）
 export async function joinRoom(code: string, name: string, team: Team): Promise<void> {
   const user = await ensureSignedIn()
   const snap = await get(roomRef(code))
-  if (!snap.exists()) throw new Error('その コードの 部屋が 見つかりません。')
+  if (!snap.exists()) throw new Error('その あいことばの 部屋が 見つかりません。つづりを たしかめてね。')
   const state = snap.val() as RoomState
   if ((state as { kind?: string }).kind === 'race')
     throw new Error('それは レースの へやです。「レース」の「つうしんで あそぶ」から はいってね。')

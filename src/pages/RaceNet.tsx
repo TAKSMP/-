@@ -41,6 +41,8 @@ import { RaceSlots, type FixedRacer } from '../components/RaceSlots'
 import { LapPicker, MyBugGrid, MyRacerCard, RaceHowto, RaceResults, StagePicker } from '../components/RaceParts'
 import { Confetti } from '../components/Confetti'
 import { sfx } from '../lib/sound'
+import { normalizeRoomCode, ROOM_CODE_MIN } from '../lib/roomWords'
+import { RoomWordCard, RoomWordInput } from '../components/RoomWord'
 
 // つうしんバトルと おなじ なまえを つかう（毎回 入れなおさなくて いいように）
 const NAME_KEY = 'chomushi.netbattle.name'
@@ -180,9 +182,9 @@ export function RaceNet({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => voi
 
   async function join() {
     if (!myBug) return
-    const c = codeInput.trim().toUpperCase()
-    if (c.length !== 4) {
-      setError('コードは 4もじ だよ')
+    const c = normalizeRoomCode(codeInput)
+    if (c.length < ROOM_CODE_MIN) {
+      setError('あいことば（えいごの ことば）を いれてね')
       return
     }
     setBusy(true)
@@ -371,7 +373,7 @@ export function RaceNet({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => voi
                 setPhase('joinEnter')
               }}
             >
-              🚪 へやに はいる（コードを いれる）
+              🚪 へやに はいる（あいことばを いれる）
             </button>
             <button
               className="btn btn-ghost"
@@ -388,17 +390,10 @@ export function RaceNet({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => voi
 
       {phase === 'joinEnter' && (
         <div className="battle-step">
-          <h2 className="battle-step-title">へやの コードを いれてね</h2>
-          <input
-            className="race-net-input race-net-code"
-            value={codeInput}
-            maxLength={4}
-            placeholder="ABCD"
-            autoCapitalize="characters"
-            onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
-          />
+          <h2 className="battle-step-title">へやの あいことばを いれてね</h2>
+          <RoomWordInput value={codeInput} onChange={setCodeInput} />
           <div className="race-lineup-actions">
-            <button className="btn btn-big btn-primary" disabled={busy || codeInput.trim().length !== 4} onClick={join}>
+            <button className="btn btn-big btn-primary" disabled={busy || codeInput.length < ROOM_CODE_MIN} onClick={join}>
               {busy ? 'つないでいるよ…' : 'はいる'}
             </button>
             <button
@@ -416,11 +411,10 @@ export function RaceNet({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => voi
 
       {phase === 'lobby' && code && (
         <div className="battle-step">
-          <div className="race-net-code-box">
-            <span>へやの コード</span>
-            <b>{code}</b>
-            <small>{isHost ? 'ともだちに おしえてね（さいだい 6にん）' : 'ホストが スタートするのを まってね'}</small>
-          </div>
+          <RoomWordCard
+            code={code}
+            note={isHost ? 'ともだちに おしえてね（さいだい 6にん）' : 'ホストが スタートするのを まってね'}
+          />
           {status === 'racing' && !myRacerId && <p className="race-lead">いまは レース ちゅう。つぎの レースから はしれるよ！</p>}
           <StagePicker
             stage={setup.stage ?? 'hiroba'}

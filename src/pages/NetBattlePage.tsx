@@ -3,7 +3,7 @@
 // -------------------------------------------------------------
 //  ・ストーリーモードで そだてた 虫を 1ぴき えらんで もっていく
 //    （すきな なかまを もう1ぴき つれていくことも できる）
-//  ・「部屋を つくる」→ コードが 出る → もう片方が それを 入れて 参加
+//  ・「部屋を つくる」→ あいことば（えいごの ことば）が 出る → もう片方が それを 入れて 参加
 //  ・field の けいさんは 部屋を つくった がわ（ホスト）だけが する
 // =============================================================
 import { useEffect, useRef, useState } from 'react'
@@ -24,6 +24,8 @@ import {
   type Team,
 } from '../lib/netBattle'
 import { sfx } from '../lib/sound'
+import { normalizeRoomCode, ROOM_CODE_MIN } from '../lib/roomWords'
+import { RoomWordCard, RoomWordInput } from '../components/RoomWord'
 
 interface Props {
   bugs: CaughtBug[]
@@ -163,9 +165,9 @@ export function NetBattlePage({ bugs }: Props) {
 
   async function doJoin() {
     if (!myBug) return
-    const trimmed = codeInput.trim().toUpperCase()
-    if (trimmed.length !== 4) {
-      setError('4もじの コードを 入れてね。')
+    const trimmed = normalizeRoomCode(codeInput)
+    if (trimmed.length < ROOM_CODE_MIN) {
+      setError('あいことば（えいごの ことば）を 入れてね。')
       return
     }
     setBusy(true)
@@ -336,14 +338,8 @@ export function NetBattlePage({ bugs }: Props) {
   if (phase === 'joinEnter') {
     return (
       <div className="story net-battle-menu">
-        <h2 className="battle-step-title">コードを 入れてね</h2>
-        <input
-          className="net-battle-input net-battle-code-input"
-          value={codeInput}
-          maxLength={4}
-          placeholder="ABCD"
-          onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
-        />
+        <h2 className="battle-step-title">あいことばを 入れてね</h2>
+        <RoomWordInput value={codeInput} onChange={setCodeInput} />
         {error && <p className="story-notice">{error}</p>}
         <button className="btn btn-big btn-primary" disabled={busy} onClick={doJoin}>
           参加する 🚪
@@ -359,8 +355,7 @@ export function NetBattlePage({ bugs }: Props) {
     return (
       <div className="story net-battle-menu">
         <h2 className="battle-step-title">あいてを まっています…</h2>
-        <p className="net-battle-code-display">{code}</p>
-        <p className="story-lead">この コードを、あいての 端末に つたえてね。</p>
+        <RoomWordCard code={code} note="この ことばを あいてに つたえてね。あいては つづりを うって はいるよ。" />
         <button className="btn btn-ghost battle-back" onClick={backToMenu}>
           ← やめる
         </button>

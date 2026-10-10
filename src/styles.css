@@ -6419,3 +6419,91 @@ body.race-full .page-head {
   white-space: nowrap;
   padding: 6px 12px;
 }
+
+/* --- つうしんの あいことば（えいごの ことば） --- */
+.room-word {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: #fff8d9;
+  border: 3px dashed #e0a800;
+  border-radius: 18px;
+  padding: 10px 12px 12px;
+  margin-bottom: 14px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.room-word-label {
+  font-size: 13px;
+  color: #7a6a3a;
+}
+.room-word-big {
+  font-size: 44px;
+  line-height: 1.1;
+  letter-spacing: 0.14em;
+  color: #e06a00;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+.room-word-big.long {
+  font-size: 32px;
+  letter-spacing: 0.08em;
+}
+.room-word-mean {
+  font-size: 17px;
+}
+.room-word-btns {
+  display: flex;
+  gap: 8px;
+  margin: 4px 0;
+}
+.room-word-btns button {
+  border: 2px solid #e0c36a;
+  background: #fff;
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.room-word small {
+  color: #6a6a5a;
+  font-weight: 700;
+  text-align: center;
+}
+.room-word-entry {
+  margin-bottom: 12px;
+}
+.room-word-input {
+  display: block;
+  width: 100%;
+  max-width: 340px;
+  margin: 0 auto 8px;
+  font: inherit;
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--ink);
+  padding: 10px 8px;
+  border-radius: 14px;
+  border: 3px solid #c9d9b8;
+  background: #fff;
+}
+.room-word-ok {
+  margin: 0;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 900;
+  color: #2f8f4e;
+}
+.room-word-hint {
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  color: #6a7a58;
+}
