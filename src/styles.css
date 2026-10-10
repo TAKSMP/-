@@ -5800,6 +5800,28 @@ input:focus {
 body.race-full {
   overflow: hidden;
 }
+/* レース ちゅうは うしろの がめんを けす。のこして おくと、iPhone で「トン、ギュー」と おした ときに
+   うしろの もじが えらばれて「コピー／調べる」メニューが 出て しまう */
+body.race-full .tabbar,
+body.race-full .settings-fab,
+body.race-full .play-back,
+body.race-full .page-head {
+  display: none !important;
+}
+/* ながおしで もじが えらばれたり、ボタンが うきあがったり しない ように（iPhone）。
+   ちゅうい：body ぜんたいを user-select: none に すると、ぎゃくに iOS の むしめがねが 出て
+   2かいめの タッチが とどかなく なる（実測）。レースの がめんの なかだけに つける。 */
+.rt-wrap,
+.rt-wrap * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.rt-wrap {
+  touch-action: none;
+}
 .rt-wrap {
   position: fixed;
   inset: 0;
@@ -5959,7 +5981,7 @@ body.race-full {
   transform: translateY(2px);
   box-shadow: 0 1px 0 #c9d4b8;
 }
-.rt-move:disabled {
+.rt-move.off {
   opacity: 0.35;
   filter: grayscale(1);
   cursor: default;
@@ -5988,6 +6010,8 @@ body.race-full {
   font-weight: 800;
   color: #e0682c;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .rt-move-left {
   flex: none;
@@ -6368,4 +6392,30 @@ body.race-full {
 .race-move-uses {
   font-size: 12px;
   color: #3d8bff;
+}
+
+/* iPhone では ボタンの もじが あおく なるので、いろを そろえる */
+.race-pick,
+.race-stage,
+.rs-count-btn,
+.race-lap-btn,
+.rs-toggle button,
+.rs-level-step button,
+.rs-face-btn,
+.rt-move,
+.rt-quit {
+  color: var(--ink);
+}
+.rt-quit {
+  color: #fff;
+}
+.rs-toggle button.on {
+  color: #fff;
+}
+.race-laps {
+  flex-wrap: wrap;
+}
+.race-lap-btn {
+  white-space: nowrap;
+  padding: 6px 12px;
 }

@@ -91,6 +91,7 @@ export function RaceTrack({ racers, laps, stageId, viewerId, net, onFinish, onQu
   const gaugeRef = useRef<HTMLDivElement>(null)
   const gaugeHintRef = useRef<HTMLSpanElement>(null)
   const accelRef = useRef(false)
+  const tiredRef = useRef(false) // たいりょく 0 で じどうで はなした（おしなおす まで きかない）
   const moveRef = useRef<number | null>(null)
   const useCountRef = useRef(0)
   const lastMoveRef = useRef(-1) // さいごに おした わざ（アクセルを おくる ときも いっしょに おくる）
@@ -106,6 +107,43 @@ export function RaceTrack({ racers, laps, stageId, viewerId, net, onFinish, onQu
   useEffect(() => {
     document.body.classList.add('race-full')
     return () => document.body.classList.remove('race-full')
+  }, [])
+
+  // ── iPhone の「タップして すぐ ながおし」たいさく（2026-10-10、実機の ほうこく＋Simulator で さいげん）
+  // iOS は「トン、ギュー」を もじを えらぶ ジェスチャーと みなして、2かいめの タッチを ページに わたさない
+  // ことが ある。そのとき ちかくに えらべる もじが あると「コピー／調べる」メニューが 出たり、ボタンが
+  // うきあがったり して、アクセルが おされた ままに なり、たいりょく 0 の まま もどらなく なっていた。
+  // ページ側では この ジェスチャーを とめられない（preventDefault も CSS も ききめ なし。body を
+  // user-select: none に すると むしめがねが 出て かえって わるい）ので、つぎの 3つで まもる：
+  //  1) レース ちゅうは うしろの がめん（タブ・見出し）を けして、えらべる もじを なくす（CSS: body.race-full）
+  //  2) タッチ・ポインターの preventDefault() は よばない（よぶと つぎの タッチが とどかなく なる ことが ある）
+  //  3) アクセルが おされた ままに ならない ように する：ゆびが ぜんぶ はなれた・がめんが かくれた ときは はなす。
+  //     たいりょくが 0 に なったら じどうで はなして、おしなおす まで きかない（そのあいだも かいふくは する）
+  useEffect(() => {
+    const release = () => press(false)
+    const onTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length === 0) release()
+    }
+    const onVis = () => {
+      if (document.hidden) release()
+    }
+    const onSel = () => {
+      const sel = window.getSelection()
+      if (sel && !sel.isCollapsed) sel.removeAllRanges()
+    }
+    onSel()
+    window.addEventListener('touchend', onTouchEnd, { passive: true })
+    window.addEventListener('touchcancel', onTouchEnd, { passive: true })
+    window.addEventListener('blur', release)
+    document.addEventListener('visibilitychange', onVis)
+    document.addEventListener('selectionchange', onSel)
+    return () => {
+      window.removeEventListener('touchend', onTouchEnd)
+      window.removeEventListener('touchcancel', onTouchEnd)
+      window.removeEventListener('blur', release)
+      document.removeEventListener('visibilitychange', onVis)
+      document.removeEventListener('selectionchange', onSel)
+    }
   }, [])
 
   useEffect(() => {
@@ -164,7 +202,7 @@ export function RaceTrack({ racers, laps, stageId, viewerId, net, onFinish, onQu
         moveRef.current = null
       } else {
         const ins: Record<string, RaceInput> = { ...(link?.remoteInputs?.() ?? {}) }
-        ins[me.id] = { accel: accelRef.current, move: moveRef.current }
+        ins[me.id] = { accel: accelRef.current && !tiredRef.current, move: moveRef.current }
         moveRef.current = null
         while (acc >= DT) {
           stepRace(st, DT, ins)
@@ -202,10 +240,15 @@ export function RaceTrack({ racers, laps, stageId, viewerId, net, onFinish, onQu
         gaugeRef.current.dataset.low = ratio < 0.25 ? '1' : ''
         gaugeRef.current.dataset.endless = me.endlessT > 0 ? '1' : ''
       }
+      // たいりょくが 0：じどうで アクセルを はなす（ゆびが のった ままでも かいふく する）
+      if (accelRef.current && !tiredRef.current && me.stamina <= 0 && me.endlessT <= 0 && st.countdown <= 0) {
+        tiredRef.current = true
+        setAccelDown(false)
+        netRef.current?.sendInput?.(false, useCountRef.current, lastMoveRef.current)
+      }
       if (gaugeHintRef.current) {
-        const tired = me.pressing && me.stamina <= 0
-        gaugeHintRef.current.textContent = tired
-          ? 'へとへと！ はなして やすもう'
+        gaugeHintRef.current.textContent = tiredRef.current && accelRef.current
+          ? 'へとへと！ いちど はなして、もういちど おしてね'
           : me.jamT > 0
             ? 'しびれて ふめない！'
             : me.endlessT > 0
@@ -590,7 +633,10 @@ export function RaceTrack({ racers, laps, stageId, viewerId, net, onFinish, onQu
 
   // アクセルと わざ（ゲストは ホストへ おくる）
   function press(down: boolean) {
-    if (accelRef.current === down) return
+    // おしなおしたら「へとへと」を とく。はなした しるしが とどかなかった ときも、ここで やりなおせる
+    const wasTired = tiredRef.current
+    tiredRef.current = false
+    if (accelRef.current === down && !(down && wasTired)) return
     accelRef.current = down
     setAccelDown(down)
     netRef.current?.sendInput?.(down, useCountRef.current, lastMoveRef.current)
@@ -599,7 +645,7 @@ export function RaceTrack({ racers, laps, stageId, viewerId, net, onFinish, onQu
     moveRef.current = i
     lastMoveRef.current = i
     useCountRef.current += 1
-    netRef.current?.sendInput?.(accelRef.current, useCountRef.current, i)
+    netRef.current?.sendInput?.(accelRef.current && !tiredRef.current, useCountRef.current, i)
   }
 
   return (
@@ -635,10 +681,9 @@ export function RaceTrack({ racers, laps, stageId, viewerId, net, onFinish, onQu
             {hud.moves.map((m, i) => (
               <button
                 key={i}
-                className={'rt-move' + (m.ult ? ' ult' : '') + (m.left > 0 && hud.ready ? ' ready' : '')}
-                disabled={m.left <= 0}
-                onPointerDown={(e) => {
-                  e.preventDefault()
+                className={'rt-move' + (m.ult ? ' ult' : '') + (m.left > 0 && hud.ready ? ' ready' : '') + (m.left <= 0 ? ' off' : '')}
+                aria-disabled={m.left <= 0}
+                onPointerDown={() => {
                   if (m.left > 0) fireMove(i)
                 }}
               >
@@ -654,8 +699,8 @@ export function RaceTrack({ racers, laps, stageId, viewerId, net, onFinish, onQu
           <button
             className={'rt-accel' + (accelDown ? ' down' : '')}
             onPointerDown={(e) => {
-              e.preventDefault()
-              e.currentTarget.setPointerCapture(e.pointerId)
+              // マウスだけ つかまえる（ゆびは はじめから この ボタンに くっついている）
+              if (e.pointerType === 'mouse') e.currentTarget.setPointerCapture(e.pointerId)
               press(true)
             }}
             onPointerUp={() => press(false)}
