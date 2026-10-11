@@ -10,6 +10,8 @@
 //  ダッシュ：矢印キー/WASDで うごいている あいだに、がめんの どこかを おさえ続けると はやく なる
 //  （固定ボタンでは なく viewer.js がわで はんてい。くわしくは そちらの コメントを）
 //  ちょうちょアメ：ひろうと 100びょう アサギマダラに なって そらを とぶ（たてものも こえられる）。
+//  トンボあめ：ひろうと ギンヤンマ（100びょう・ダッシュが ちょうちょの 5ばい）か ウスバキトンボ（200びょう）に なって とぶ。
+//  ひだりうえ…では なく みぎうえに、全体地図の 縮小版（ミニマップ）と いまいる ばしょを 出す。
 //  ちょうちょちゃんビル：たてものが 1つ ひかっていて、さわると onBuildingReach（レベルを 3かい あげられる）。
 //  とんでいる あいだは むしに であわない。じかんぎれで いちばん ちかい 道に おりる。
 // =============================================================
@@ -27,10 +29,13 @@ import { boySheetUrl, drawBoySprite, loadImage } from '../fields/boySprite'
 import { encounterDistance } from '../lib/encounter'
 import {
   FLY_INFO,
+  NORMAL_DASH_MULT,
+  rollDragonflyKind,
   rollFlyKind,
   type FlyKind,
   CANDY_PICKUP_RADIUS,
   isButterfly,
+  isDragonfly,
   loadCandy,
   respawnCandy,
   type CandySpot,
@@ -72,9 +77,13 @@ const BUTTERFLY_SCREEN = 64 // がめんの 上での おおきさ
 const BUTTERFLY_ROW: Record<string, number> = { down: 0, left: 1, right: 2, up: 3 }
 const BUTTERFLY_FLAP = [0, 1, 2, 1] // はねを ぱたぱた（とまっていても はばたく）
 
-function butterflySheetUrl(kind: FlyKind): string {
-  const file = kind === 'oogoma' ? 'fields/oogoma.png' : 'fields/asagi.png'
-  return new URL(file, new URL(import.meta.env.BASE_URL, document.baseURI)).href
+// トンボの ドット絵（public/fields/ginyanma.png・usubakitonbo.png：レイアウトは アサギマダラと おなじ。
+// 元画像と つくりかたは MAP/tonbo-sprite/）。トンボは よこに ながいので ちょうちょより おおきく かく
+const DRAGONFLY_SCREEN = 88
+const DRAGONFLY_FLAP_MS = 60 // トンボは はねを はやく ぱたぱた
+
+function flySheetUrl(kind: FlyKind): string {
+  return new URL(FLY_INFO[kind].sheet, new URL(import.meta.env.BASE_URL, document.baseURI)).href
 }
 
 // そらを とんでいる アサギマダラ（x,y は あしもと＝かげの いち）
@@ -85,32 +94,34 @@ function drawButterfly(
   y: number,
   facing: string,
   t: number,
+  dragonfly = false,
 ) {
   const bob = Math.sin(t / 280) * 4
+  const size = dragonfly ? DRAGONFLY_SCREEN : BUTTERFLY_SCREEN
   ctx.save()
   ctx.fillStyle = 'rgba(35,59,65,0.25)'
   ctx.beginPath()
-  ctx.ellipse(x, y, 13, 4, 0, 0, Math.PI * 2)
+  ctx.ellipse(x, y, dragonfly ? 17 : 13, 4, 0, 0, Math.PI * 2)
   ctx.fill()
   if (img) {
     const row = BUTTERFLY_ROW[facing] ?? 0
-    const col = BUTTERFLY_FLAP[Math.floor(t / 90) % BUTTERFLY_FLAP.length]
+    const col = BUTTERFLY_FLAP[Math.floor(t / (dragonfly ? DRAGONFLY_FLAP_MS : 90)) % BUTTERFLY_FLAP.length]
     ctx.drawImage(
       img,
       col * BUTTERFLY_CELL,
       row * BUTTERFLY_CELL,
       BUTTERFLY_CELL,
       BUTTERFLY_CELL,
-      x - BUTTERFLY_SCREEN / 2,
-      y - BUTTERFLY_SCREEN - 16 + bob,
-      BUTTERFLY_SCREEN,
-      BUTTERFLY_SCREEN,
+      x - size / 2,
+      y - size * 0.8 - 14 + bob,
+      size,
+      size,
     )
   } else {
-    ctx.font = '40px sans-serif'
+    ctx.font = dragonfly ? 'bold 16px sans-serif' : '40px sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText('🦋', x, y - 40 + bob)
+    ctx.fillText(dragonfly ? 'トンボ' : '🦋', x, y - 40 + bob)
   }
   ctx.restore()
 }
@@ -140,6 +151,35 @@ function drawButterflyCandy(
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText('🦋', x, y)
+  }
+  ctx.restore()
+}
+// 地図に おちている トンボあめ（みどりに ひかる たまの なかで ギンヤンマと ウスバキトンボが こうごに あらわれる）
+function drawDragonflyCandy(
+  ctx: CanvasRenderingContext2D,
+  imgs: (HTMLImageElement | null)[],
+  x: number,
+  y: number,
+  t: number,
+) {
+  const pulse = 0.5 + 0.5 * Math.sin(t / 300)
+  ctx.save()
+  const g = ctx.createRadialGradient(x, y, 2, x, y, 22)
+  g.addColorStop(0, 'rgba(255,255,255,0.95)')
+  g.addColorStop(0.55, `rgba(190,235,120,${0.75 + pulse * 0.2})`)
+  g.addColorStop(1, 'rgba(150,215,90,0)')
+  ctx.fillStyle = g
+  ctx.beginPath()
+  ctx.arc(x, y, 22 + pulse * 3, 0, Math.PI * 2)
+  ctx.fill()
+  const img = imgs[Math.floor(t / 1200) % imgs.length]
+  if (img) {
+    ctx.drawImage(img, 0, 0, BUTTERFLY_CELL, BUTTERFLY_CELL, x - 19, y - 19, 38, 38)
+  } else {
+    ctx.font = 'bold 12px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText('トンボ', x, y)
   }
   ctx.restore()
 }
@@ -205,6 +245,9 @@ export function WorldMap({
   // ちょうちょの ドット絵：アサギマダラ（ちょうちょアメの アイコンにも つかう）と オオゴマダラ
   const butterflySheet = useRef<HTMLImageElement | null>(null)
   const oogomaSheet = useRef<HTMLImageElement | null>(null)
+  // トンボの ドット絵（トンボあめの アイコンにも つかう）
+  const ginyanmaSheet = useRef<HTMLImageElement | null>(null)
+  const usubakiSheet = useRef<HTMLImageElement | null>(null)
   // いま とんでいる ちょうちょ（ひろう たびに きめなおす）
   const flyKindRef = useRef<FlyKind>('asagi')
   const [flyKind, setFlyKind] = useState<FlyKind>('asagi')
@@ -221,6 +264,9 @@ export function WorldMap({
   // がめんに 出す のこり びょう（1びょうごとに だけ こうしんする）
   const [flySec, setFlySec] = useState(0)
   const [landedNote, setLandedNote] = useState(false)
+  // 全体地図の 縮小版（ミニマップ）：あるいている あいだ みぎうえに 出す。いまいる ばしょは ref で まいフレーム うごかす
+  const [miniMap, setMiniMap] = useState<{ src: string; aspect: number } | null>(null)
+  const miniDotRef = useRef<HTMLSpanElement | null>(null)
   const artBgRef = useRef<ArtBackground | null>(null)
   // いま おちている あめ（そのマップ限定、localStorage に ほぞん。ロード後に セットする）
   const [candies, setCandies] = useState<CandySpot[]>([])
@@ -308,6 +354,8 @@ export function WorldMap({
       }
       artBgRef.current = artBg
       const mask = decodeRoads(map)
+      // ミニマップ：全体地図と おなじ 絵を ちいさく 出す（ブラウザの キャッシュで よみこみは 1かい）
+      setMiniMap({ src: new URL(map.images.game, baseUrl).href, aspect: map.width / map.height })
       // まえに いた 道から さいかい（道の うえで なければ 入口から）
       const back = lastPos.get(base)
       const resumed = !!(back && isRoad(map, mask, back.x, back.y))
@@ -330,14 +378,24 @@ export function WorldMap({
         setBuildingOn(true)
       }
       try {
-        butterflySheet.current = await loadImage(butterflySheetUrl('asagi'), abort.signal)
+        butterflySheet.current = await loadImage(flySheetUrl('asagi'), abort.signal)
       } catch {
         butterflySheet.current = null // よめなくても 🦋 で かわりに かく
       }
       try {
-        oogomaSheet.current = await loadImage(butterflySheetUrl('oogoma'), abort.signal)
+        oogomaSheet.current = await loadImage(flySheetUrl('oogoma'), abort.signal)
       } catch {
         oogomaSheet.current = null
+      }
+      try {
+        ginyanmaSheet.current = await loadImage(flySheetUrl('ginyanma'), abort.signal)
+      } catch {
+        ginyanmaSheet.current = null // よめなくても 「トンボ」の もじで かわりに かく
+      }
+      try {
+        usubakiSheet.current = await loadImage(flySheetUrl('usubaki'), abort.signal)
+      } catch {
+        usubakiSheet.current = null
       }
       if (disposed || !host.current) return
       speedRef.current = map.speed
@@ -368,6 +426,7 @@ export function WorldMap({
             if (flyRemainMs.current <= 0) {
               flyRemainMs.current = 0
               engine.current?.setFlying(false) // いちばん ちかい 道に おりる
+              engine.current?.setDashMult(NORMAL_DASH_MULT) // ギンヤンマの 5ばい ダッシュも おわり
               // おりた とたんに であわない ように、ここから かぞえなおす
               nextAt.current = s.travel + encounterDistance(speedRef.current)
               setFlySec(0)
@@ -413,9 +472,23 @@ export function WorldMap({
             }
           }
           const flying = flyRemainMs.current > 0
+          // ミニマップの げんざいち（あるいて いる あいだも とんでいる あいだも）
+          const miniDot = miniDotRef.current
+          if (miniDot) {
+            miniDot.style.left = `${(s.wx / map.width) * 100}%`
+            miniDot.style.top = `${(s.wy / map.height) * 100}%`
+          }
           if (flying) {
-            const img = flyKindRef.current === 'oogoma' ? oogomaSheet.current : butterflySheet.current
-            drawButterfly(ctx, img, s.x, s.y, s.facing, t)
+            const fk = flyKindRef.current
+            const img =
+              fk === 'oogoma'
+                ? oogomaSheet.current
+                : fk === 'ginyanma'
+                  ? ginyanmaSheet.current
+                  : fk === 'usubaki'
+                    ? usubakiSheet.current
+                    : butterflySheet.current
+            drawButterfly(ctx, img, s.x, s.y, s.facing, t, FLY_INFO[fk].dragonfly)
           }
           else if (sheet.current) drawBoySprite(ctx, sheet.current, s, BOY_SCREEN_H, stepPx)
           else drawMarker(ctx, s.x, s.y)
@@ -434,6 +507,8 @@ export function WorldMap({
             const bob = Math.sin(t / 260 + c.x) * 3
             if (isButterfly(c)) {
               drawButterflyCandy(ctx, butterflySheet.current, sx, sy + bob, t)
+            } else if (isDragonfly(c)) {
+              drawDragonflyCandy(ctx, [ginyanmaSheet.current, usubakiSheet.current], sx, sy + bob, t)
             } else {
               ctx.save()
               ctx.font = '26px sans-serif'
@@ -449,13 +524,14 @@ export function WorldMap({
                 const next = respawnCandy(base, candiesRef.current, c.id, map, mask)
                 candiesRef.current = next
                 setCandies(next)
-                if (isButterfly(c)) {
-                  // ちょうちょアメ：その ばで そらへ（とんでいる とちゅうなら 20びょうに もどす）
-                  const kind = rollFlyKind()
+                if (isButterfly(c) || isDragonfly(c)) {
+                  // ちょうちょアメ・トンボあめ：その ばで そらへ（とんでいる とちゅうでも あたらしい ほうに かわる）
+                  const kind = isDragonfly(c) ? rollDragonflyKind() : rollFlyKind()
                   flyKindRef.current = kind
                   setFlyKind(kind)
                   flyRemainMs.current = FLY_INFO[kind].sec * 1000
                   engine.current?.setFlying(true)
+                  engine.current?.setDashMult(FLY_INFO[kind].dash) // ギンヤンマは ダッシュが 5ばい
                   setFlySec(FLY_INFO[kind].sec)
                   setLandedNote(false)
                 } else {
@@ -474,7 +550,10 @@ export function WorldMap({
       engine.current = world
       world.setPaused(pausedRef.current)
       // マウントの とちゅうで ちょうちょアメを ひろって いた ばあいに そろえる
-      if (flyRemainMs.current > 0) world.setFlying(true)
+      if (flyRemainMs.current > 0) {
+        world.setFlying(true)
+        world.setDashMult(FLY_INFO[flyKindRef.current].dash)
+      }
     })().catch((e) => {
       if (disposed || (e as Error)?.name === 'AbortError') return
       if (host.current) host.current.textContent = 'マップを よみこめませんでした。'
@@ -487,6 +566,7 @@ export function WorldMap({
       // （たてものの 上の いちを おぼえると、つぎは スタート地点から に なってしまう）
       if (flyRemainMs.current > 0) {
         engine.current?.setFlying(false)
+        engine.current?.setDashMult(NORMAL_DASH_MULT)
         flyRemainMs.current = 0
       }
       const pos = engine.current?.getPosition()
@@ -603,15 +683,44 @@ export function WorldMap({
               ref={(el) => {
                 radarDotRefs.current[i] = el
               }}
-              className={'candy-radar-dot' + (isButterfly(c) ? ' butterfly' : '')}
+              className={
+                'candy-radar-dot' + (isButterfly(c) ? ' butterfly' : isDragonfly(c) ? ' dragonfly' : '')
+              }
             />
           ))}
         </div>
       )}
+      {/* 全体地図の 縮小版：あるいている あいだ みぎうえに。あかい てんが いま いる ばしょ */}
+      {!overview && miniMap && (
+        <div
+          className={'world-minimap' + (flySec > 0 || landedNote ? ' below-timer' : '')}
+          style={{ aspectRatio: miniMap.aspect }}
+          aria-label="いま いる ばしょ"
+        >
+          <img src={miniMap.src} alt="" draggable={false} />
+          <span ref={miniDotRef} className="world-minimap-dot" />
+        </div>
+      )}
       {flySec > 0 && !overview && (
-        <div className={'butterfly-timer' + (flySec <= 5 ? ' ending' : '')}>
+        <div
+          className={
+            'butterfly-timer' + (FLY_INFO[flyKind].dragonfly ? ' dragonfly' : '') + (flySec <= 5 ? ' ending' : '')
+          }
+        >
           <span className="butterfly-timer-label">
-            🦋 {FLY_INFO[flyKind].name}で とんでいる！
+            {FLY_INFO[flyKind].dragonfly ? (
+              <span
+                className="fly-icon"
+                style={{ backgroundImage: `url(${flySheetUrl(flyKind)})` }}
+                aria-hidden="true"
+              />
+            ) : (
+              '🦋 '
+            )}
+            {FLY_INFO[flyKind].name}で とんでいる！
+            {FLY_INFO[flyKind].dash > NORMAL_DASH_MULT && (
+              <small className="butterfly-timer-sub">ダッシュで ちょうちょの {FLY_INFO[flyKind].dash}ばい！</small>
+            )}
           </span>
           <span className="butterfly-timer-sec">
             {flySec}

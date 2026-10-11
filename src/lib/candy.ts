@@ -4,13 +4,16 @@
 //  ひろうと、すきな虫の レベルを けいけんちなしで 1つ あげられる。
 //  それとは べつに「ちょうちょアメ」が いつも 1個 おちていて、ひろうと アサギマダラ（100びょう）か、
 //  3ぶんの1の かくりつで オオゴマダラ（50びょう）に なって そらを とべる。
+//  もうひとつ「トンボあめ」も いつも 1個 おちていて、ひろうと ギンヤンマ か ウスバキトンボに なって そらを とべる。
+//    ・ギンヤンマ：100びょう。ダッシュ（2本ゆび／Shift）で ちょうちょの 5ばいの はやさ。
+//    ・ウスバキトンボ：200びょう。はやさは ちょうちょと おなじ。
 //  ひろった ばしょには、べつの ばしょに おなじ しゅるいの あたらしい あめが 出る。
 //  ばしょは マップの id ごとに localStorage に ほぞん（次に 開いても おなじ）。
 // =============================================================
 import type { WorldMapData } from '../fields/world/viewer'
 import { isRoad } from '../fields/world/navigation'
 
-export type CandyKind = 'normal' | 'butterfly'
+export type CandyKind = 'normal' | 'butterfly' | 'dragonfly'
 
 export interface CandySpot {
   id: string
@@ -21,20 +24,56 @@ export interface CandySpot {
 
 export const CANDY_COUNT = 5 // ふつうの あめ
 export const BUTTERFLY_CANDY_COUNT = 1 // ちょうちょアメ
+export const DRAGONFLY_CANDY_COUNT = 1 // トンボあめ
 export const BUTTERFLY_FLY_SEC = 100 // ちょうちょアメで そらを とべる じかん（アサギマダラ）
 // ちょうちょアメを ひろった とき 3ぶんの1 で オオゴマダラに なる（とべる じかんは はんぶんの 50びょう）
 export const OOGOMA_CHANCE = 1 / 3
 export const OOGOMA_FLY_SEC = 50
 
-export type FlyKind = 'asagi' | 'oogoma'
-export const FLY_INFO: Record<FlyKind, { name: string; sec: number }> = {
-  asagi: { name: 'アサギマダラ', sec: BUTTERFLY_FLY_SEC },
-  oogoma: { name: 'オオゴマダラ', sec: OOGOMA_FLY_SEC },
+// ダッシュの ばいりつ（ふつうは viewer.js の DASH_MULT と おなじ 2ばい）
+export const NORMAL_DASH_MULT = 2
+// ギンヤンマの ダッシュは ちょうちょの 5ばい
+export const GINYANMA_DASH_MULT = 5
+
+// トンボあめを ひろった とき ギンヤンマに なる かくりつ（のこりは ウスバキトンボ）
+export const GINYANMA_CHANCE = 1 / 2
+export const GINYANMA_FLY_SEC = 100
+export const USUBAKI_FLY_SEC = 200
+
+export type FlyKind = 'asagi' | 'oogoma' | 'ginyanma' | 'usubaki'
+export interface FlyInfo {
+  name: string
+  sec: number // とべる じかん
+  dash: number // ダッシュの ばいりつ
+  sheet: string // ドット絵（public/ いかの パス）
+  dragonfly: boolean
+}
+export const FLY_INFO: Record<FlyKind, FlyInfo> = {
+  asagi: { name: 'アサギマダラ', sec: BUTTERFLY_FLY_SEC, dash: NORMAL_DASH_MULT, sheet: 'fields/asagi.png', dragonfly: false },
+  oogoma: { name: 'オオゴマダラ', sec: OOGOMA_FLY_SEC, dash: NORMAL_DASH_MULT, sheet: 'fields/oogoma.png', dragonfly: false },
+  ginyanma: {
+    name: 'ギンヤンマ',
+    sec: GINYANMA_FLY_SEC,
+    dash: GINYANMA_DASH_MULT,
+    sheet: 'fields/ginyanma.png',
+    dragonfly: true,
+  },
+  usubaki: {
+    name: 'ウスバキトンボ',
+    sec: USUBAKI_FLY_SEC,
+    dash: NORMAL_DASH_MULT,
+    sheet: 'fields/usubakitonbo.png',
+    dragonfly: true,
+  },
 }
 
 // ひろった しゅんかんに どちらの ちょうちょに なるかを きめる
 export function rollFlyKind(): FlyKind {
   return Math.random() < OOGOMA_CHANCE ? 'oogoma' : 'asagi'
+}
+// トンボあめを ひろった しゅんかんに どちらの トンボに なるかを きめる
+export function rollDragonflyKind(): FlyKind {
+  return Math.random() < GINYANMA_CHANCE ? 'ginyanma' : 'usubaki'
 }
 // プレイヤーの あしもとから これより ちかいと ひろえる（元画像の ピクセル）
 export const CANDY_PICKUP_RADIUS = 16
@@ -72,13 +111,14 @@ function saveCandy(fieldId: string, spots: CandySpot[]): void {
 }
 
 export const isButterfly = (c: CandySpot): boolean => c.kind === 'butterfly'
+export const isDragonfly = (c: CandySpot): boolean => c.kind === 'dragonfly'
 
 function newSpot(kind: CandyKind, map: WorldMapData, mask: Uint8Array): CandySpot {
   return { id: makeId(), ...randomRoadPoint(map, mask), kind }
 }
 
-// 保存ずみの あめを 読みこむ。たりない ぶん（ふつう 5個・ちょうちょ 1個）は あたらしく つくる。
-// ふるい ほぞん（ふつうの あめ 5個だけ）には ちょうちょアメを 1個 たす。
+// 保存ずみの あめを 読みこむ。たりない ぶん（ふつう 5個・ちょうちょ 1個・トンボ 1個）は あたらしく つくる。
+// ふるい ほぞん（ふつうの あめ 5個だけ、など）には たりない しゅるいを たす。
 export function loadCandy(fieldId: string, map: WorldMapData, mask: Uint8Array): CandySpot[] {
   let saved: CandySpot[] = []
   try {
@@ -88,11 +128,13 @@ export function loadCandy(fieldId: string, map: WorldMapData, mask: Uint8Array):
   } catch {
     // こわれていたら 下で 作り直す
   }
-  const normals = saved.filter((c) => !isButterfly(c)).slice(0, CANDY_COUNT)
+  const normals = saved.filter((c) => !isButterfly(c) && !isDragonfly(c)).slice(0, CANDY_COUNT)
   const flies = saved.filter(isButterfly).slice(0, BUTTERFLY_CANDY_COUNT)
+  const dragons = saved.filter(isDragonfly).slice(0, DRAGONFLY_CANDY_COUNT)
   while (normals.length < CANDY_COUNT) normals.push(newSpot('normal', map, mask))
   while (flies.length < BUTTERFLY_CANDY_COUNT) flies.push(newSpot('butterfly', map, mask))
-  const spots = [...normals, ...flies]
+  while (dragons.length < DRAGONFLY_CANDY_COUNT) dragons.push(newSpot('dragonfly', map, mask))
+  const spots = [...normals, ...flies, ...dragons]
   if (spots.length !== saved.length || spots.some((c, i) => c.id !== saved[i]?.id)) saveCandy(fieldId, spots)
   return spots
 }
@@ -106,7 +148,7 @@ export function respawnCandy(
   mask: Uint8Array,
 ): CandySpot[] {
   const next = spots.map((s) =>
-    s.id === pickedId ? newSpot(isButterfly(s) ? 'butterfly' : 'normal', map, mask) : s,
+    s.id === pickedId ? newSpot(s.kind ?? 'normal', map, mask) : s,
   )
   saveCandy(fieldId, next)
   return next

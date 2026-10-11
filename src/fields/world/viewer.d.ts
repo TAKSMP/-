@@ -57,6 +57,8 @@ export interface WorldHandle {
   // そらを とぶ（ちょうちょアメ）。true の あいだは 道路の そとも うごける。false で いちばん ちかい 道に おりる
   setFlying(value: boolean): void
   isFlying(): boolean
+  // ダッシュの ばいりつ（ギンヤンマで 5）。0いかで もとの 2ばいに もどる
+  setDashMult(value: number): void
   destroy(): void
 }
 
