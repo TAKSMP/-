@@ -342,6 +342,11 @@ function calcDamage(
   return { dmg: Math.max(1, Math.round(dmg)), crit }
 }
 
+// かならず あたる わざか（めいちゅうりつが null／みせっていの もの）
+export function isSureHit(move: SpecialMoveV2): boolean {
+  return move.accuracy == null
+}
+
 // めいちゅう はんてい
 function hitCheck(
   att: Fighter,
@@ -349,7 +354,11 @@ function hitCheck(
   move: SpecialMoveV2,
   rng: Rng,
 ): boolean {
-  if (move.accuracy === null) return true
+  // 必中わざ（accuracy: null）。つうしんバトルでは Firebase が null を すてて undefined に
+  // なって とどく ので、null と undefined の どちらも「かならず あたる」と みなす
+  // （さもないと undefined/100 = NaN で かならず はずれて しまう）
+  const acc0 = move.accuracy
+  if (acc0 == null) return true
   if (def.charging?.hidden) return false
   // すばやい あいてほど、わずかに よけやすい
   const speedGap = effStat(def, 'speed') - effStat(att, 'speed')
@@ -359,7 +368,7 @@ function hitCheck(
     SPEED_EVASION_CAP,
   )
   const acc =
-    (move.accuracy / 100) *
+    (acc0 / 100) *
     rankMul('accuracy', att.rank.accuracy) *
     (1 / rankMul('evasion', def.rank.evasion)) *
     (1 - speedEvasion)
@@ -577,7 +586,7 @@ function executeMove(
       let ok: boolean
       if (move.kind === 'attack') {
         ok = rng() < move.inflict.chance
-      } else if (target.uid !== actor.uid && move.accuracy !== null) {
+      } else if (target.uid !== actor.uid && !isSureHit(move)) {
         ok = hitCheck(actor, target, move, rng)
       } else {
         ok = true

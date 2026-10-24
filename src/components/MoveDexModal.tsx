@@ -107,7 +107,7 @@ export function MoveDexModal({ onClose }: { onClose: () => void }) {
                       </div>
                       <div>
                         <dt>めいちゅう</dt>
-                        <dd>{d.move.accuracy === null ? 'かならず あたる' : `${d.move.accuracy}％`}</dd>
+                        <dd>{d.move.accuracy == null ? 'かならず あたる' : `${d.move.accuracy}％`}</dd>
                       </div>
                       <div>
                         <dt>つかえる</dt>
