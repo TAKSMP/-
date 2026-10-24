@@ -7,7 +7,7 @@
 // =============================================================
 import type { BattleStatsV2, CaughtBug, SpecialMoveV2 } from '../types'
 import { canonicalOrder } from '../data/orders'
-import { MOVE_LIBRARY, MOVE_PATTERNS, type LibraryMove } from './moveLibrary'
+import { MOVE_LIBRARY, MOVE_PATTERNS, ULTIMATE_ONLY_PATTERNS, type LibraryMove } from './moveLibrary'
 import {
   clampInt,
   HP_MAX,
@@ -183,7 +183,9 @@ function mergeLegacyMove(bug: CaughtBug): SpecialMoveV2[] {
 // -------------------------------------------------------------
 export function buildBattlePromptV2(name: string, fact?: string): string {
   const factLine = fact?.trim() ? `この虫のとくちょう: ${fact.trim()}\n` : ''
-  const list = MOVE_PATTERNS.map((p) => `${p.no}. ${p.label}`).join('\n')
+  const list = MOVE_PATTERNS.filter((p) => !ULTIMATE_ONLY_PATTERNS.includes(p.key))
+    .map((p) => `${p.no}. ${p.label}`)
+    .join('\n')
   const fence = '```'
   return `日本の昆虫「${name}」の、たいせんゲーム用のステータスを、バランスを考えてきめてください。
 ${factLine}その虫の じっさいの とくちょう（大きさ・力・すばやさ・ハサミや毒など）を いかしつつ、
@@ -250,7 +252,7 @@ export function parseBattleAnswerV2(
     if (!mName) continue
     const typeNo = num(pickLine(text, [`タイプ${i}`, `こうか${i}`, `効果${i}`]))
     const desc = pickLine(text, [`せつめい${i}`, `わざせつめい${i}`, `説明${i}`])
-    const pat = MOVE_PATTERNS.find((p) => p.no === typeNo)
+    const pat = MOVE_PATTERNS.find((p) => p.no === typeNo && !ULTIMATE_ONLY_PATTERNS.includes(p.key))
     const template =
       (pat && MOVE_LIBRARY.find((m) => m.pattern === pat.key)) ??
       auto[i - 1] ??

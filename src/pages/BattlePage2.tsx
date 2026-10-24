@@ -20,6 +20,7 @@ import { BugPicker } from '../components/BugPicker'
 import { StarRating } from '../components/StarRating'
 import { BattleStage, type BattleResult } from '../components/BattleStage'
 import { sfx } from '../lib/sound'
+import { moveSummary } from '../lib/moveLibrary'
 
 
 // -------------------------------------------------------------
@@ -96,7 +97,7 @@ function StatCardV2({ bug, grown }: { bug: CaughtBug; grown?: { save: StorySave 
                 {m.emoji ?? '✨'} {m.name}
               </b>
               <span className="move-line-sub">
-                {m.kind === 'attack' ? `いりょく${m.power}` : 'へんかわざ'} ／{' '}
+                {moveSummary(m)} ／{' '}
                 {m.uses}かい
               </span>
               <p className="move-desc">{m.desc}</p>

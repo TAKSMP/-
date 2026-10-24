@@ -22,6 +22,7 @@ import { bugsForField } from '../lib/fieldBugs'
 import { assignEncounters } from '../data/encounters'
 import { findEncounter } from '../data/encounters'
 import { sfx } from '../lib/sound'
+import { moveSummary } from '../lib/moveLibrary'
 import {
   addExp,
   addToCage,
@@ -772,7 +773,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   )
 
   const moveLabel = (m: SpecialMoveV2) =>
-    (m.ultimate ? '👑 ' : '') + (m.kind === 'attack' ? `いりょく${m.power}` : 'へんかわざ')
+    (m.ultimate ? '👑 ' : '') + moveSummary(m)
 
   const movesViewModal = movesViewBug && (
     <div className="modal-backdrop" onClick={() => setMovesViewBug(null)}>

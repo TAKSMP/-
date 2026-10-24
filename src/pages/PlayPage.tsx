@@ -77,30 +77,31 @@ export function PlayPage({ bugs, onGoCapture }: Props) {
       null,
       'ゲーム',
       header('⚔️ バトル', 'どの バトルを する？'),
-      <div className="game-menu">
-        <button className="game-card battle" onClick={() => go('battle1')}>
-          <span className="game-emoji vs">🐛 VS 🐛</span>
-          <span className="game-title">1たい1</span>
-          <span className="game-desc">1ぴきずつ たたかう</span>
+      <>
+        <div className="game-menu">
+          <button className="game-card battle" onClick={() => go('battle1')}>
+            <span className="game-emoji vs">🐛 VS 🐛</span>
+            <span className="game-title">1たい1</span>
+            <span className="game-desc">1ぴきずつ たたかう</span>
+          </button>
+          <button className="game-card battle" disabled={!canTwo} onClick={() => go('battle2')}>
+            <span className="game-emoji vs">🐛🐛 VS 🐛🐛</span>
+            <span className="game-title">2たい2</span>
+            <span className="game-desc">
+              {canTwo ? '2ひきずつ チームで たたかう' : '虫が 4ひき あつまったら できるよ'}
+            </span>
+          </button>
+          <button className="game-card battle" onClick={() => go('net')}>
+            <span className="game-emoji">📡</span>
+            <span className="game-title">つうしんバトル</span>
+            <span className="game-desc">そだてた虫を たたかわせよう</span>
+          </button>
+        </div>
+        {/* レースの「まえのばん」と おなじく、いちばん したに ちいさく */}
+        <button className="btn btn-ghost play-old-link" onClick={() => go('battleOld')}>
+          🕹️ まえのばん
         </button>
-        <button className="game-card battle" disabled={!canTwo} onClick={() => go('battle2')}>
-          <span className="game-emoji vs">🐛🐛 VS 🐛🐛</span>
-          <span className="game-title">2たい2</span>
-          <span className="game-desc">
-            {canTwo ? '2ひきずつ チームで たたかう' : '虫が 4ひき あつまったら できるよ'}
-          </span>
-        </button>
-        <button className="game-card battle" onClick={() => go('battleOld')}>
-          <span className="game-emoji">🕹️</span>
-          <span className="game-title">まえのばん</span>
-          <span className="game-desc">くらべる ため のこしてあります（あとで けします）</span>
-        </button>
-        <button className="game-card battle" onClick={() => go('net')}>
-          <span className="game-emoji">📡</span>
-          <span className="game-title">つうしんバトル</span>
-          <span className="game-desc">そだてた虫を たたかわせよう</span>
-        </button>
-      </div>,
+      </>,
     )
   }
 

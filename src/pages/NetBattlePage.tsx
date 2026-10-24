@@ -24,6 +24,7 @@ import {
   type Team,
 } from '../lib/netBattle'
 import { sfx } from '../lib/sound'
+import { moveSummary } from '../lib/moveLibrary'
 import { normalizeRoomCode, ROOM_CODE_MIN } from '../lib/roomWords'
 import { RoomWordCard, RoomWordInput } from '../components/RoomWord'
 
@@ -59,7 +60,7 @@ type Phase =
   | 'battle'
 
 const moveLabel = (m: SpecialMoveV2) =>
-  (m.ultimate ? '👑 ' : '') + (m.kind === 'attack' ? `いりょく${m.power}` : 'へんかわざ')
+  (m.ultimate ? '👑 ' : '') + moveSummary(m)
 
 function bugCard(save: StorySave, b: CaughtBug, onViewMoves: (b: CaughtBug) => void) {
   const lv = levelOf(save, b.id)

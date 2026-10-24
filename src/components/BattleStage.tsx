@@ -24,7 +24,7 @@ import {
   type Side,
   type TurnStep,
 } from '../lib/battleEngine'
-import { BASIC_ATTACK } from '../lib/moveLibrary'
+import { BASIC_ATTACK, moveSummary } from '../lib/moveLibrary'
 import { Confetti } from './Confetti'
 import { ParkScene } from './ParkScene'
 import { sfx } from '../lib/sound'
@@ -103,7 +103,7 @@ export function cueFor(line: string, fighters: Pick<Fighter, 'uid' | 'name'>[]):
 
 // わざの あじ に あわせて 音を えらぶ
 function soundKind(m: SpecialMoveV2): string {
-  if (m.healRatio || m.restSleep || m.regen || m.drainRatio) return 'heal'
+  if (m.healRatio || m.restSleep || m.regen || m.drainRatio || m.revive) return 'heal'
   if (m.hits) return 'doubleAttack'
   if (m.kind === 'status') {
     return m.statChanges?.some((s) => s.to === 'self') ? 'attackUp' : 'defenseUp'
@@ -221,6 +221,58 @@ export function FighterSlot({
   )
 }
 
+// いまは つかえない わざの りゆう（ボタンを うすく して ひとこと 出す）。つかえるなら null
+export function moveBlockedReason(
+  m: SpecialMoveV2,
+  actor: Pick<Fighter, 'uid' | 'side'>,
+  fighters: Pick<Fighter, 'uid' | 'side' | 'fainted'>[],
+): string | null {
+  if (m.revive && !fighters.some((x) => x.side === actor.side && x.uid !== actor.uid && x.fainted)) {
+    return 'たおれた みかたが いないよ'
+  }
+  return null
+}
+
+// 「わざコピー」：あいての わざの なかから、まねする わざを えらぶ
+export function CopyPicker({
+  foe,
+  onPick,
+  onCancel,
+}: {
+  foe: Pick<Fighter, 'name' | 'moves'>
+  onPick: (moveIndex: number) => void
+  onCancel: () => void
+}) {
+  return (
+    <>
+      <p className="stage-prompt">
+        🪞 <b>{foe.name}</b> の どの わざを まねする？
+      </p>
+      <div className="stage2-moves">
+        {foe.moves.map((m, i) => (
+          <button
+            key={m.id + i}
+            className={'stage-btn sp' + (m.ultimate ? ' ult' : '')}
+            disabled={!!m.copyMove}
+            onClick={() => onPick(i)}
+          >
+            <span>
+              {m.emoji ?? '✨'} {m.name}
+            </span>
+            <small>
+              {m.ultimate && '👑 '}
+              {m.copyMove ? 'まねできないよ' : `${moveSummary(m)}／のこり${m.uses}かい`}
+            </small>
+          </button>
+        ))}
+        <button className="stage-btn atk" onClick={onCancel}>
+          <span>← わざを えらびなおす</span>
+        </button>
+      </div>
+    </>
+  )
+}
+
 // まだ めいれいを きめていない、じぶんの虫
 function nextActor(f: Field, cmds: Command[]): Fighter | undefined {
   const decided = new Set(cmds.map((c) => c.actorUid))
@@ -262,6 +314,12 @@ export function BattleStage({
     actorUid: string
     moveIndex: number
     move: SpecialMoveV2
+  } | null>(null)
+  // わざコピー：どの あいての わざを まねするか えらんでいる ところ
+  const [pendingCopy, setPendingCopy] = useState<{
+    actorUid: string
+    moveIndex: number
+    targetUid: string
   } | null>(null)
   const [visibleLog, setVisibleLog] = useState<string[]>([startLog])
   const [playback, setPlayback] = useState<{
@@ -370,6 +428,12 @@ export function BattleStage({
       setPendingMove({ actorUid: actor.uid, moveIndex, move })
       return
     }
+    if (move.copyMove) {
+      // あいてが 1ぴきなら そのまま わざえらびへ
+      const foe = fieldRef.current.fighters.find((x) => x.side !== actor.side && !x.fainted)
+      if (foe) setPendingCopy({ actorUid: actor.uid, moveIndex, targetUid: foe.uid })
+      return
+    }
     pushCmd({ actorUid: actor.uid, moveIndex, targetUid: null })
   }
 
@@ -378,7 +442,19 @@ export function BattleStage({
     if (!pm) return
     sfx.tap()
     setPendingMove(null)
+    if (pm.move.copyMove) {
+      setPendingCopy({ actorUid: pm.actorUid, moveIndex: pm.moveIndex, targetUid: uid })
+      return
+    }
     pushCmd({ actorUid: pm.actorUid, moveIndex: pm.moveIndex, targetUid: uid })
+  }
+
+  function pickCopy(copyIndex: number) {
+    const pc = pendingCopy
+    if (!pc) return
+    sfx.tap()
+    setPendingCopy(null)
+    pushCmd({ actorUid: pc.actorUid, moveIndex: pc.moveIndex, targetUid: pc.targetUid, copyIndex })
   }
 
   // ── 1ターンぶんを けいさんして、さいせいを はじめる
@@ -521,6 +597,15 @@ export function BattleStage({
           <div className="stage-actions">
             <span className="stage-wait">{field.over ? '…' : 'たたかい中…'}</span>
           </div>
+        ) : pendingCopy ? (
+          <CopyPicker
+            foe={field.fighters.find((x) => x.uid === pendingCopy.targetUid) ?? { name: 'あいて', moves: [] }}
+            onPick={pickCopy}
+            onCancel={() => {
+              sfx.tap()
+              setPendingCopy(null)
+            }}
+          />
         ) : pendingMove ? (
           <>
             <p className="stage-prompt">
@@ -545,23 +630,25 @@ export function BattleStage({
               🐛 <b>{cur.name}</b> は なにを する？
             </p>
             <div className="stage2-moves">
-              {cur.moves.map((m, i) => (
-                <button
-                  key={m.id + i}
-                  className={'stage-btn sp' + (m.ultimate ? ' ult' : '')}
-                  disabled={cur.usesLeft[i] <= 0}
-                  onClick={() => chooseMove(cur, i, m)}
-                >
-                  <span>
-                    {m.emoji ?? '✨'} {m.name}
-                  </span>
-                  <small>
-                    {m.ultimate && '👑 '}
-                    {m.kind === 'attack' ? `いりょく${m.power}` : 'へんかわざ'}
-                    ／のこり{cur.usesLeft[i]}
-                  </small>
-                </button>
-              ))}
+              {cur.moves.map((m, i) => {
+                const blocked = moveBlockedReason(m, cur, field.fighters)
+                return (
+                  <button
+                    key={m.id + i}
+                    className={'stage-btn sp' + (m.ultimate ? ' ult' : '')}
+                    disabled={cur.usesLeft[i] <= 0 || !!blocked}
+                    onClick={() => chooseMove(cur, i, m)}
+                  >
+                    <span>
+                      {m.emoji ?? '✨'} {m.name}
+                    </span>
+                    <small>
+                      {m.ultimate && '👑 '}
+                      {blocked ?? `${moveSummary(m)}／のこり${cur.usesLeft[i]}`}
+                    </small>
+                  </button>
+                )
+              })}
               <button
                 className="stage-btn atk"
                 onClick={() => chooseMove(cur, -1, BASIC_ATTACK)}

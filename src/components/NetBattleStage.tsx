@@ -24,8 +24,8 @@ import {
   type RoomState,
   type Team,
 } from '../lib/netBattle'
-import { cueFor, FighterSlot, playCueSound } from './BattleStage'
-import { BASIC_ATTACK } from '../lib/moveLibrary'
+import { CopyPicker, cueFor, FighterSlot, moveBlockedReason, playCueSound } from './BattleStage'
+import { BASIC_ATTACK, moveSummary } from '../lib/moveLibrary'
 import { ParkScene } from './ParkScene'
 import { Confetti } from './Confetti'
 import { sfx } from '../lib/sound'
@@ -37,7 +37,7 @@ interface Props {
 }
 
 const moveLabel = (m: SpecialMoveV2) =>
-  (m.ultimate ? '👑 ' : '') + (m.kind === 'attack' ? `いりょく${m.power}` : 'へんかわざ')
+  (m.ultimate ? '👑 ' : '') + moveSummary(m)
 
 // LiteFighter に しゃしんを もどして、ふつうの FighterSlot で つかえる かたちに
 // Realtime Database は からの配列（[]）を おとして undefined に する くせが ある ので、
@@ -71,6 +71,12 @@ export function NetBattleStage({ code, role, onQuit }: Props) {
     actorUid: string
     moveIndex: number
     move: SpecialMoveV2
+  } | null>(null)
+  // わざコピー：どの あいての わざを まねするか えらんでいる ところ
+  const [pendingCopy, setPendingCopy] = useState<{
+    actorUid: string
+    moveIndex: number
+    targetUid: string
   } | null>(null)
   const [confetti, setConfetti] = useState(false)
   // そのターンの ログを 1行ずつ 見せている さいちゅう（ふつうの バトルと おなじ）
@@ -119,6 +125,7 @@ export function NetBattleStage({ code, role, onQuit }: Props) {
       seenTurnRef.current = turn
       setCmds([])
       setPendingMove(null)
+      setPendingCopy(null)
       resolvingRef.current = false
       const steps = room?.field?.steps ?? []
       if (!firstLoad && steps.length > 0) {
@@ -245,6 +252,12 @@ export function NetBattleStage({ code, role, onQuit }: Props) {
       setPendingMove({ actorUid: actor.uid, moveIndex, move })
       return
     }
+    if (move.copyMove) {
+      // あいてが 1ぴきなら そのまま わざえらびへ
+      const foe = shown.find((x) => x.side !== actor.side && !x.fainted)
+      if (foe) setPendingCopy({ actorUid: actor.uid, moveIndex, targetUid: foe.uid })
+      return
+    }
     setCmds((prev) => [...prev, { actorUid: actor.uid, moveIndex, targetUid: null }])
   }
 
@@ -253,7 +266,22 @@ export function NetBattleStage({ code, role, onQuit }: Props) {
     if (!pm) return
     sfx.tap()
     setPendingMove(null)
+    if (pm.move.copyMove) {
+      setPendingCopy({ actorUid: pm.actorUid, moveIndex: pm.moveIndex, targetUid: uid })
+      return
+    }
     setCmds((prev) => [...prev, { actorUid: pm.actorUid, moveIndex: pm.moveIndex, targetUid: uid }])
+  }
+
+  function pickCopy(copyIndex: number) {
+    const pc = pendingCopy
+    if (!pc) return
+    sfx.tap()
+    setPendingCopy(null)
+    setCmds((prev) => [
+      ...prev,
+      { actorUid: pc.actorUid, moveIndex: pc.moveIndex, targetUid: pc.targetUid, copyIndex },
+    ])
   }
 
   function isTappable(f: Fighter): boolean {
@@ -333,6 +361,15 @@ export function NetBattleStage({ code, role, onQuit }: Props) {
               もどる
             </button>
           </div>
+        ) : pendingCopy ? (
+          <CopyPicker
+            foe={shown.find((x) => x.uid === pendingCopy.targetUid) ?? { name: 'あいて', moves: [] }}
+            onPick={pickCopy}
+            onCancel={() => {
+              sfx.tap()
+              setPendingCopy(null)
+            }}
+          />
         ) : pendingMove ? (
           <>
             <p className="stage-prompt">
@@ -360,21 +397,22 @@ export function NetBattleStage({ code, role, onQuit }: Props) {
               🐛 <b>{cur.name}</b> は なにを する？
             </p>
             <div className="stage2-moves">
-              {cur.moves.map((m, i) => (
-                <button
-                  key={m.id + i}
-                  className={'stage-btn sp' + (m.ultimate ? ' ult' : '')}
-                  disabled={cur.usesLeft[i] <= 0}
-                  onClick={() => chooseMove(cur, i, m)}
-                >
-                  <span>
-                    {m.emoji ?? '✨'} {m.name}
-                  </span>
-                  <small>
-                    {moveLabel(m)}／のこり{cur.usesLeft[i]}
-                  </small>
-                </button>
-              ))}
+              {cur.moves.map((m, i) => {
+                const blocked = moveBlockedReason(m, cur, shown)
+                return (
+                  <button
+                    key={m.id + i}
+                    className={'stage-btn sp' + (m.ultimate ? ' ult' : '')}
+                    disabled={cur.usesLeft[i] <= 0 || !!blocked}
+                    onClick={() => chooseMove(cur, i, m)}
+                  >
+                    <span>
+                      {m.emoji ?? '✨'} {m.name}
+                    </span>
+                    <small>{blocked ?? `${moveLabel(m)}／のこり${cur.usesLeft[i]}`}</small>
+                  </button>
+                )
+              })}
               <button className="stage-btn atk" onClick={() => chooseMove(cur, -1, BASIC_ATTACK)}>
                 <span>⚔️ こうげき</span>
                 <small>なんかいでも つかえる</small>

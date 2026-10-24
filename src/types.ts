@@ -109,6 +109,7 @@ export type MoveTarget =
   | 'self' // じぶん
   | 'ally' // じぶんか みかたの どちらか1ぴき（バトル画面で タップして えらぶ）
   | 'selfSide' // じぶん がわ ぜんいん
+  | 'fallenAlly' // たおれている みかた（ふっかつの わざ。じどうで えらばれる）
 
 // のうりょく変化の 1つぶん
 export interface StatChange {
@@ -165,6 +166,10 @@ export interface SpecialMoveV2 {
   restSleep?: boolean // ねむって ぜんかいふく
   regen?: { ratio: number; turns: number } // まいターン すこしずつ かいふく
   leech?: { ratio: number; turns: number } // あいてのHPを まいターン すいとる
+  hpToOne?: boolean // あたると あいての HPが のこり 1に なる（めいちゅうりつは accuracy）
+  revive?: { ratio: number; chance: number } // たおれた みかたを HPの ratio ぶんで ふっかつ（chance の かくりつで せいこう）
+  chaos?: boolean // なにが おこるか わからない（いろいろな こうかから ランダム）
+  copyMove?: boolean // あいての わざを 1つ えらんで、このわざと いれかえて じぶんの わざに する
 }
 
 // バトルステータス（v2）

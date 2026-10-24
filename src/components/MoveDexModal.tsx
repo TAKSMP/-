@@ -14,6 +14,7 @@ import {
   type MoveGroup,
 } from '../lib/moveDex'
 import { sfx } from '../lib/sound'
+import { moveSummary } from '../lib/moveLibrary'
 
 export function MoveDexModal({ onClose }: { onClose: () => void }) {
   const [group, setGroup] = useState<MoveGroup>('attack')
@@ -74,11 +75,7 @@ export function MoveDexModal({ onClose }: { onClose: () => void }) {
                   {found && (
                     <span className="movedex-power">
                       {d.move.ultimate && `${ULTIMATE_KIND_LABEL[d.move.ultimate]}・`}
-                      {d.move.kind === 'attack' && d.move.power > 0
-                        ? `いりょく${d.move.power}`
-                        : d.move.fixedDamage
-                          ? `${d.move.fixedDamage}ダメージ`
-                          : 'へんかわざ'}
+                      {d.move.fixedDamage ? `${d.move.fixedDamage}ダメージ` : moveSummary(d.move)}
                     </span>
                   )}
                   {found && <span className="movedex-arrow">{isOpen ? '▲' : '▼'}</span>}
@@ -102,12 +99,20 @@ export function MoveDexModal({ onClose }: { onClose: () => void }) {
                                 ? 'じぶん'
                                 : d.move.target === 'ally'
                                   ? 'みかた'
-                                  : 'あいて 1ぴき'}
+                                  : d.move.target === 'fallenAlly'
+                                    ? 'たおれた みかた'
+                                    : 'あいて 1ぴき'}
                         </dd>
                       </div>
                       <div>
-                        <dt>めいちゅう</dt>
-                        <dd>{d.move.accuracy == null ? 'かならず あたる' : `${d.move.accuracy}％`}</dd>
+                        <dt>{d.move.revive ? 'せいこう' : 'めいちゅう'}</dt>
+                        <dd>
+                          {d.move.revive
+                            ? `${Math.round(d.move.revive.chance * 100)}％`
+                            : d.move.accuracy == null
+                              ? 'かならず あたる'
+                              : `${d.move.accuracy}％`}
+                        </dd>
                       </div>
                       <div>
                         <dt>つかえる</dt>

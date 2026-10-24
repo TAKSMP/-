@@ -106,6 +106,7 @@ export interface Command {
   actorUid: string
   moveIndex: number // -1 = ふつうの こうげき、0〜2 = ひっさつわざ
   targetUid?: string | null
+  copyIndex?: number // わざコピー：あいての わざの うち、どれを うつすか（あいての moves の ばんごう）
 }
 
 type Rng = () => number
@@ -254,6 +255,7 @@ function snapshotFighters(f: Field): Fighter[] {
     ...x,
     rank: { ...x.rank },
     statuses: x.statuses.map((s) => ({ ...s })),
+    moves: [...x.moves], // わざコピーで いれかわる ことが ある
     usesLeft: [...x.usesLeft],
     charging: x.charging ? { ...x.charging } : null,
   }))
@@ -288,6 +290,14 @@ function resolveTargets(
     }
     case 'selfSide':
       return aliveOf(field, actor.side)
+    case 'fallenAlly': {
+      // たおれて いる みかた（じぶんを のぞく）。2たい2 なら さいだい 1ぴき
+      const fallen = field.fighters.filter(
+        (x) => x.side === actor.side && x.uid !== actor.uid && x.fainted,
+      )
+      const want = fallen.find((x) => x.uid === wantUid)
+      return want ? [want] : fallen.length > 0 ? [fallen[0]] : []
+    }
     case 'allFoes':
       return foes
     case 'allOthers':
@@ -465,6 +475,182 @@ function changeRank(
 }
 
 // -------------------------------------------------------------
+//  ふっかつ・なにが おこるか わからない・わざコピー
+// -------------------------------------------------------------
+// たおれた 虫を ratio ぶんの HPで よみがえらせる（じょうたいも まっさらに）
+function reviveFighter(t: Fighter, ratio: number, log: string[]): void {
+  t.fainted = false
+  t.faintReported = false
+  t.hp = Math.max(1, Math.min(t.maxHp, Math.round(t.maxHp * ratio)))
+  t.statuses = []
+  t.rank = emptyRank()
+  t.charging = null
+  t.recharge = 0
+  t.regen = null
+  t.leechedBy = null
+  t.counterGuard = false
+  log.push(`🌟 ${t.name}が ふっかつした！`)
+  log.push(`💚 ${t.name}の HPが ${t.hp} かいふく！`)
+}
+
+// 「ふしぎなおまじない」：なにが おこるか わからない。いい ことも わるい ことも ある。
+const CHAOS_OUTCOMES = 12
+export function chaosEffect(field: Field, actor: Fighter, log: string[], rng: Rng): void {
+  const foes = aliveOf(field, actor.side === 'me' ? 'foe' : 'me')
+  const allies = aliveOf(field, actor.side)
+  const fallen = field.fighters.find(
+    (x) => x.side === actor.side && x.uid !== actor.uid && x.fainted,
+  )
+  log.push(`🎲 ${actor.name}は ふしぎな おまじないを となえた…！`)
+  // ふっかつは たおれた みかたが いる ときだけ。いないときは ほかの 結果から えらびなおす
+  let pick = Math.floor(rng() * CHAOS_OUTCOMES)
+  if (pick === 10 && !fallen) pick = (pick + 1 + Math.floor(rng() * (CHAOS_OUTCOMES - 1))) % CHAOS_OUTCOMES
+  switch (pick) {
+    case 0: {
+      // だいばくはつ：あいて ぜんいんに だいダメージ
+      log.push('💥 ぼんっ！ だいばくはつが おきた！')
+      const synth = { ...BASIC_ATTACK, power: 110 } as SpecialMoveV2
+      for (const t of foes) {
+        if (t.fainted) continue
+        const { dmg } = calcDamage(actor, t, synth, { spread: foes.length > 1, late: false }, rng)
+        const dealt = applyDamage(actor, t, dmg, log)
+        log.push(`${t.name}に ${dealt}の ダメージ！`)
+      }
+      reportFaints(field, log)
+      return
+    }
+    case 1: {
+      log.push('🌈 からだが ひかりに つつまれた！')
+      const before = actor.hp
+      actor.hp = actor.maxHp
+      log.push(
+        actor.hp > before
+          ? `💚 ${actor.name}の HPが ${actor.hp - before} かいふく！`
+          : `…${actor.name}の HPは もう まんタンだ！`,
+      )
+      return
+    }
+    case 2: {
+      log.push('🌸 やさしい ひかりが みんなを つつんだ！')
+      for (const t of allies) {
+        const heal = Math.max(1, Math.round(t.maxHp * 0.5))
+        const before = t.hp
+        t.hp = Math.min(t.maxHp, t.hp + heal)
+        t.statuses = []
+        log.push(
+          t.hp > before
+            ? `💚 ${t.name}の HPが ${t.hp - before} かいふく！`
+            : `…${t.name}の HPは もう まんタンだ！`,
+        )
+      }
+      return
+    }
+    case 3: {
+      log.push('🌙 ねむけを さそう かぜが ふいた！')
+      for (const t of foes) inflictStatus(t, 'sleep', log, rng)
+      return
+    }
+    case 4: {
+      log.push('⛈️ かみなりが あいてを つらぬいた！')
+      for (const t of foes) inflictStatus(t, 'paralysis', log, rng)
+      return
+    }
+    case 5: {
+      log.push('🔥 ちからが みなぎって きた！')
+      changeRank(actor, 'attack', 2, log)
+      changeRank(actor, 'speed', 2, log)
+      return
+    }
+    case 6: {
+      log.push('😱 あいてが ふるえあがった！')
+      for (const t of foes) {
+        changeRank(t, 'attack', -2, log)
+        changeRank(t, 'defense', -2, log)
+      }
+      return
+    }
+    case 7: {
+      // しっぱい：じぶんに ダメージ（たおれては しまわない）
+      const dmg = Math.min(actor.hp - 1, Math.max(1, Math.round(actor.maxHp * 0.25)))
+      log.push('💫 おまじないが しっぱい！ じぶんに はねかえった！')
+      if (dmg > 0) {
+        actor.hp -= dmg
+        actor.damageTakenThisTurn += dmg
+        log.push(`${actor.name}に ${dmg}の ダメージ！`)
+      }
+      return
+    }
+    case 8: {
+      log.push('…………。')
+      log.push('😶 しかし なにも おこらなかった！')
+      return
+    }
+    case 9: {
+      log.push('😴 まちがえて じぶんが ねむくなって きた…')
+      inflictStatus(actor, 'sleep', log, rng)
+      return
+    }
+    case 10: {
+      if (!fallen) return
+      log.push('✨ きせきが おきた！')
+      reviveFighter(fallen, 0.5, log)
+      return
+    }
+    default: {
+      // あいて1ぴきの HPが はんぶんに
+      const t = foes[Math.floor(rng() * foes.length)]
+      if (!t) {
+        log.push('😶 しかし なにも おこらなかった！')
+        return
+      }
+      const dmg = Math.floor(t.hp / 2)
+      log.push('🌀 くうかんが ゆがんだ！')
+      if (dmg > 0) {
+        const dealt = applyDamage(actor, t, dmg, log)
+        log.push(`${t.name}に ${dealt}の ダメージ！ HPが はんぶんに なった！`)
+        reportFaints(field, log)
+      } else {
+        log.push(`…${t.name}は もう HPが ほとんど ない！`)
+      }
+    }
+  }
+}
+
+// 「わざコピー」：あいての わざを 1つ えらんで、このわざと いれかえる
+function copyFoeMove(
+  field: Field,
+  actor: Fighter,
+  move: SpecialMoveV2,
+  wantUid: string | null | undefined,
+  copyIndex: number | undefined,
+  log: string[],
+  rng: Rng,
+): void {
+  const t = resolveTargets(field, actor, move, wantUid)[0]
+  if (!t) {
+    log.push('…しかし あいてが いない！')
+    return
+  }
+  // コピーできる わざ（わざコピー じたいは コピーできない）
+  const ok = t.moves
+    .map((m, i) => ({ m, i }))
+    .filter((x) => !x.m.copyMove)
+  const chosen =
+    (copyIndex !== undefined ? ok.find((x) => x.i === copyIndex) : undefined) ??
+    (ok.length > 0 ? ok[Math.floor(rng() * ok.length)] : undefined)
+  const slot = actor.moves.findIndex((m) => m.id === move.id)
+  if (!chosen || slot < 0) {
+    log.push('…しかし うまく うつせなかった！')
+    return
+  }
+  const copied = { ...chosen.m }
+  actor.moves[slot] = copied
+  actor.usesLeft[slot] = copied.uses
+  log.push(`🪞 ${actor.name}は ${t.name}の「${copied.name}」を まねして おぼえた！`)
+  log.push(`✨ 「${copied.name}」が ${actor.name}の わざに なった！（のこり${copied.uses}かい）`)
+}
+
+// -------------------------------------------------------------
 //  わざを 1つ じっこうする
 // -------------------------------------------------------------
 function executeMove(
@@ -475,7 +661,35 @@ function executeMove(
   isLate: boolean,
   log: string[],
   rng: Rng,
+  copyIndex?: number,
 ): void {
+  // ── ふっかつ：たおれた みかたを よみがえらせる
+  if (move.revive) {
+    const t = resolveTargets(field, actor, move, wantUid)[0]
+    if (!t) {
+      log.push('…しかし ふっかつ させる みかたが いない！')
+      return
+    }
+    if (rng() >= move.revive.chance) {
+      log.push(`…しかし ${t.name}は めざめなかった！`)
+      return
+    }
+    reviveFighter(t, move.revive.ratio, log)
+    return
+  }
+
+  // ── なにが おこるか わからない
+  if (move.chaos) {
+    chaosEffect(field, actor, log, rng)
+    return
+  }
+
+  // ── わざコピー：あいての わざを 1つ じぶんの わざに する
+  if (move.copyMove) {
+    copyFoeMove(field, actor, move, wantUid, copyIndex, log, rng)
+    return
+  }
+
   // ── ちえんわざ：よこくして このターンは おわり
   if (move.delayTurns && move.delayTurns > 0) {
     const t = resolveTargets(field, actor, move, wantUid)[0]
@@ -554,6 +768,22 @@ function executeMove(
 
   for (const target of targets) {
     if (target.fainted) continue
+
+    // ── HPを のこり 1に する（めいちゅうりつは accuracy。はずれる ことも ある）
+    if (move.hpToOne) {
+      if (!hitCheck(actor, target, move, rng)) {
+        log.push(`💨 ${target.name}は ヒラリと よけた！`)
+        continue
+      }
+      const lost = target.hp - 1
+      if (lost <= 0) {
+        log.push(`…${target.name}の HPは もう のこり 1だ！`)
+        continue
+      }
+      applyDamage(actor, target, lost, log)
+      log.push(`🩸 ${target.name}に ${lost}の ダメージ！ HPが のこり 1に なった！`)
+      continue
+    }
 
     // ── こうげきわざ
     if (move.kind === 'attack' && (move.power > 0 || move.fixedDamage)) {
@@ -730,6 +960,7 @@ export function resolveTurn(
       ...x,
       rank: { ...x.rank },
       statuses: x.statuses.map((s) => ({ ...s })),
+      moves: [...x.moves], // わざコピーで いれかわる ことが ある ので、うつして おく
       usesLeft: [...x.usesLeft],
       damageTakenThisTurn: 0,
       actedIndex: -1,
@@ -758,6 +989,7 @@ export function resolveTurn(
     move: SpecialMoveV2
     moveIndex: number
     targetUid: string | null
+    copyIndex?: number
     priority: number
     speed: number
     tie: number
@@ -776,6 +1008,7 @@ export function resolveTurn(
       move,
       moveIndex: actor.charging ? -2 : c.moveIndex,
       targetUid: actor.charging?.targetUid ?? c.targetUid ?? null,
+      copyIndex: c.copyIndex,
       priority: move.priority ?? 0,
       speed: effStat(actor, 'speed'),
       tie: rng(),
@@ -848,7 +1081,7 @@ export function resolveTurn(
         o.fighter.actedIndex >= 0 &&
         o.fighter.actedIndex < actor.actedIndex,
     )
-    executeMove(f, actor, e.move, e.targetUid, late, log, rng)
+    executeMove(f, actor, e.move, e.targetUid, late, log, rng, e.copyIndex)
     checkOver(f)
     if (f.over) break
   }
@@ -957,11 +1190,23 @@ export function chooseCpuCommand(f: Field, actor: Fighter, rng: Rng = Math.rando
   if (foes.length === 0) return { actorUid: actor.uid, moveIndex: -1 }
   // いちばん HPが すくない あいてを ねらう
   const target = [...foes].sort((a, b) => a.hp - b.hp)[0]
+  // たおれている みかた（ふっかつの わざの あいて）
+  const fallen = f.fighters.find(
+    (x) => x.side === actor.side && x.uid !== actor.uid && x.fainted,
+  )
 
+  // 今は いみの ない わざは えらばない（ふっかつ：たおれた みかたが いない／HPを 1に：もう 1）
   const usable = actor.moves
     .map((m, i) => ({ m, i }))
     .filter((x) => actor.usesLeft[x.i] > 0)
+    .filter((x) => !(x.m.revive && !fallen))
+    .filter((x) => !(x.m.hpToOne && target.hp <= 1))
 
+  // たおれた みかたが いて、ふっかつの わざが あれば ゆうせん
+  const reviver = usable.find((x) => x.m.revive)
+  if (reviver && fallen) {
+    return { actorUid: actor.uid, moveIndex: reviver.i, targetUid: fallen.uid }
+  }
   // HPが すくないときは かいふくを ゆうせん
   const healer = usable.find((x) => x.m.healRatio || x.m.restSleep)
   if (healer && actor.hp <= actor.maxHp * 0.35) {
@@ -980,8 +1225,25 @@ export function chooseCpuCommand(f: Field, actor: Fighter, rng: Rng = Math.rando
       : usable
   if (pool.length > 0 && rng() < 0.6) {
     const pick = pool[Math.floor(rng() * pool.length)]
+    // わざコピー：あいての いちばん つよい わざを えらぶ
+    if (pick.m.copyMove) {
+      const best = target.moves
+        .map((m, i) => ({ m, i }))
+        .filter((x) => !x.m.copyMove)
+        .sort((a, b) => (b.m.ultimate ? 1000 : 0) + b.m.power - ((a.m.ultimate ? 1000 : 0) + a.m.power))[0]
+      return {
+        actorUid: actor.uid,
+        moveIndex: pick.i,
+        targetUid: target.uid,
+        copyIndex: best?.i,
+      }
+    }
     const t =
-      pick.m.target === 'self' || pick.m.target === 'ally' ? actor.uid : target.uid
+      pick.m.target === 'self' || pick.m.target === 'ally'
+        ? actor.uid
+        : pick.m.target === 'fallenAlly'
+          ? (fallen?.uid ?? actor.uid)
+          : target.uid
     return { actorUid: actor.uid, moveIndex: pick.i, targetUid: t }
   }
   return { actorUid: actor.uid, moveIndex: -1, targetUid: target.uid }
