@@ -29,7 +29,7 @@ export const ULTIMATE_KIND_LABEL: Record<'attack' | 'status' | 'heal', string> =
 
 export function groupOf(m: LibraryMove): MoveGroup {
   if (m.ultimate) return 'ultimate'
-  if (m.healRatio || m.restSleep || m.regen || m.cureStatus || m.cureStatusKey) return 'heal'
+  if (m.healRatio || m.restSleep || m.regen || m.cureStatus || m.cureStatusKey || m.restoreStats) return 'heal'
   return m.kind === 'attack' ? 'attack' : 'status'
 }
 

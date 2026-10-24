@@ -103,7 +103,7 @@ export function cueFor(line: string, fighters: Pick<Fighter, 'uid' | 'name'>[]):
 
 // わざの あじ に あわせて 音を えらぶ
 function soundKind(m: SpecialMoveV2): string {
-  if (m.healRatio || m.restSleep || m.regen || m.drainRatio || m.revive) return 'heal'
+  if (m.healRatio || m.restSleep || m.regen || m.drainRatio || m.revive || m.restoreStats) return 'heal'
   if (m.hits) return 'doubleAttack'
   if (m.kind === 'status') {
     return m.statChanges?.some((s) => s.to === 'self') ? 'attackUp' : 'defenseUp'

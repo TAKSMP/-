@@ -59,6 +59,7 @@ export const MOVE_PATTERNS = [
   { no: 47, key: 'revive', label: 'たおれた みかたを ふっかつ させる' },
   { no: 48, key: 'chaos', label: 'なにが おこるか わからない' },
   { no: 49, key: 'copyMove', label: 'あいての わざを じぶんの わざに する' },
+  { no: 50, key: 'restoreStats', label: 'さがった のうりょくを もとに もどす' },
 ] as const
 
 // さいきょうわざ だけの パターン（AI（ChatGPT）への しつもんには ふくめない）
@@ -70,6 +71,7 @@ export function moveSummary(m: SpecialMoveV2): string {
   if (m.revive) return 'ふっかつ'
   if (m.chaos) return 'なにが おこるかな？'
   if (m.copyMove) return 'わざコピー'
+  if (m.restoreStats) return 'ダウンを もどす'
   if (m.kind === 'attack') return `いりょく${m.power}`
   return 'へんかわざ'
 }
@@ -79,6 +81,7 @@ export type MovePatternKey = (typeof MOVE_PATTERNS)[number]['key']
 export interface LibraryMove extends SpecialMoveV2 {
   pattern: MovePatternKey
   tags: string[] // どんな虫に にあうか（かま・つの・どく…）
+  minLevel?: number // この レベルいじょうで おぼえる わざ（レベルアップで ランダムに でる とき）
   typeLabel?: string // わざリストの「タイプ」らん（さいきょうわざは パターンの くみあわせ なので じぶんで かく）
 }
 
@@ -314,6 +317,15 @@ export const MOVE_LIBRARY: LibraryMove[] = [
 
   // ⑯ あいての わざを コピー（バトルで あいての わざを 1つ えらんで、このわざと いれかえる）
   mv({ id: 'x01', pattern: 'copyMove', name: 'わざコピー', desc: 'あいての ひっさつわざを 1つ えらんで、じぶんの わざに する。つかった この わざは、えらんだ わざに いれかわるよ。', emoji: '🪞', power: 0, target: 'oneFoe', accuracy: null, uses: 2, copyMove: true, tags: ['ぎたい', 'ずるい', 'め'] }),
+
+  // ⑳ さがった のうりょくを もとに もどす（さがった ぶんだけ。あがっている ぶんは そのまま）
+  mv({ id: 'r01', pattern: 'restoreStats', name: 'ちからのよびもどし', desc: 'ぐっと ちからを こめて、さがった こうげきを もとに もどす。じぶんにも つかえる。', emoji: '💪', power: 0, target: 'ally', accuracy: null, restoreStats: ['attack'], tags: ['ちから', 'つの'] }),
+  mv({ id: 'r02', pattern: 'restoreStats', name: 'からのかたなおし', desc: 'からを ととのえて、さがった ぼうぎょを もとに もどす。じぶんにも つかえる。', emoji: '🛡️', power: 0, target: 'ally', accuracy: null, restoreStats: ['defense'], tags: ['かたい', 'こうら'] }),
+  mv({ id: 'r03', pattern: 'restoreStats', name: 'はねのストレッチ', desc: 'はねを のばして、さがった すばやさを もとに もどす。じぶんにも つかえる。', emoji: '🪽', power: 0, target: 'ally', accuracy: null, restoreStats: ['speed'], tags: ['はね', 'とぶ'] }),
+  mv({ id: 'r04', pattern: 'restoreStats', name: 'ひとみのみがき', desc: 'めを ぴかぴかに みがいて、さがった めいちゅうりつを もとに もどす。じぶんにも つかえる。', emoji: '👁️', power: 0, target: 'ally', accuracy: null, restoreStats: ['accuracy'], tags: ['め', 'ひかる'] }),
+  mv({ id: 'r05', pattern: 'restoreStats', name: 'あしどりのおさらい', desc: 'あしの うごきを おもいだして、さがった かいひりつを もとに もどす。じぶんにも つかえる。', emoji: '👣', power: 0, target: 'ally', accuracy: null, restoreStats: ['evasion'], tags: ['あし', 'はやい'] }),
+  mv({ id: 'r06', pattern: 'restoreStats', name: 'ちからとからのたてなおし', desc: 'こころを ひとつに して、さがった こうげきと ぼうぎょを もとに もどす。じぶんにも つかえる。', emoji: '🔰', power: 0, target: 'ally', accuracy: null, uses: 2, minLevel: 30, restoreStats: ['attack', 'defense'], tags: ['ちから', 'かたい', 'コウチュウ目'] }),
+  mv({ id: 'r07', pattern: 'restoreStats', name: 'めとあしのたてなおし', desc: 'おちついて いきを ととのえ、さがった めいちゅうりつと かいひりつを もとに もどす。じぶんにも つかえる。', emoji: '🎯', power: 0, target: 'ally', accuracy: null, uses: 2, minLevel: 30, restoreStats: ['accuracy', 'evasion'], tags: ['め', 'あし', 'トンボ目'] }),
 ]
 
 // -------------------------------------------------------------
@@ -366,6 +378,8 @@ export const ULTIMATE_MOVES: LibraryMove[] = [
   ult({ ultimate: 'heal', id: 'u29', uses: 3, pattern: 'heal', name: 'ひかりのつばさやすめ', desc: 'ひかる はねを やすめて HPを かいふく。ぼうぎょと すばやさも あがる。', emoji: '🕊️', power: 0, healRatio: 0.5, statChanges: [up('defense', 1), up('speed', 1)], typeLabel: 'HPを かいふく＋ぼうぎょ・すばやさ アップ', tags: ['はね', 'とぶ'] }),
   ult({ ultimate: 'heal', id: 'u30', uses: 1, pattern: 'cure', name: 'ふしちょうのほのお', desc: 'ふしぎな ほのおに つつまれて よみがえる。HPが ぜんかいして じょうたいいじょうも なおる。', emoji: '🔥', power: 0, healRatio: 1, cureStatus: true, typeLabel: 'HPを ぜんかいふく＋じょうたいいじょうも なおす', tags: ['ひかる', 'ちから', 'つの'] }),
   ult({ ultimate: 'heal', id: 'u33', uses: 2, pattern: 'revive', name: 'いのちのめざめ', desc: 'たおれた みかたに いのちを わけて ふっかつ させる。HPは はんぶんで もどる。でも せいこうする かくりつは はんぶん。', emoji: '🌟', power: 0, target: 'fallenAlly', revive: { ratio: 0.5, chance: 0.5 }, typeLabel: 'たおれた みかたを ふっかつ（HPはんぶん・せいこう 1/2）', tags: ['ひかる', 'みつ', 'りんぷん', 'チョウ目'] }),
+  ult({ ultimate: 'heal', id: 'u34', uses: 2, pattern: 'restoreStats', name: 'さんみいったいのふっかつ', desc: 'ちから・まもり・はやさの みっつの こころを ひとつに して、みかた ぜんいんの さがった こうげき・ぼうぎょ・すばやさを もとに もどす。', emoji: '🔱', power: 0, target: 'selfSide', restoreStats: ['attack', 'defense', 'speed'], typeLabel: 'みかた ぜんいんの こうげき・ぼうぎょ・すばやさダウンを もとに', tags: ['ちから', 'かたい', 'はね', 'コウチュウ目'] }),
+  ult({ ultimate: 'heal', id: 'u35', uses: 1, pattern: 'restoreStats', name: 'ぜんかいのいやしのひかり', desc: 'あたたかい ひかりが みかた ぜんいんを つつみ、さがって いた のうりょくを ぜんぶ もとに もどす。', emoji: '🌈', power: 0, target: 'selfSide', restoreStats: ['attack', 'defense', 'speed', 'accuracy', 'evasion'], typeLabel: 'みかた ぜんいんの さがった のうりょくを ぜんぶ もとに', tags: ['ひかる', 'りんぷん', 'チョウ目', 'みつ'] }),
 ]
 
 export function findMove(id: string): LibraryMove | undefined {

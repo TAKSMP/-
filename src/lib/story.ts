@@ -704,7 +704,7 @@ export function newMoveFor(
   const knownNames = new Set(known.map((m) => m.name))
   const tags = tagsOf(bug)
   let pool = MOVE_LIBRARY.filter(
-    (m) => !knownIds.has(m.id) && !knownNames.has(m.name),
+    (m) => !knownIds.has(m.id) && !knownNames.has(m.name) && (m.minLevel ?? 0) <= level,
   )
   if (pool.length === 0) return null
   // レベルが ひくいうちは つよすぎる わざは 出さない

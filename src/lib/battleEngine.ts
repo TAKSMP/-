@@ -870,6 +870,23 @@ function executeMove(
       }
     }
 
+    // ── さがった のうりょくランクを もとに もどす
+    if (move.restoreStats) {
+      const fixed: StatKey[] = []
+      for (const k of move.restoreStats) {
+        const base = k === 'evasion' ? BASE_EVASION : 0
+        if (target.rank[k] < base) {
+          target.rank[k] = base
+          fixed.push(k)
+        }
+      }
+      log.push(
+        fixed.length > 0
+          ? `✨ ${target.name}の ${fixed.map(statLabel).join('・')}ダウンが もとに もどった！`
+          : `…${target.name}の のうりょくは さがって いなかった。`,
+      )
+    }
+
     // ── ねむって ぜんかいふく
     if (move.restSleep) {
       target.hp = target.maxHp

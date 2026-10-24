@@ -67,7 +67,7 @@ export function raceEffectOf(m: SpecialMoveV2): RaceEffect {
   if (m.restSleep) return 'endless'
   if (m.regen) return 'endless'
   if (m.healRatio) return 'refill'
-  if (m.cureStatus || m.cureStatusKey) return 'shield'
+  if (m.cureStatus || m.cureStatusKey || m.restoreStats) return 'shield'
   if (m.counterGuard || m.hideWhileCharging || m.counterRatio) return 'shield'
   if (m.inflict?.status === 'sleep') return 'sleepShot'
   if (m.inflict?.status === 'poison') return 'poisonTrap'
