@@ -106,7 +106,7 @@ export function DojoPage({ bugs }: { bugs: CaughtBug[] }) {
 
   const bgUrl = new URL('dojo/dojo-bg.jpg', new URL(import.meta.env.BASE_URL, document.baseURI)).href
   const wrap = (body: React.ReactNode) => (
-    <div className="dojo" style={{ backgroundImage: `url(${bgUrl})` }}>
+    <div className="dojo-room" style={{ backgroundImage: `url(${bgUrl})` }}>
       {body}
     </div>
   )
@@ -126,7 +126,7 @@ export function DojoPage({ bugs }: { bugs: CaughtBug[] }) {
   if (step === 'menu') {
     return wrap(
       <div className="dojo-panel">
-        <h2 className="dojo-title">🥋 わざ道場</h2>
+        <h2 className="dojo-title">🥋 わざ<ruby>道場<rt>どうじょう</rt></ruby></h2>
         <p className="dojo-lead">
           ここは <b>しんわざ</b> と <b>きたえる</b> ばしょ。ただし、つかえるのは{' '}
           <b>レベル{DOJO_MIN_LEVEL}いじょう</b> の虫だけ！ えいごの テストに ぜんぶ せいかいしたら ねがいが かなうよ。

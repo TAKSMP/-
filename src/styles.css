@@ -6625,7 +6625,7 @@ body.race-full .page-head {
 .game-card.dojo {
   background: linear-gradient(135deg, #fff3c4, #f3dcff);
 }
-.dojo {
+.dojo-room {
   background-size: cover;
   background-position: center top;
   background-color: #f3e3a8;

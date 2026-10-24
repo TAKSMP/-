@@ -52,7 +52,7 @@ export function PlayPage({ bugs, onGoCapture }: Props) {
       </div>
     )
   }
-  const header = (title: string, sub: string) => (
+  const header = (title: ReactNode, sub: string) => (
     <header className="page-head">
       <h1>{title}</h1>
       <p className="sub">{sub}</p>
@@ -77,8 +77,8 @@ export function PlayPage({ bugs, onGoCapture }: Props) {
         </button>
         <button className="game-card dojo" onClick={() => go('dojo')}>
           <span className="game-emoji">🥋</span>
-          <span className="game-title">わざ道場</span>
-          <span className="game-desc">えいごの テストで しんわざを おぼえたり、わざを きたえたり（Lv50〜）</span>
+          <span className="game-title">わざ<ruby>道場<rt>どうじょう</rt></ruby></span>
+          <span className="game-desc">えいごの テストで わざを おぼえる・きたえる</span>
         </button>
       </div>,
     )
@@ -99,7 +99,7 @@ export function PlayPage({ bugs, onGoCapture }: Props) {
     return frame(
       'storyMenu',
       'ストーリー',
-      header('🥋 わざ道場', 'えいごを がんばって つよくなろう！'),
+      header(<>🥋 わざ<ruby>道場<rt>どうじょう</rt></ruby></>, 'えいごを がんばって つよくなろう！'),
       <DojoPage bugs={bugs} />,
     )
   }
