@@ -1,13 +1,14 @@
 // えいごの よみあげ（ブラウザの こえ）。おとが でない たんまつでは speechSupported() が false
 //  ・よむ たびに だんせいの こえ と じょせいの こえを こうごに つかう
-//  ・「ゆっくり さいせい」が ONの ときは 0.7ばいそく
+//  ・「ゆっくり さいせい」が ONの ときは ゆっくり（rate 0.5）
 export function speechSupported(): boolean {
   return typeof window !== 'undefined' && 'speechSynthesis' in window
 }
 
 const SLOW_KEY = 'chomushi.speak.slow.v1'
-const SLOW_RATE = 0.7
-const NORMAL_RATE = 0.9
+// ブラウザの rate は たんまつで きこえかたが ちがう ので、ちがいが わかる ように はなす
+const SLOW_RATE = 0.5
+const NORMAL_RATE = 1.0
 
 let slow = (() => {
   try {
@@ -36,7 +37,11 @@ const FEMALE_RE = /female|woman|samantha|zira|aria|jenny|karen|victoria|susan|ha
 const MALE_RE = /\bmale\b|david|mark|guy|alex|daniel|fred|george|james|ryan|tom|arthur|matthew|joey|justin|brian/i
 
 function pickVoice(gender: Gender): { voice?: SpeechSynthesisVoice; pitch: number } {
-  const en = window.speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().startsWith('en'))
+  // ネットの こえ（localService=false）は はやさを かえられない ことが あるので、たんまつの こえを さきに
+  const en = window.speechSynthesis
+    .getVoices()
+    .filter((v) => v.lang.toLowerCase().startsWith('en'))
+    .sort((a, b) => Number(b.localService) - Number(a.localService))
   const hit = en.find((v) =>
     gender === 'female' ? FEMALE_RE.test(v.name) : MALE_RE.test(v.name) && !/female/i.test(v.name),
   )

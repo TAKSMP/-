@@ -6727,20 +6727,20 @@ body.race-full .page-head {
 .dojo-done-big { font-size: 28px; font-weight: 900; margin: 8px 0; }
 .dojo-done-msg { font-size: 15px; font-weight: 800; line-height: 1.7; margin: 0 0 14px; }
 .dojo-kiku { margin: 0 auto 8px; display: block; }
-.dojo-choice-wrap { position: relative; display: flex; }
-.dojo-choice-wrap .dojo-choice { flex: 1; }
+.dojo-choice-wrap { display: flex; gap: 6px; align-items: stretch; }
+.dojo-choice-wrap .dojo-choice { flex: 1; min-width: 0; }
+/* おおきな ためしぎき ボタン（えらぶ ボタンと はなして おく） */
 .dojo-kiku-mini {
-  position: absolute;
-  right: 4px;
-  top: 4px;
+  flex: 0 0 52px;
+  min-height: 52px;
   border: none;
   background: #e3f2ff;
-  border-radius: 50%;
-  width: 28px;
-  height: 28px;
-  font-size: 14px;
+  border-radius: 14px;
+  font-size: 22px;
   cursor: pointer;
+  box-shadow: var(--shadow);
 }
+.dojo-kiku-mini:active { transform: translateY(2px); }
 .dojo-quiz { position: relative; }
 .dojo-slow {
   position: absolute;
