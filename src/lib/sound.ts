@@ -167,12 +167,12 @@ export const sfx = {
   error() {
     beep(200, 0.2, 0, 'sawtooth')
   },
-  // クイズ：□の ぶぶんを かくす「ピコピコ」（こたえの もじすうに あわせて ながさが かわる）
+  // クイズ：□の ぶぶんを かくす「ぴろぴろ」（こたえの もじすうに あわせて ながさが かわる）
   // ms：ながさ（ミリびょう）。こえに まけない ように おおきめ
   blankMask(ms = 600) {
     const step = 0.09
     const n = Math.max(3, Math.round(ms / 1000 / step))
-    for (let i = 0; i < n; i++) beep(i % 2 ? 1568 : 1047, step, i * step, 'square', 0.4)
+    for (let i = 0; i < n; i++) beep(i % 2 ? 1500 : 1000, step, i * step, 'square', 0.4) // ぴ・ろ・ぴ・ろ…
   },
   // クイズ：せいかい（ピンポン）。こえと おなじくらいの おおきさ
   correct() {

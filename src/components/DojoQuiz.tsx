@@ -8,7 +8,7 @@ import { buildQuiz, isCorrect, type QuizMode } from '../data/englishQuiz'
 import { isSlow, setSlow, speakEnglish, speakWithMask, speechSupported, stopSpeaking } from '../lib/speak'
 import { sfx } from '../lib/sound'
 
-// ひっきもんだいで よみあげる えいご（1ぎょうめが えいごの ときだけ）。□は「ピコピコ」で かくす
+// ひっきもんだいで よみあげる えいご（1ぎょうめが えいごの ときだけ）。□は「ぴろぴろ」で かくす
 const isEnglish = (t: string) => /^[A-Za-z]/.test(t.trim())
 function bodyEnglish(body?: string): string | null {
   const first = body?.split('\n')[0] ?? ''
