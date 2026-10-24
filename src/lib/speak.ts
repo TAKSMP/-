@@ -1,10 +1,58 @@
-// えいごの よみあげ（ブラウザの こえ）。おとが でない たんまつでは supported() が false
+// えいごの よみあげ（ブラウザの こえ）。おとが でない たんまつでは speechSupported() が false
+//  ・よむ たびに だんせいの こえ と じょせいの こえを こうごに つかう
+//  ・「ゆっくり さいせい」が ONの ときは 0.7ばいそく
 export function speechSupported(): boolean {
   return typeof window !== 'undefined' && 'speechSynthesis' in window
 }
 
+const SLOW_KEY = 'chomushi.speak.slow.v1'
+const SLOW_RATE = 0.7
+const NORMAL_RATE = 0.9
+
+let slow = (() => {
+  try {
+    return localStorage.getItem(SLOW_KEY) === '1'
+  } catch {
+    return false
+  }
+})()
+
+export function isSlow(): boolean {
+  return slow
+}
+export function setSlow(v: boolean): void {
+  slow = v
+  try {
+    localStorage.setItem(SLOW_KEY, v ? '1' : '0')
+  } catch {
+    /* むし */
+  }
+}
+
+type Gender = 'female' | 'male'
+let nextGender: Gender = 'female' // じょせい → だんせい → … の じゅん
+
+const FEMALE_RE = /female|woman|samantha|zira|aria|jenny|karen|victoria|susan|hazel|moira|tessa|fiona|allison|ava|joanna|kendra|salli|google us english/i
+const MALE_RE = /\bmale\b|david|mark|guy|alex|daniel|fred|george|james|ryan|tom|arthur|matthew|joey|justin|brian/i
+
+function pickVoice(gender: Gender): { voice?: SpeechSynthesisVoice; pitch: number } {
+  const en = window.speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().startsWith('en'))
+  const hit = en.find((v) =>
+    gender === 'female' ? FEMALE_RE.test(v.name) : MALE_RE.test(v.name) && !/female/i.test(v.name),
+  )
+  if (hit) return { voice: hit, pitch: 1 }
+  // こえが みつからない ときは ピッチで ちがいを だす
+  return { voice: en[0], pitch: gender === 'female' ? 1.25 : 0.7 }
+}
+
 // よみあげの せいぎょ（stopSpeaking／あたらしい よみあげで ふるい つづきを やめる）
 let token = 0
+
+function takeGender(): Gender {
+  const g = nextGender
+  nextGender = g === 'female' ? 'male' : 'female'
+  return g
+}
 
 // □を みつけたら「ピー」などの こうかおん（mask）で かくして つづきを よむ
 export function speakWithMask(text: string, mask: () => void): void {
@@ -14,6 +62,7 @@ export function speakWithMask(text: string, mask: () => void): void {
     return
   }
   const my = ++token
+  const gender = takeGender() // ぜんぶ おなじ ひとの こえで
   const run = (i: number) => {
     if (my !== token || i >= parts.length) return
     const next = () => {
@@ -25,12 +74,17 @@ export function speakWithMask(text: string, mask: () => void): void {
     }
     const part = parts[i].trim()
     if (!part) return next()
-    speakEnglish(part, next, true)
+    speakEnglish(part, next, true, gender)
   }
   run(0)
 }
 
-export function speakEnglish(text: string, onEnd?: () => void, keepToken = false): void {
+export function speakEnglish(
+  text: string,
+  onEnd?: () => void,
+  keepToken = false,
+  gender?: Gender,
+): void {
   if (!keepToken) token++
   if (!speechSupported()) {
     onEnd?.()
@@ -41,9 +95,10 @@ export function speakEnglish(text: string, onEnd?: () => void, keepToken = false
     synth.cancel()
     const u = new SpeechSynthesisUtterance(text)
     u.lang = 'en-US'
-    u.rate = 0.8
-    const voice = synth.getVoices().find((v) => v.lang.toLowerCase().startsWith('en'))
+    u.rate = slow ? SLOW_RATE : NORMAL_RATE
+    const { voice, pitch } = pickVoice(gender ?? takeGender())
     if (voice) u.voice = voice
+    u.pitch = pitch
     if (onEnd) {
       // おわり を まつ。ブラウザによっては onend が こない ので ほけんの タイマーも
       let done = false
@@ -54,7 +109,7 @@ export function speakEnglish(text: string, onEnd?: () => void, keepToken = false
       }
       u.onend = fin
       u.onerror = fin
-      window.setTimeout(fin, 700 + text.length * 120)
+      window.setTimeout(fin, (700 + text.length * 120) / (slow ? SLOW_RATE : 1))
     }
     synth.speak(u)
   } catch (e) {

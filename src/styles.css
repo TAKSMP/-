@@ -6741,3 +6741,20 @@ body.race-full .page-head {
   font-size: 14px;
   cursor: pointer;
 }
+.dojo-quiz { position: relative; }
+.dojo-slow {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  border: 2px solid #b9d9f5;
+  background: #fff;
+  border-radius: 999px;
+  padding: 4px 9px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ink);
+  cursor: pointer;
+}
+.dojo-slow.on { background: #bfe4ff; border-color: #3a9be0; }
+.dojo-dots { padding-top: 26px; }

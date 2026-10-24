@@ -5,7 +5,7 @@
 // =============================================================
 import { useEffect, useMemo, useState } from 'react'
 import { buildQuiz, isCorrect, type QuizMode } from '../data/englishQuiz'
-import { speakEnglish, speakWithMask, speechSupported, stopSpeaking } from '../lib/speak'
+import { isSlow, setSlow, speakEnglish, speakWithMask, speechSupported, stopSpeaking } from '../lib/speak'
 import { sfx } from '../lib/sound'
 
 // ひっきもんだいで よみあげる えいご（1ぎょうめが えいごの ときだけ）。□は「ピー」などで かくす
@@ -33,6 +33,7 @@ export function DojoQuiz({
   const [picked, setPicked] = useState<string | null>(null)
   const [failed, setFailed] = useState<string | null>(null) // まちがえた ときの せいかい
   const [shownOk, setShownOk] = useState(false)
+  const [slow, setSlowState] = useState(isSlow())
 
   const q = quiz[idx]
   const choices = useMemo(() => {
@@ -108,6 +109,17 @@ export function DojoQuiz({
 
   return (
     <div className="dojo-panel dojo-quiz">
+      <button
+        className={'dojo-slow' + (slow ? ' on' : '')}
+        aria-pressed={slow}
+        onClick={() => {
+          sfx.tap()
+          setSlow(!slow)
+          setSlowState(!slow)
+        }}
+      >
+        🐢 ゆっくりさいせい {slow ? 'ON' : 'OFF'}
+      </button>
       <div className="dojo-dots" aria-label={`${idx + 1}もんめ／${quiz.length}もん`}>
         {quiz.map((_, i) => (
           <span key={i} className={'dojo-dot' + (i < idx || (i === idx && shownOk) ? ' done' : i === idx ? ' now' : '')} />
