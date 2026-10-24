@@ -8,6 +8,13 @@ import { buildQuiz, isCorrect, type QuizMode } from '../data/englishQuiz'
 import { speakEnglish, speechSupported, stopSpeaking } from '../lib/speak'
 import { sfx } from '../lib/sound'
 
+// ひっきもんだいで よみあげる えいご（1ぎょうめが えいごの ときだけ）。□は「ブランク」と よむ
+const isEnglish = (t: string) => /^[A-Za-z]/.test(t.trim())
+function bodyEnglish(body?: string): string | null {
+  const first = body?.split('\n')[0] ?? ''
+  return isEnglish(first) ? first.replace(/□/g, 'blank') : null
+}
+
 export function DojoQuiz({
   mode,
   tier,
@@ -121,22 +128,33 @@ export function DojoQuiz({
       )}
       {q.emoji && <div className="dojo-q-emoji">{q.emoji}</div>}
       {q.body && <p className="dojo-q-body">{q.body}</p>}
+      {!q.speak && bodyEnglish(q.body) && (
+        <button className="btn dojo-speak dojo-kiku" onClick={() => speakEnglish(bodyEnglish(q.body)!)}>
+          🔊 きく
+        </button>
+      )}
       {q.hint && <p className="dojo-q-hint">ヒント：{q.hint}</p>}
 
       {q.fmt === 'choice' ? (
         <div className="dojo-choices">
           {choices.map((c) => (
-            <button
-              key={c}
-              className={'dojo-choice' + (shownOk && c === q.answers[0] ? ' ok' : '') + (picked === c ? ' picked' : '')}
-              disabled={shownOk}
-              onClick={() => {
-                setPicked(c)
-                judge(c)
-              }}
-            >
-              {c}
-            </button>
+            <div key={c} className="dojo-choice-wrap">
+              <button
+                className={'dojo-choice' + (shownOk && c === q.answers[0] ? ' ok' : '') + (picked === c ? ' picked' : '')}
+                disabled={shownOk}
+                onClick={() => {
+                  setPicked(c)
+                  judge(c)
+                }}
+              >
+                {c}
+              </button>
+              {!q.speak && isEnglish(c) && (
+                <button className="dojo-kiku-mini" aria-label={`${c}を きく`} onClick={() => speakEnglish(c)}>
+                  🔊
+                </button>
+              )}
+            </div>
           ))}
         </div>
       ) : (
