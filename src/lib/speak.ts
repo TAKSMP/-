@@ -98,7 +98,8 @@ export function speakEnglish(
   try {
     const synth = window.speechSynthesis
     synth.cancel()
-    const u = new SpeechSynthesisUtterance(text)
+    // 「.」を「ふる すとっぷ」と よむ こえが あるので、くとうてんは とって よむ
+    const u = new SpeechSynthesisUtterance(text.replace(/[.。]+/g, ' ').replace(/\s+/g, ' ').trim())
     u.lang = 'en-US'
     u.rate = slow ? SLOW_RATE : NORMAL_RATE
     const { voice, pitch } = pickVoice(gender ?? takeGender())
