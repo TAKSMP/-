@@ -167,6 +167,14 @@ export const sfx = {
   error() {
     beep(200, 0.2, 0, 'sawtooth')
   },
+  // クイズ：□の ぶぶんを かくす「ピー」「ぴろぴろ」（バラエティばんぐみの ふうに）
+  blankMask() {
+    if (Math.random() < 0.5) {
+      beep(1000, 0.55, 0, 'sine', 0.22) // ピー
+    } else {
+      for (let i = 0; i < 6; i++) beep(i % 2 ? 1500 : 1000, 0.09, i * 0.09, 'square', 0.12) // ぴろぴろ
+    }
+  },
   // クイズ：せいかい（ピンポン）
   correct() {
     beep(880, 0.12, 0, 'triangle', 0.22)

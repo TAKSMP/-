@@ -5,14 +5,14 @@
 // =============================================================
 import { useEffect, useMemo, useState } from 'react'
 import { buildQuiz, isCorrect, type QuizMode } from '../data/englishQuiz'
-import { speakEnglish, speechSupported, stopSpeaking } from '../lib/speak'
+import { speakEnglish, speakWithMask, speechSupported, stopSpeaking } from '../lib/speak'
 import { sfx } from '../lib/sound'
 
-// ひっきもんだいで よみあげる えいご（1ぎょうめが えいごの ときだけ）。□は「ブランク」と よむ
+// ひっきもんだいで よみあげる えいご（1ぎょうめが えいごの ときだけ）。□は「ピー」などで かくす
 const isEnglish = (t: string) => /^[A-Za-z]/.test(t.trim())
 function bodyEnglish(body?: string): string | null {
   const first = body?.split('\n')[0] ?? ''
-  return isEnglish(first) ? first.replace(/□/g, 'blank') : null
+  return isEnglish(first) ? first : null
 }
 
 export function DojoQuiz({
@@ -131,7 +131,7 @@ export function DojoQuiz({
       {q.emoji && <div className="dojo-q-emoji">{q.emoji}</div>}
       {q.body && <p className="dojo-q-body">{q.body}</p>}
       {!q.speak && bodyEnglish(q.body) && (
-        <button className="btn dojo-speak dojo-kiku" onClick={() => speakEnglish(bodyEnglish(q.body)!)}>
+        <button className="btn dojo-speak dojo-kiku" onClick={() => speakWithMask(bodyEnglish(q.body)!, sfx.blankMask)}>
           🔊 きく
         </button>
       )}
