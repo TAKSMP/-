@@ -8,7 +8,12 @@ export function speechSupported(): boolean {
 const SLOW_KEY = 'chomushi.speak.slow.v1'
 // ブラウザの rate は たんまつで きこえかたが ちがう ので、ちがいが わかる ように はなす
 const SLOW_RATE = 0.5
-const NORMAL_RATE = 1.0
+// こどもむけに、すこし はやく・あかるく（ゆっくりの ときは そのまま）
+const NORMAL_RATE = 1.05
+
+// こえの たかさ。たかい ほうが あかるく きこえる
+const PITCH = { female: 1.35, male: 1.15 } as const
+const PITCH_NO_VOICE = { female: 1.45, male: 1.0 } as const // こえが えらべない ときは たかさで 男女を わける
 
 let slow = (() => {
   try {
@@ -46,10 +51,10 @@ function pickVoice(gender: Gender): { voice?: SpeechSynthesisVoice; pitch: numbe
   const hit = en.find((v) =>
     gender === 'female' ? FEMALE_RE.test(v.name) : MALE_RE.test(v.name) && !/female/i.test(v.name),
   )
-  if (hit) return { voice: hit, pitch: 1 }
+  if (hit) return { voice: hit, pitch: PITCH[gender] }
   // こえが みつからない ときは ピッチで ちがいを だす
   // （en-US の こえが 1つも なければ voice を きめず、u.lang='en-US' に まかせる）
-  return { voice: en[0], pitch: gender === 'female' ? 1.25 : 0.7 }
+  return { voice: en[0], pitch: PITCH_NO_VOICE[gender] }
 }
 
 // よみあげの せいぎょ（stopSpeaking／あたらしい よみあげで ふるい つづきを やめる）
