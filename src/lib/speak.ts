@@ -37,16 +37,18 @@ const FEMALE_RE = /female|woman|samantha|zira|aria|jenny|karen|victoria|susan|ha
 const MALE_RE = /\bmale\b|david|mark|guy|alex|daniel|fred|george|james|ryan|tom|arthur|matthew|joey|justin|brian/i
 
 function pickVoice(gender: Gender): { voice?: SpeechSynthesisVoice; pitch: number } {
+  // アメリカ英語（en-US）の こえだけを つかう（イギリス・オーストラリア などは ださない）
   // ネットの こえ（localService=false）は はやさを かえられない ことが あるので、たんまつの こえを さきに
   const en = window.speechSynthesis
     .getVoices()
-    .filter((v) => v.lang.toLowerCase().startsWith('en'))
+    .filter((v) => v.lang.replace('_', '-').toLowerCase() === 'en-us')
     .sort((a, b) => Number(b.localService) - Number(a.localService))
   const hit = en.find((v) =>
     gender === 'female' ? FEMALE_RE.test(v.name) : MALE_RE.test(v.name) && !/female/i.test(v.name),
   )
   if (hit) return { voice: hit, pitch: 1 }
   // こえが みつからない ときは ピッチで ちがいを だす
+  // （en-US の こえが 1つも なければ voice を きめず、u.lang='en-US' に まかせる）
   return { voice: en[0], pitch: gender === 'female' ? 1.25 : 0.7 }
 }
 
