@@ -4,6 +4,7 @@ import { QuizPage } from './QuizPage'
 import { BattlePage } from './BattlePage'
 import { BattlePage2 } from './BattlePage2'
 import { StoryPage } from './StoryPage'
+import { DojoPage } from './DojoPage'
 import { RacePage } from './RacePage'
 import { RacePageOld } from './RacePageOld'
 import { NetBattlePage } from './NetBattlePage'
@@ -14,12 +15,14 @@ interface Props {
   onGoCapture: () => void
 }
 
-// ゲーム → クイズ／ストーリー／バトル／レース。
+// ゲーム → クイズ／ストーリー（ストーリーモード／わざ道場）／バトル／レース。
 // バトルの なかは → 1たい1／2たい2／まえのばん／つうしんバトル
 type Game =
   | null
   | 'quiz'
+  | 'storyMenu'
   | 'story'
+  | 'dojo'
   | 'battleMenu'
   | 'battle1'
   | 'battle2'
@@ -60,13 +63,44 @@ export function PlayPage({ bugs, onGoCapture }: Props) {
     return frame(null, 'ゲーム', null, <QuizPage bugs={bugs} onGoCapture={onGoCapture} />)
   }
 
-  // ストーリーモード（マップを すすんで ゴールを めざす）
-  if (game === 'story') {
+  // ストーリー → ストーリーモード／わざ道場
+  if (game === 'storyMenu') {
     return frame(
       null,
       'ゲーム',
-      header('🗺️ ストーリー', 'マップを すすんで ゴールを めざそう！'),
+      header('🗺️ ストーリー', 'どっちに いく？'),
+      <div className="game-menu">
+        <button className="game-card story" onClick={() => go('story')}>
+          <span className="game-emoji">🗺️</span>
+          <span className="game-title">ストーリーモード</span>
+          <span className="game-desc">マップを すすんで ゴールへ！ たおすと レベルアップ</span>
+        </button>
+        <button className="game-card dojo" onClick={() => go('dojo')}>
+          <span className="game-emoji">🥋</span>
+          <span className="game-title">わざ道場</span>
+          <span className="game-desc">えいごの テストで しんわざを おぼえたり、わざを きたえたり（Lv50〜）</span>
+        </button>
+      </div>,
+    )
+  }
+
+  // ストーリーモード（マップを すすんで ゴールを めざす）
+  if (game === 'story') {
+    return frame(
+      'storyMenu',
+      'ストーリー',
+      header('🗺️ ストーリーモード', 'マップを すすんで ゴールを めざそう！'),
       <StoryPage bugs={bugs} onGoCapture={onGoCapture} />,
+    )
+  }
+
+  // わざ道場
+  if (game === 'dojo') {
+    return frame(
+      'storyMenu',
+      'ストーリー',
+      header('🥋 わざ道場', 'えいごを がんばって つよくなろう！'),
+      <DojoPage bugs={bugs} />,
     )
   }
 
@@ -176,7 +210,7 @@ export function PlayPage({ bugs, onGoCapture }: Props) {
           <span className="game-title">クイズ</span>
           <span className="game-desc">虫の なまえや ひみつを あてよう</span>
         </button>
-        <button className="game-card story" onClick={() => go('story')}>
+        <button className="game-card story" onClick={() => go('storyMenu')}>
           <span className="game-emoji">🗺️</span>
           <span className="game-title">ストーリー</span>
           <span className="game-desc">マップを すすんで ゴールへ！ たおすと レベルアップ</span>

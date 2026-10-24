@@ -323,6 +323,7 @@ export interface StorySave {
   ultimates?: Record<string, SpecialMoveV2[]> // 虫のID → さいきょうわざ（わざ3つとは べつわく。さいだい3つ）
   party?: Record<string, string[]> // （ふるい形）マップごとの なかま
   cage?: string[] // むしかご：なかまに した虫の ID（ずっと のこる）
+  trained?: Record<string, Record<string, TrainSteps>> // 虫のID → わざのID → わざ道場で きたえた かいすう
   lastCompanionId?: string // 直近 バトルに つれていった なかまの ID（つれていく？ がめんの ひだり はしに 出す）
 }
 
@@ -372,6 +373,7 @@ export function loadStory(): StorySave {
       cage:
         d.cage ??
         Array.from(new Set(Object.values(d.party ?? {}).flat())),
+      trained: d.trained ?? {},
       lastCompanionId: typeof d.lastCompanionId === 'string' ? d.lastCompanionId : undefined,
     }
   } catch {
@@ -501,12 +503,14 @@ export function resetLevel(save: StorySave, bugId: string): StorySave {
   delete levels[bugId]
   delete moves[bugId] // おぼえた わざも もとに もどす
   delete ultimates[bugId]
-  return { ...save, levels, moves, ultimates }
+  const trained = { ...(save.trained ?? {}) }
+  delete trained[bugId]
+  return { ...save, levels, moves, ultimates, trained }
 }
 
 // ぜんぶの虫の レベルを 1に もどす
 export function resetAllLevels(save: StorySave): StorySave {
-  return { ...save, levels: {}, moves: {}, ultimates: {} }
+  return { ...save, levels: {}, moves: {}, ultimates: {}, trained: {} }
 }
 
 // -------------------------------------------------------------
@@ -554,7 +558,94 @@ export function movesOf(
   bug: CaughtBug,
   level: number,
 ): SpecialMoveV2[] {
+  return baseMovesOf(save, bug, level).map((m) => applyTraining(m, save.trained?.[bug.id]?.[m.id]))
+}
+
+// きたえる まえの わざ（わざ道場で つかう）
+export function baseMovesOf(save: StorySave, bug: CaughtBug, level: number): SpecialMoveV2[] {
   return [...allMovesOf(save, bug).slice(0, moveSlots(level)), ...ultimatesOf(save, bug.id, level)]
+}
+
+// -------------------------------------------------------------
+//  わざ道場：わざを きたえる
+// -------------------------------------------------------------
+export const DOJO_MIN_LEVEL = 50
+
+export type TrainKey = 'power' | 'uses' | 'accuracy' | 'heal' | 'revive'
+export type TrainSteps = Partial<Record<TrainKey, number>>
+
+export interface TrainOption {
+  key: TrainKey
+  label: string
+  emoji: string
+  perStep: string // 1かいで どれだけ ふえるか
+  max: number // さいだい なんかい きたえられるか
+}
+
+// その わざで きたえられる こうもく
+export function trainOptions(m: SpecialMoveV2): TrainOption[] {
+  const out: TrainOption[] = []
+  if (m.fixedDamage) {
+    out.push({ key: 'power', label: 'ダメージ', emoji: '💥', perStep: '+5', max: 5 })
+  } else if (m.kind === 'attack' && m.power > 0) {
+    out.push({ key: 'power', label: 'いりょく', emoji: '💥', perStep: '+5', max: 5 })
+  }
+  if (m.accuracy != null && m.accuracy < 100) {
+    out.push({
+      key: 'accuracy',
+      label: 'めいちゅうりつ',
+      emoji: '🎯',
+      perStep: '+5%',
+      max: Math.min(5, Math.ceil((100 - m.accuracy) / 5)),
+    })
+  }
+  if (m.healRatio) {
+    out.push({ key: 'heal', label: 'かいふくりょう', emoji: '💚', perStep: '+5%', max: 5 })
+  }
+  if (m.revive) {
+    out.push({ key: 'revive', label: 'ふっかつの せいこうりつ', emoji: '🌟', perStep: '+10%', max: 4 })
+  }
+  out.push({ key: 'uses', label: 'つかえる かいすう', emoji: '🔁', perStep: '+1かい', max: 3 })
+  return out
+}
+
+// きたえた ぶんを わざに のせる（もとの わざは かえない）
+export function applyTraining(m: SpecialMoveV2, t?: TrainSteps): SpecialMoveV2 {
+  if (!t) return m
+  const out: SpecialMoveV2 = { ...m }
+  const lim = (key: TrainKey) =>
+    Math.min(t[key] ?? 0, trainOptions(m).find((o) => o.key === key)?.max ?? 0)
+  const pw = lim('power')
+  if (pw) {
+    if (out.fixedDamage) out.fixedDamage += pw * 5
+    else out.power += pw * 5
+  }
+  const ac = lim('accuracy')
+  if (ac && out.accuracy != null) out.accuracy = Math.min(100, out.accuracy + ac * 5)
+  const hl = lim('heal')
+  if (hl && out.healRatio) out.healRatio = Math.min(1, +(out.healRatio + hl * 0.05).toFixed(2))
+  const rv = lim('revive')
+  if (rv && out.revive) {
+    out.revive = { ...out.revive, chance: Math.min(1, +(out.revive.chance + rv * 0.1).toFixed(2)) }
+  }
+  const us = lim('uses')
+  if (us) out.uses += us
+  return out
+}
+
+export function trainedSteps(save: StorySave, bugId: string, moveId: string, key: TrainKey): number {
+  return save.trained?.[bugId]?.[moveId]?.[key] ?? 0
+}
+
+// 1だん きたえる（さいだいを こえない）
+export function trainMove(save: StorySave, bugId: string, m: SpecialMoveV2, key: TrainKey): StorySave {
+  const opt = trainOptions(m).find((o) => o.key === key)
+  if (!opt) return save
+  const cur = trainedSteps(save, bugId, m.id, key)
+  if (cur >= opt.max) return save
+  const byBug = { ...(save.trained?.[bugId] ?? {}) }
+  byBug[m.id] = { ...(byBug[m.id] ?? {}), [key]: cur + 1 }
+  return { ...save, trained: { ...(save.trained ?? {}), [bugId]: byBug } }
 }
 
 // -------------------------------------------------------------

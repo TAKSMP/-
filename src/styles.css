@@ -6618,3 +6618,111 @@ body.race-full .page-head {
   font-size: 13px;
   color: #6a7a58;
 }
+
+/* =============================================================
+   わざ道場
+   ============================================================= */
+.game-card.dojo {
+  background: linear-gradient(135deg, #fff3c4, #f3dcff);
+}
+.dojo {
+  background-size: cover;
+  background-position: center top;
+  background-color: #f3e3a8;
+  border-radius: 20px;
+  padding: 14px 10px 20px;
+  min-height: 60vh;
+}
+.dojo-panel {
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+.dojo-title { margin: 4px 0 8px; font-size: 18px; }
+.dojo-lead { font-size: 13px; font-weight: 700; line-height: 1.7; margin: 0 0 10px; }
+.dojo-count { font-size: 13px; margin: 0 0 10px; }
+.dojo-empty { font-weight: 800; padding: 14px 4px; }
+.dojo-back { display: block; margin: 0 0 6px; }
+.dojo-tabs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 10px; }
+.dojo-tab {
+  border: 2px solid transparent;
+  background: var(--card);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.dojo-tab.on { border-color: #8a4fd0; background: #f3e6ff; }
+.dojo-movelist { display: flex; flex-direction: column; gap: 6px; text-align: left; }
+.dojo-move {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: 'emoji name' 'emoji sub';
+  column-gap: 10px;
+  align-items: center;
+  border: none;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  border-radius: 14px;
+  padding: 8px 12px;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  position: relative;
+}
+.dojo-move:disabled { opacity: 0.5; cursor: default; }
+.dojo-move:not(:disabled):active { transform: translateY(2px); }
+.dojo-move-no { position: absolute; top: 4px; right: 8px; font-size: 10px; opacity: 0.55; font-weight: 800; }
+.dojo-move-emoji { grid-area: emoji; font-size: 24px; }
+.dojo-move-name { grid-area: name; font-weight: 900; font-size: 14px; }
+.dojo-move-sub { grid-area: sub; font-size: 11px; font-weight: 700; opacity: 0.75; }
+
+.dojo-dots { display: flex; gap: 5px; justify-content: center; margin-bottom: 4px; }
+.dojo-dot { width: 14px; height: 14px; border-radius: 50%; background: #ddd; }
+.dojo-dot.now { background: #ffd24a; box-shadow: 0 0 0 2px #f0a500; }
+.dojo-dot.done { background: #5cc46a; }
+.dojo-q-count { margin: 0; font-size: 12px; font-weight: 800; opacity: 0.7; }
+.dojo-q-title { margin: 6px 0; font-size: 14px; font-weight: 900; color: #6a35b0; }
+.dojo-q-emoji { font-size: 54px; line-height: 1.1; }
+.dojo-q-body { font-size: 20px; font-weight: 900; white-space: pre-line; margin: 6px 0 10px; line-height: 1.6; }
+.dojo-q-hint, .dojo-q-note { font-size: 12px; font-weight: 800; opacity: 0.7; margin: 0 0 8px; }
+.dojo-listen { margin: 6px 0 10px; }
+.dojo-speak { background: #e3f2ff; }
+.dojo-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.dojo-choice {
+  border: 3px solid transparent;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  border-radius: 14px;
+  padding: 12px 6px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--ink);
+  cursor: pointer;
+}
+.dojo-choice.picked { border-color: #8a4fd0; }
+.dojo-choice.ok { border-color: #3fb15a; background: #e6f9ea; }
+.dojo-input-row { display: flex; gap: 8px; margin-top: 8px; }
+.dojo-input {
+  flex: 1;
+  min-width: 0;
+  border: 3px solid #d5c3ee;
+  border-radius: 12px;
+  padding: 10px;
+  font: inherit;
+  font-size: 18px;
+  font-weight: 800;
+}
+.dojo-ok { margin-top: 12px; }
+.dojo-ok-big { font-size: 22px; font-weight: 900; color: #3fb15a; margin-bottom: 6px; }
+.dojo-quit { display: block; margin: 12px auto 0; font-size: 12px; }
+.dojo-fail-big { font-size: 26px; font-weight: 900; color: #d64545; margin: 10px 0; }
+.dojo-fail-sub { font-weight: 700; font-size: 13px; }
+.dojo-fail-ans { font-size: 15px; margin: 10px 0 14px; }
+.dojo-done-big { font-size: 28px; font-weight: 900; margin: 8px 0; }
+.dojo-done-msg { font-size: 15px; font-weight: 800; line-height: 1.7; margin: 0 0 14px; }
