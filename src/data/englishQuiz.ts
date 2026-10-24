@@ -39,16 +39,20 @@ function shuffle<T>(a: T[]): T[] {
   return r
 }
 
-// わざの むずかしさ（1〜3）の もんだいから 10もん（おなじ テストの なかでは かぶらない）
-export function buildQuiz(mode: QuizMode, tier: 1 | 2 | 3, length = QUIZ_LENGTH): EnglishQ[] {
-  const pool = QUESTIONS.filter((q) => q.mode === mode && q.level === tier)
+// わざの むずかしさ（★1〜3）ごとの もんだいの まぜかた [Lv1, Lv2, Lv3]（ごうけい 10もん）
+export const QUIZ_MIX: Record<1 | 2 | 3, [number, number, number]> = {
+  1: [10, 0, 0],
+  2: [4, 6, 0],
+  3: [2, 3, 5],
+}
+
+// ★の かずに あわせて 10もん（やさしい じゅんに ならべる。おなじ テストの なかでは かぶらない）
+export function buildQuiz(mode: QuizMode, tier: 1 | 2 | 3): EnglishQ[] {
   const out: EnglishQ[] = []
-  while (out.length < length && pool.length > 0) {
-    for (const q of shuffle(pool)) {
-      if (out.length >= length) break
-      out.push(q)
-    }
-  }
+  QUIZ_MIX[tier].forEach((n, i) => {
+    const pool = shuffle(QUESTIONS.filter((q) => q.mode === mode && q.level === i + 1))
+    out.push(...pool.slice(0, n))
+  })
   return out
 }
 
