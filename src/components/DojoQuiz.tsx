@@ -34,6 +34,7 @@ export function DojoQuiz({
   const [failed, setFailed] = useState<string | null>(null) // まちがえた ときの せいかい
   const [shownOk, setShownOk] = useState(false)
   const [slow, setSlowState] = useState(isSlow())
+  const [pic, setPic] = useState<string | null>(null) // イラストを みせている えらびかた
 
   const q = quiz[idx]
   const choices = useMemo(() => {
@@ -73,6 +74,7 @@ export function DojoQuiz({
     setTyped('')
     setPicked(null)
     setShownOk(false)
+    setPic(null)
   }
 
   function retry() {
@@ -82,6 +84,7 @@ export function DojoQuiz({
     setPicked(null)
     setShownOk(false)
     setFailed(null)
+    setPic(null)
   }
 
   if (failed) {
@@ -150,6 +153,13 @@ export function DojoQuiz({
       {q.hint && <p className="dojo-q-hint">ヒント：{q.hint}</p>}
 
       {q.fmt === 'choice' ? (
+        <>
+        {pic && q.pics?.[pic] && (
+          <div className="dojo-pic" onClick={() => setPic(null)}>
+            <span className="dojo-pic-emoji">{q.pics[pic]}</span>
+            <span className="dojo-pic-text">{pic}</span>
+          </div>
+        )}
         <div className="dojo-choices">
           {choices.map((c) => (
             <div key={c} className="dojo-choice-wrap">
@@ -163,6 +173,18 @@ export function DojoQuiz({
               >
                 {c}
               </button>
+              {q.speak && q.pics?.[c] && (
+                <button
+                  className={'dojo-kiku-mini dojo-pic-btn' + (pic === c ? ' on' : '')}
+                  aria-label="イラストを みる"
+                  onClick={() => {
+                    sfx.tap()
+                    setPic(pic === c ? null : c)
+                  }}
+                >
+                  🖼️
+                </button>
+              )}
               {!q.speak && isEnglish(c) && (
                 <button className="dojo-kiku-mini" aria-label={`${c}を きく`} onClick={() => speakEnglish(c)}>
                   🔊
@@ -171,6 +193,7 @@ export function DojoQuiz({
             </div>
           ))}
         </div>
+        </>
       ) : (
         <form
           className="dojo-input-row"

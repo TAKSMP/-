@@ -19,6 +19,7 @@ export interface EnglishQ {
   speak?: string // リスニング：よみあげる えいご
   answers: string[] // せいかい（さいしょの 1つを 見せる）。にゅうりょくは どれでも OK
   choices?: string[] // えらぶ もんだい：せいかいを ふくむ
+  pics?: Record<string, string> // リスニングで えいごの えらびかたを よめない こ むけ：えらびかた → イラスト（えもじ）
   hint?: string
 }
 
@@ -79,9 +80,9 @@ const LISTEN: EnglishQ[] = [
   { id: 'l2c', mode: 'listen', pattern: 2, fmt: 'choice', title: L2, speak: 'green', answers: ['みどり'], choices: ['みどり', 'しろ', 'くろ', 'ももいろ'] },
 
   // ③ たんごを きいて にゅうりょく
-  { id: 'l3a', mode: 'listen', pattern: 3, fmt: 'choice', title: L3, speak: 'bee', answers: ['bee'], choices: ['bee', 'pea', 'bed', 'bean'] },
-  { id: 'l3b', mode: 'listen', pattern: 3, fmt: 'choice', title: L3, speak: 'leaf', answers: ['leaf'], choices: ['leaf', 'leg', 'loaf', 'lie'] },
-  { id: 'l3c', mode: 'listen', pattern: 3, fmt: 'choice', title: L3, speak: 'flower', answers: ['flower'], choices: ['flower', 'floor', 'flour', 'flavor'] },
+  { id: 'l3a', mode: 'listen', pattern: 3, fmt: 'choice', title: L3, speak: 'bee', answers: ['bee'], choices: ['bee', 'pea', 'bed', 'bean'], pics: {'bee': '🐝', 'pea': '🫛', 'bed': '🛏️', 'bean': '🫘'} },
+  { id: 'l3b', mode: 'listen', pattern: 3, fmt: 'choice', title: L3, speak: 'leaf', answers: ['leaf'], choices: ['leaf', 'leg', 'loaf', 'lie'], pics: {'leaf': '🍃', 'leg': '🦵', 'loaf': '🍞', 'lie': '🤥'} },
+  { id: 'l3c', mode: 'listen', pattern: 3, fmt: 'choice', title: L3, speak: 'flower', answers: ['flower'], choices: ['flower', 'floor', 'flour', 'flavor'], pics: {'flower': '🌸', 'floor': '🪵', 'flour': '🌾', 'flavor': '😋'} },
 
   // ④ みじかい ぶんを きいて いみを えらぶ
   { id: 'l4a', mode: 'listen', pattern: 4, fmt: 'choice', title: L4, speak: 'I found a big beetle.', answers: ['おおきい かぶとむしを みつけた'], choices: ['おおきい かぶとむしを みつけた', 'ちいさい ありを みつけた', 'かぶとむしを にがした', 'おおきい かえるを みた'] },
@@ -89,9 +90,9 @@ const LISTEN: EnglishQ[] = [
   { id: 'l4c', mode: 'listen', pattern: 4, fmt: 'choice', title: L4, speak: 'Bugs live in the forest.', answers: ['むしは もりに すんでいる'], choices: ['むしは もりに すんでいる', 'むしは うみに すんでいる', 'むしは もりで ねている', 'むしは そらを とんでいる'] },
 
   // ⑤ ぶんを きいて ぜんぶ にゅうりょく
-  { id: 'l5a', mode: 'listen', pattern: 5, fmt: 'choice', title: L5, speak: 'I like bugs.', answers: ['I like bugs.'], choices: ['I like bugs.', 'I like bags.', 'I like bees.', 'I lick bugs.'] },
-  { id: 'l5b', mode: 'listen', pattern: 5, fmt: 'choice', title: L5, speak: 'The bee is small.', answers: ['The bee is small.'], choices: ['The bee is small.', 'The bee is tall.', 'The bed is small.', 'The beet is small.'] },
-  { id: 'l5c', mode: 'listen', pattern: 5, fmt: 'choice', title: L5, speak: 'A frog is green.', answers: ['A frog is green.'], choices: ['A frog is green.', 'A frog is gray.', 'A dog is green.', 'A fog is green.'] },
+  { id: 'l5a', mode: 'listen', pattern: 5, fmt: 'choice', title: L5, speak: 'I like bugs.', answers: ['I like bugs.'], choices: ['I like bugs.', 'I like bags.', 'I like bees.', 'I lick bugs.'], pics: {'I like bugs.': '🐛❤️', 'I like bags.': '👜❤️', 'I like bees.': '🐝❤️', 'I lick bugs.': '👅🐛'} },
+  { id: 'l5b', mode: 'listen', pattern: 5, fmt: 'choice', title: L5, speak: 'The bee is small.', answers: ['The bee is small.'], choices: ['The bee is small.', 'The bee is tall.', 'The bed is small.', 'The beet is small.'], pics: {'The bee is small.': '🐝🤏', 'The bee is tall.': '🐝📏', 'The bed is small.': '🛏️🤏', 'The beet is small.': '🥬🤏'} },
+  { id: 'l5c', mode: 'listen', pattern: 5, fmt: 'choice', title: L5, speak: 'A frog is green.', answers: ['A frog is green.'], choices: ['A frog is green.', 'A frog is gray.', 'A dog is green.', 'A fog is green.'], pics: {'A frog is green.': '🐸🟢', 'A frog is gray.': '🐸🩶', 'A dog is green.': '🐶🟢', 'A fog is green.': '🌫️🟢'} },
 ]
 
 export const QUESTIONS: EnglishQ[] = [...WRITE, ...LISTEN]

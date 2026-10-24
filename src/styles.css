@@ -6758,3 +6758,18 @@ body.race-full .page-head {
 }
 .dojo-slow.on { background: #bfe4ff; border-color: #3a9be0; }
 .dojo-dots { padding-top: 26px; }
+.dojo-pic {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #fffbe6;
+  border: 3px dashed #f0a500;
+  border-radius: 16px;
+  padding: 8px;
+  margin: 6px 0 4px;
+  cursor: pointer;
+  animation: enc-pop 0.3s ease;
+}
+.dojo-pic-emoji { font-size: 64px; line-height: 1.15; }
+.dojo-pic-text { font-size: 12px; font-weight: 800; opacity: 0.6; }
+.dojo-pic-btn.on { background: #ffe9a8; }
