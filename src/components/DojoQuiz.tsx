@@ -54,15 +54,17 @@ export function DojoQuiz({
   function judge(given: string) {
     if (!q || shownOk || failed) return
     if (isCorrect(q, given)) {
-      sfx.tap()
+      sfx.correct()
       setShownOk(true)
     } else {
+      sfx.wrong()
       setFailed(q.answers[0])
     }
   }
 
   function next() {
     if (idx + 1 >= quiz.length) {
+      sfx.win()
       onClear()
       return
     }

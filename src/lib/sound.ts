@@ -167,6 +167,16 @@ export const sfx = {
   error() {
     beep(200, 0.2, 0, 'sawtooth')
   },
+  // クイズ：せいかい（ピンポン）
+  correct() {
+    beep(880, 0.12, 0, 'triangle', 0.22)
+    beep(1319, 0.3, 0.13, 'triangle', 0.22)
+  },
+  // クイズ：ふせいかい（ブブー）
+  wrong() {
+    beep(220, 0.22, 0, 'sawtooth', 0.2)
+    beep(165, 0.4, 0.22, 'sawtooth', 0.2)
+  },
   // バッジ獲得の キラキラ
   badge() {
     beep(1319, 0.09, 0, 'triangle', 0.18)
