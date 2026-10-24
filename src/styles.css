@@ -1976,6 +1976,42 @@ input:focus {
 .game-card:active {
   transform: translateY(3px);
 }
+.game-emoji.vs {
+  font-size: 28px;
+  white-space: nowrap;
+}
+.game-card:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.game-card:disabled:active {
+  transform: none;
+}
+/* レースの したの「まえのばん」への ちいさな リンク */
+.play-old-link {
+  display: block;
+  margin: 18px auto 8px;
+  font-size: 12px;
+  opacity: 0.75;
+}
+/* そだてた虫の カード：レベルと かずの ステータス */
+.statcard-lv {
+  font-size: 11px;
+  font-weight: 900;
+  color: #c06000;
+  white-space: nowrap;
+}
+.statrow-nums {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 800;
+}
+.speed-num {
+  font-size: 13px;
+  font-weight: 900;
+}
 .game-card.quiz {
   background: linear-gradient(160deg, #fff6d6, #ffe89a);
 }

@@ -49,7 +49,7 @@ const TABS: { id: Tab; label: string; emoji: string }[] = [
   { id: 'zukan', label: 'ずかん', emoji: '📖' },
   { id: 'mission', label: 'ミッション', emoji: '🎯' },
   { id: 'search', label: 'けんさく', emoji: '🔍' },
-  { id: 'quiz', label: 'あそぶ', emoji: '🎮' },
+  { id: 'quiz', label: 'ゲーム', emoji: '🎮' },
 ]
 
 export default function App() {
