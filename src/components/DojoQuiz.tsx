@@ -4,7 +4,7 @@
 //  ひとつでも まちがえたら「でなおしてきなさい！」
 // =============================================================
 import { useEffect, useMemo, useState } from 'react'
-import { buildQuiz, isCorrect, type QuizMode } from '../data/englishQuiz'
+import { arrangeChoices, buildQuiz, isCorrect, type QuizMode } from '../data/englishQuiz'
 import { isSlow, setSlow, speakEnglish, speakWithMask, speechSupported, stopSpeaking } from '../lib/speak'
 import { sfx } from '../lib/sound'
 
@@ -37,15 +37,8 @@ export function DojoQuiz({
   const [pic, setPic] = useState<string | null>(null) // イラストを みせている えらびかた
 
   const q = quiz[idx]
-  const choices = useMemo(() => {
-    if (!q?.choices) return []
-    const a = [...q.choices]
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1))
-      ;[a[i], a[j]] = [a[j], a[i]]
-    }
-    return a
-  }, [q])
+  // えらびかたの ならびは まいかい ランダム（まえと おなじ ばしょに こたえが こない）
+  const choices = useMemo(() => (q ? arrangeChoices(q) : []), [quiz, idx]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // リスニングは もんだいが 出たら じどうで よみあげる
   useEffect(() => {
