@@ -26,6 +26,8 @@ export interface EnglishQ {
 // -------------------------------------------------------------
 //  ひっき（しんわざの しゅうとく）
 // -------------------------------------------------------------
+const WD = 'えいごの いみを えらぼう（にちじょうの ことば）'
+const WS = 'ものがたり：なんて いった？ えいごを えらぼう'
 const W1 = '日本語を えいごに しよう（えらぶ）'
 const W2 = 'えいごの いみを えらぼう'
 const W3 = 'えいごを えらぼう（つづり）'
@@ -33,20 +35,33 @@ const W4 = 'ぶんの □に はいる ことばを えらぼう'
 const W5 = 'ぶんの □に はいる ことばを えらぼう（つづり）'
 
 const WRITE: EnglishQ[] = [
-  // ① 日本語 → えいご（4たく）
-  { id: 'w1a', mode: 'write', pattern: 1, fmt: 'choice', title: W1, emoji: '🦋', body: 'ちょうちょ', answers: ['butterfly'], choices: ['butterfly', 'beetle', 'spider', 'ant'] },
-  { id: 'w1b', mode: 'write', pattern: 1, fmt: 'choice', title: W1, emoji: '🪲', body: 'かぶとむし', answers: ['beetle'], choices: ['bee', 'beetle', 'butterfly', 'worm'] },
-  { id: 'w1c', mode: 'write', pattern: 1, fmt: 'choice', title: W1, emoji: '🐞', body: 'てんとうむし', answers: ['ladybug'], choices: ['ladybug', 'firefly', 'cricket', 'mosquito'] },
+  // ① にちじょうの ことば（えいご → 日本語）
+  { id: 'wd1a', mode: 'write', pattern: 1, fmt: 'choice', title: WD, body: 'Good morning', answers: ['おはよう'], choices: ['おはよう', 'おやすみ', 'さようなら', 'いただきます'] },
+  { id: 'wd1b', mode: 'write', pattern: 1, fmt: 'choice', title: WD, body: 'Thank you', answers: ['ありがとう'], choices: ['ありがとう', 'ごめんなさい', 'こんにちは', 'おめでとう'] },
+  { id: 'wd1c', mode: 'write', pattern: 1, fmt: 'choice', title: WD, body: 'Good night', answers: ['おやすみ'], choices: ['おやすみ', 'おはよう', 'いただきます', 'ただいま'] },
+  { id: 'wd1d', mode: 'write', pattern: 1, fmt: 'choice', title: WD, body: 'I am hungry.', answers: ['おなかが すいた'], choices: ['おなかが すいた', 'ねむい', 'たのしい', 'さむい'] },
+  { id: 'wd1e', mode: 'write', pattern: 1, fmt: 'choice', title: WD, body: 'See you!', answers: ['またね'], choices: ['またね', 'はじめまして', 'いただきます', 'ごちそうさま'] },
 
-  // ② えいご → 日本語（4たく）
+  // ③ 虫の ものがたり：なんて いった？（日本語の おはなし → えいごの ことば）
+  { id: 'wd3a', mode: 'write', pattern: 3, fmt: 'choice', title: WS, emoji: '🦋', body: 'カマキリが、くものすに ひっかかった ちょうちょを たすけて あげた。\nちょうちょは なんて いった？', answers: ['Thank you'], choices: ['Thank you', 'Good morning', 'Help', 'Angry'] },
+  { id: 'wd3b', mode: 'write', pattern: 3, fmt: 'choice', title: WS, emoji: '🐞', body: 'あさ、てんとうむしが ありに あった。\nなんて あいさつする？', answers: ['Good morning'], choices: ['Good morning', 'Good night', 'Sorry', 'Goodbye'] },
+  { id: 'wd3c', mode: 'write', pattern: 3, fmt: 'choice', title: WS, emoji: '🪲', body: 'かぶとむしが ころんで しまった。\nくわがたは なんて きいた？', answers: ['Are you OK?', 'Are you OK'], choices: ['Are you OK?', 'I am hungry', 'Good night', 'See you'] },
+  { id: 'wd3d', mode: 'write', pattern: 3, fmt: 'choice', title: WS, emoji: '✨', body: 'よるに なった。ほたるは おともだちに なんて いう？', answers: ['Good night'], choices: ['Good night', 'Good morning', 'Thank you', 'Sorry'] },
+
+  // 虫の たんご：日本語 → えいご（4たく）
+  { id: 'w1a', mode: 'write', pattern: 2, fmt: 'choice', title: W1, emoji: '🦋', body: 'ちょうちょ', answers: ['butterfly'], choices: ['butterfly', 'beetle', 'spider', 'ant'] },
+  { id: 'w1b', mode: 'write', pattern: 2, fmt: 'choice', title: W1, emoji: '🪲', body: 'かぶとむし', answers: ['beetle'], choices: ['bee', 'beetle', 'butterfly', 'worm'] },
+  { id: 'w1c', mode: 'write', pattern: 2, fmt: 'choice', title: W1, emoji: '🐞', body: 'てんとうむし', answers: ['ladybug'], choices: ['ladybug', 'firefly', 'cricket', 'mosquito'] },
+
+  // 虫の たんご：えいご → 日本語（4たく）
   { id: 'w2a', mode: 'write', pattern: 2, fmt: 'choice', title: W2, body: 'dragonfly', answers: ['とんぼ'], choices: ['とんぼ', 'せみ', 'かまきり', 'はち'] },
   { id: 'w2b', mode: 'write', pattern: 2, fmt: 'choice', title: W2, body: 'caterpillar', answers: ['あおむし（けむし）'], choices: ['あおむし（けむし）', 'みみず', 'かたつむり', 'こおろぎ'] },
   { id: 'w2c', mode: 'write', pattern: 2, fmt: 'choice', title: W2, body: 'grasshopper', answers: ['ばった'], choices: ['ばった', 'あり', 'ほたる', 'くも'] },
 
-  // ③ つづりを にゅうりょく
-  { id: 'w3a', mode: 'write', pattern: 3, fmt: 'choice', title: W3, emoji: '🐝', body: 'はち', answers: ['bee'], choices: ['bee', 'ant', 'fly', 'bat'] },
-  { id: 'w3b', mode: 'write', pattern: 3, fmt: 'choice', title: W3, emoji: '🐜', body: 'あり', answers: ['ant'], choices: ['ant', 'art', 'and', 'arm'] },
-  { id: 'w3c', mode: 'write', pattern: 3, fmt: 'choice', title: W3, emoji: '🕷️', body: 'くも', answers: ['spider'], choices: ['spider', 'spinner', 'spicy', 'spoon'] },
+  // 虫の たんご：つづりを えらぶ
+  { id: 'w3a', mode: 'write', pattern: 2, fmt: 'choice', title: W3, emoji: '🐝', body: 'はち', answers: ['bee'], choices: ['bee', 'ant', 'fly', 'bat'] },
+  { id: 'w3b', mode: 'write', pattern: 2, fmt: 'choice', title: W3, emoji: '🐜', body: 'あり', answers: ['ant'], choices: ['ant', 'art', 'and', 'arm'] },
+  { id: 'w3c', mode: 'write', pattern: 2, fmt: 'choice', title: W3, emoji: '🕷️', body: 'くも', answers: ['spider'], choices: ['spider', 'spinner', 'spicy', 'spoon'] },
 
   // ④ ぶんの あなうめ（4たく）
   { id: 'w4a', mode: 'write', pattern: 4, fmt: 'choice', title: W4, body: 'A spider has eight □.\n（くもは 8ほんの □を もつ）', answers: ['legs'], choices: ['legs', 'wings', 'hands', 'ears'] },
@@ -62,6 +77,7 @@ const WRITE: EnglishQ[] = [
 // -------------------------------------------------------------
 //  リスニング（わざを きたえる）。speak を こえで よみあげる
 // -------------------------------------------------------------
+const LB = 'こえを きいて、どんな 虫か えらぼう'
 const L1 = 'こえを きいて、いみを えらぼう'
 const L2 = 'こえを きいて、こたえを えらぼう'
 const L3 = 'こえを きいて、つづりを えらぼう'
@@ -69,6 +85,18 @@ const L4 = 'ぶんを きいて、いみを えらぼう'
 const L5 = 'ぶんを きいて、おなじ ぶんを えらぼう'
 
 const LISTEN: EnglishQ[] = [
+  // ① にちじょうの ことばを きいて いみを えらぶ
+  { id: 'ld1a', mode: 'listen', pattern: 1, fmt: 'choice', title: L1, speak: 'Good morning', answers: ['おはよう'], choices: ['おはよう', 'おやすみ', 'さようなら', 'いただきます'] },
+  { id: 'ld1b', mode: 'listen', pattern: 1, fmt: 'choice', title: L1, speak: 'Thank you', answers: ['ありがとう'], choices: ['ありがとう', 'ごめんなさい', 'こんにちは', 'おめでとう'] },
+  { id: 'ld1c', mode: 'listen', pattern: 1, fmt: 'choice', title: L1, speak: 'I am hungry', answers: ['おなかが すいた'], choices: ['おなかが すいた', 'ねむい', 'たのしい', 'さむい'] },
+  { id: 'ld1d', mode: 'listen', pattern: 1, fmt: 'choice', title: L1, speak: 'See you', answers: ['またね'], choices: ['またね', 'はじめまして', 'いただきます', 'ごちそうさま'] },
+
+  // ③ どんな 虫？（いろ・おおきさ ＋ 虫）
+  { id: 'ld3a', mode: 'listen', pattern: 3, fmt: 'choice', title: LB, speak: 'Blue butterfly', answers: ['あおい ちょうちょ'], choices: ['あおい ちょうちょ', 'やわらかい ちょうちょ', 'あかい ちょうちょ', 'おおきい ちょうちょ'] },
+  { id: 'ld3b', mode: 'listen', pattern: 3, fmt: 'choice', title: LB, speak: 'Big beetle', answers: ['おおきい かぶとむし'], choices: ['おおきい かぶとむし', 'ちいさい かぶとむし', 'あかい かぶとむし', 'はやい かぶとむし'] },
+  { id: 'ld3c', mode: 'listen', pattern: 3, fmt: 'choice', title: LB, speak: 'Red ladybug', answers: ['あかい てんとうむし'], choices: ['あかい てんとうむし', 'あおい てんとうむし', 'ちいさい てんとうむし', 'くろい てんとうむし'] },
+  { id: 'ld3d', mode: 'listen', pattern: 3, fmt: 'choice', title: LB, speak: 'Small ant', answers: ['ちいさい あり'], choices: ['ちいさい あり', 'おおきい あり', 'くろい はち', 'ちいさい くも'] },
+
   // ① たんごを きいて いみを えらぶ
   { id: 'l1a', mode: 'listen', pattern: 1, fmt: 'choice', title: L1, speak: 'butterfly', answers: ['ちょうちょ'], choices: ['ちょうちょ', 'かぶとむし', 'はち', 'くも'] },
   { id: 'l1b', mode: 'listen', pattern: 1, fmt: 'choice', title: L1, speak: 'grasshopper', answers: ['ばった'], choices: ['ばった', 'あり', 'せみ', 'とんぼ'] },
