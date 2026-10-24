@@ -8,7 +8,7 @@ import { buildQuiz, isCorrect, type QuizMode } from '../data/englishQuiz'
 import { isSlow, setSlow, speakEnglish, speakWithMask, speechSupported, stopSpeaking } from '../lib/speak'
 import { sfx } from '../lib/sound'
 
-// ひっきもんだいで よみあげる えいご（1ぎょうめが えいごの ときだけ）。□は「ピー」などで かくす
+// ひっきもんだいで よみあげる えいご（1ぎょうめが えいごの ときだけ）。□は「ピコピコ」で かくす
 const isEnglish = (t: string) => /^[A-Za-z]/.test(t.trim())
 function bodyEnglish(body?: string): string | null {
   const first = body?.split('\n')[0] ?? ''
@@ -146,7 +146,7 @@ export function DojoQuiz({
       {q.emoji && <div className="dojo-q-emoji">{q.emoji}</div>}
       {q.body && <p className="dojo-q-body">{q.body}</p>}
       {!q.speak && bodyEnglish(q.body) && (
-        <button className="btn dojo-speak dojo-kiku" onClick={() => speakWithMask(bodyEnglish(q.body)!, sfx.blankMask)}>
+        <button className="btn dojo-speak dojo-kiku" onClick={() => speakWithMask(bodyEnglish(q.body)!, sfx.blankMask, 350 + 130 * (q.answers[0]?.length ?? 4))}>
           🔊 きく
         </button>
       )}

@@ -59,8 +59,8 @@ function takeGender(): Gender {
   return g
 }
 
-// □を みつけたら「ピー」などの こうかおん（mask）で かくして つづきを よむ
-export function speakWithMask(text: string, mask: () => void): void {
+// □を みつけたら「ピコピコ」の こうかおん（mask）で かくして つづきを よむ（ながさ maskMs）
+export function speakWithMask(text: string, mask: (ms: number) => void, maskMs = 600): void {
   const parts = text.split('□')
   if (parts.length === 1) {
     speakEnglish(text)
@@ -73,8 +73,8 @@ export function speakWithMask(text: string, mask: () => void): void {
     const next = () => {
       if (my !== token) return
       if (i < parts.length - 1) {
-        mask()
-        window.setTimeout(() => run(i + 1), 650)
+        mask(maskMs)
+        window.setTimeout(() => run(i + 1), maskMs + 100)
       }
     }
     const part = parts[i].trim()

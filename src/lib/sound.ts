@@ -167,23 +167,22 @@ export const sfx = {
   error() {
     beep(200, 0.2, 0, 'sawtooth')
   },
-  // クイズ：□の ぶぶんを かくす「ピー」「ぴろぴろ」（バラエティばんぐみの ふうに）
-  blankMask() {
-    if (Math.random() < 0.5) {
-      beep(1000, 0.55, 0, 'sine', 0.22) // ピー
-    } else {
-      for (let i = 0; i < 6; i++) beep(i % 2 ? 1500 : 1000, 0.09, i * 0.09, 'square', 0.12) // ぴろぴろ
-    }
+  // クイズ：□の ぶぶんを かくす「ピコピコ」（こたえの もじすうに あわせて ながさが かわる）
+  // ms：ながさ（ミリびょう）。こえに まけない ように おおきめ
+  blankMask(ms = 600) {
+    const step = 0.09
+    const n = Math.max(3, Math.round(ms / 1000 / step))
+    for (let i = 0; i < n; i++) beep(i % 2 ? 1568 : 1047, step, i * step, 'square', 0.4)
   },
-  // クイズ：せいかい（ピンポン）
+  // クイズ：せいかい（ピンポン）。こえと おなじくらいの おおきさ
   correct() {
-    beep(880, 0.12, 0, 'triangle', 0.22)
-    beep(1319, 0.3, 0.13, 'triangle', 0.22)
+    beep(880, 0.14, 0, 'triangle', 0.6)
+    beep(1319, 0.34, 0.15, 'triangle', 0.6)
   },
   // クイズ：ふせいかい（ブブー）
   wrong() {
-    beep(220, 0.22, 0, 'sawtooth', 0.2)
-    beep(165, 0.4, 0.22, 'sawtooth', 0.2)
+    beep(220, 0.24, 0, 'sawtooth', 0.45)
+    beep(165, 0.44, 0.24, 'sawtooth', 0.45)
   },
   // バッジ獲得の キラキラ
   badge() {
