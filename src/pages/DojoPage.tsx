@@ -346,6 +346,12 @@ export function DojoPage({ bugs }: { bugs: CaughtBug[] }) {
           if (mode === 'learn' && pendingEntry) {
             const mv = { ...pendingEntry.move } as SpecialMoveV2
             if (mv.ultimate) {
+              // さいきょうわざは しゅるい（こうげき／へんか／かいふく）ごとに 1つ。もっていれば とりかえを えらばせる
+              const same = (save.ultimates?.[bug.id] ?? []).some((m) => m.ultimate === mv.ultimate)
+              if (same) {
+                setStep('replace')
+                return
+              }
               commit(addUltimate(save, bug.id, mv))
               learned(mv)
               return
@@ -375,11 +381,13 @@ export function DojoPage({ bugs }: { bugs: CaughtBug[] }) {
   // ---------------- とりかえ ----------------
   if (step === 'replace' && pendingEntry) {
     const mv = { ...pendingEntry.move } as SpecialMoveV2
-    const cur = allMovesOf(save, bug).slice(0, moveSlots(level))
+    const cur = mv.ultimate
+      ? (save.ultimates?.[bug.id] ?? []).filter((m) => m.ultimate === mv.ultimate)
+      : allMovesOf(save, bug).slice(0, moveSlots(level))
     return wrap(
       <div className="dojo-panel">
         <h2 className="dojo-title">🎉 ごうかく！</h2>
-        <div className="story-learn-new">
+        <div className={'story-learn-new' + (mv.ultimate ? ' ultimate' : '')}>
           <span className="story-learn-emoji">{mv.emoji ?? '✨'}</span>
           <span className="story-learn-name">{mv.name}</span>
           <span className="story-learn-sub">
@@ -387,20 +395,30 @@ export function DojoPage({ bugs }: { bugs: CaughtBug[] }) {
           </span>
           <p className="story-learn-desc">{mv.desc}</p>
         </div>
-        <p className="story-learn-q">どの わざと とりかえる？</p>
+        <p className="story-learn-q">
+          {mv.ultimate
+            ? 'さいきょうわざは しゅるい ごとに 1つ。この わざと とりかえる？'
+            : 'どの わざと とりかえる？'}
+        </p>
         <div className="story-learn-list">
           {cur.map((m, i) => (
             <button
               key={m.id + i}
               className="story-learn-old"
               onClick={() => {
-                const all = [...allMovesOf(save, bug)]
-                all[i] = mv
-                commit(setMoves(save, bug.id, all))
+                sfx.tap()
+                if (mv.ultimate) {
+                  commit(addUltimate(save, bug.id, mv))
+                } else {
+                  const all = [...allMovesOf(save, bug)]
+                  all[i] = mv
+                  commit(setMoves(save, bug.id, all))
+                }
                 learned(mv, m.name)
               }}
             >
               <span className="story-learn-old-name">
+                {m.ultimate && '👑 '}
                 {m.emoji} {m.name}
               </span>
               <span className="story-learn-old-sub">
