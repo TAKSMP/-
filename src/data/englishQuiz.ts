@@ -27,9 +27,9 @@ export interface EnglishQ {
 // -------------------------------------------------------------
 const W1 = '日本語を えいごに しよう（えらぶ）'
 const W2 = 'えいごの いみを えらぼう'
-const W3 = 'えいごで かこう（にゅうりょく）'
+const W3 = 'えいごを えらぼう（つづり）'
 const W4 = 'ぶんの □に はいる ことばを えらぼう'
-const W5 = 'ぶんの □に はいる ことばを かこう'
+const W5 = 'ぶんの □に はいる ことばを えらぼう（つづり）'
 
 const WRITE: EnglishQ[] = [
   // ① 日本語 → えいご（4たく）
@@ -43,9 +43,9 @@ const WRITE: EnglishQ[] = [
   { id: 'w2c', mode: 'write', pattern: 2, fmt: 'choice', title: W2, body: 'grasshopper', answers: ['ばった'], choices: ['ばった', 'あり', 'ほたる', 'くも'] },
 
   // ③ つづりを にゅうりょく
-  { id: 'w3a', mode: 'write', pattern: 3, fmt: 'input', title: W3, emoji: '🐝', body: 'はち', hint: 'b _ _', answers: ['bee'] },
-  { id: 'w3b', mode: 'write', pattern: 3, fmt: 'input', title: W3, emoji: '🐜', body: 'あり', hint: 'a _ _', answers: ['ant'] },
-  { id: 'w3c', mode: 'write', pattern: 3, fmt: 'input', title: W3, emoji: '🕷️', body: 'くも', hint: 's _ _ _ _ _', answers: ['spider'] },
+  { id: 'w3a', mode: 'write', pattern: 3, fmt: 'choice', title: W3, emoji: '🐝', body: 'はち', answers: ['bee'], choices: ['bee', 'ant', 'fly', 'bat'] },
+  { id: 'w3b', mode: 'write', pattern: 3, fmt: 'choice', title: W3, emoji: '🐜', body: 'あり', answers: ['ant'], choices: ['ant', 'art', 'and', 'arm'] },
+  { id: 'w3c', mode: 'write', pattern: 3, fmt: 'choice', title: W3, emoji: '🕷️', body: 'くも', answers: ['spider'], choices: ['spider', 'spinner', 'spicy', 'spoon'] },
 
   // ④ ぶんの あなうめ（4たく）
   { id: 'w4a', mode: 'write', pattern: 4, fmt: 'choice', title: W4, body: 'A spider has eight □.\n（くもは 8ほんの □を もつ）', answers: ['legs'], choices: ['legs', 'wings', 'hands', 'ears'] },
@@ -53,9 +53,9 @@ const WRITE: EnglishQ[] = [
   { id: 'w4c', mode: 'write', pattern: 4, fmt: 'choice', title: W4, body: 'Fireflies □ at night.\n（ほたるは よる ひかる）', answers: ['shine'], choices: ['shine', 'shines', 'shined', 'shining'] },
 
   // ⑤ ぶんの あなうめ（にゅうりょく）
-  { id: 'w5a', mode: 'write', pattern: 5, fmt: 'input', title: W5, body: 'Butterflies have beautiful □.\n（ちょうちょは きれいな □を もつ）', hint: 'w _ _ _ _', answers: ['wings'] },
-  { id: 'w5b', mode: 'write', pattern: 5, fmt: 'input', title: W5, body: 'An insect has □ legs.\n（こんちゅうは □ほんの あし）', hint: 's _ _', answers: ['six', '6'] },
-  { id: 'w5c', mode: 'write', pattern: 5, fmt: 'input', title: W5, body: 'Ants are very □.\n（ありは とても ちいさい）', hint: 's _ _ _ _', answers: ['small', 'tiny'] },
+  { id: 'w5a', mode: 'write', pattern: 5, fmt: 'choice', title: W5, body: 'Butterflies have beautiful □.\n（ちょうちょは きれいな □を もつ）', answers: ['wings'], choices: ['wings', 'wins', 'wind', 'wigs'] },
+  { id: 'w5b', mode: 'write', pattern: 5, fmt: 'choice', title: W5, body: 'An insect has □ legs.\n（こんちゅうは □ほんの あし）', answers: ['six', '6'], choices: ['six', 'sit', 'sick', 'seven'] },
+  { id: 'w5c', mode: 'write', pattern: 5, fmt: 'choice', title: W5, body: 'Ants are very □.\n（ありは とても ちいさい）', answers: ['small', 'tiny'], choices: ['small', 'tall', 'smell', 'snail'] },
 ]
 
 // -------------------------------------------------------------
@@ -63,9 +63,9 @@ const WRITE: EnglishQ[] = [
 // -------------------------------------------------------------
 const L1 = 'こえを きいて、いみを えらぼう'
 const L2 = 'こえを きいて、こたえを えらぼう'
-const L3 = 'こえを きいて、えいごで かこう'
+const L3 = 'こえを きいて、つづりを えらぼう'
 const L4 = 'ぶんを きいて、いみを えらぼう'
-const L5 = 'ぶんを きいて、そのまま かこう'
+const L5 = 'ぶんを きいて、おなじ ぶんを えらぼう'
 
 const LISTEN: EnglishQ[] = [
   // ① たんごを きいて いみを えらぶ
@@ -79,9 +79,9 @@ const LISTEN: EnglishQ[] = [
   { id: 'l2c', mode: 'listen', pattern: 2, fmt: 'choice', title: L2, speak: 'green', answers: ['みどり'], choices: ['みどり', 'しろ', 'くろ', 'ももいろ'] },
 
   // ③ たんごを きいて にゅうりょく
-  { id: 'l3a', mode: 'listen', pattern: 3, fmt: 'input', title: L3, speak: 'bee', answers: ['bee'] },
-  { id: 'l3b', mode: 'listen', pattern: 3, fmt: 'input', title: L3, speak: 'leaf', answers: ['leaf'] },
-  { id: 'l3c', mode: 'listen', pattern: 3, fmt: 'input', title: L3, speak: 'flower', answers: ['flower'] },
+  { id: 'l3a', mode: 'listen', pattern: 3, fmt: 'choice', title: L3, speak: 'bee', answers: ['bee'], choices: ['bee', 'pea', 'bed', 'bean'] },
+  { id: 'l3b', mode: 'listen', pattern: 3, fmt: 'choice', title: L3, speak: 'leaf', answers: ['leaf'], choices: ['leaf', 'leg', 'loaf', 'lie'] },
+  { id: 'l3c', mode: 'listen', pattern: 3, fmt: 'choice', title: L3, speak: 'flower', answers: ['flower'], choices: ['flower', 'floor', 'flour', 'flavor'] },
 
   // ④ みじかい ぶんを きいて いみを えらぶ
   { id: 'l4a', mode: 'listen', pattern: 4, fmt: 'choice', title: L4, speak: 'I found a big beetle.', answers: ['おおきい かぶとむしを みつけた'], choices: ['おおきい かぶとむしを みつけた', 'ちいさい ありを みつけた', 'かぶとむしを にがした', 'おおきい かえるを みた'] },
@@ -89,9 +89,9 @@ const LISTEN: EnglishQ[] = [
   { id: 'l4c', mode: 'listen', pattern: 4, fmt: 'choice', title: L4, speak: 'Bugs live in the forest.', answers: ['むしは もりに すんでいる'], choices: ['むしは もりに すんでいる', 'むしは うみに すんでいる', 'むしは もりで ねている', 'むしは そらを とんでいる'] },
 
   // ⑤ ぶんを きいて ぜんぶ にゅうりょく
-  { id: 'l5a', mode: 'listen', pattern: 5, fmt: 'input', title: L5, speak: 'I like bugs.', answers: ['I like bugs'] },
-  { id: 'l5b', mode: 'listen', pattern: 5, fmt: 'input', title: L5, speak: 'The bee is small.', answers: ['The bee is small'] },
-  { id: 'l5c', mode: 'listen', pattern: 5, fmt: 'input', title: L5, speak: 'A frog is green.', answers: ['A frog is green'] },
+  { id: 'l5a', mode: 'listen', pattern: 5, fmt: 'choice', title: L5, speak: 'I like bugs.', answers: ['I like bugs.'], choices: ['I like bugs.', 'I like bags.', 'I like bees.', 'I lick bugs.'] },
+  { id: 'l5b', mode: 'listen', pattern: 5, fmt: 'choice', title: L5, speak: 'The bee is small.', answers: ['The bee is small.'], choices: ['The bee is small.', 'The bee is tall.', 'The bed is small.', 'The beet is small.'] },
+  { id: 'l5c', mode: 'listen', pattern: 5, fmt: 'choice', title: L5, speak: 'A frog is green.', answers: ['A frog is green.'], choices: ['A frog is green.', 'A frog is gray.', 'A dog is green.', 'A fog is green.'] },
 ]
 
 export const QUESTIONS: EnglishQ[] = [...WRITE, ...LISTEN]
