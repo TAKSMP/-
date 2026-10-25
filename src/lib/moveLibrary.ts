@@ -60,6 +60,7 @@ export const MOVE_PATTERNS = [
   { no: 48, key: 'chaos', label: 'なにが おこるか わからない' },
   { no: 49, key: 'copyMove', label: 'あいての わざを じぶんの わざに する' },
   { no: 50, key: 'restoreStats', label: 'さがった のうりょくを もとに もどす' },
+  { no: 51, key: 'flattenBoosts', label: 'あいての あがった のうりょくを もとに もどす' },
 ] as const
 
 // さいきょうわざ だけの パターン（AI（ChatGPT）への しつもんには ふくめない）
@@ -72,6 +73,7 @@ export function moveSummary(m: SpecialMoveV2): string {
   if (m.chaos) return 'なにが おこるかな？'
   if (m.copyMove) return 'わざコピー'
   if (m.restoreStats) return 'ダウンを もどす'
+  if (m.flattenBoosts) return 'アップを もどす'
   if (m.kind === 'attack') return `いりょく${m.power}`
   return 'へんかわざ'
 }
@@ -325,6 +327,8 @@ export const MOVE_LIBRARY: LibraryMove[] = [
   mv({ id: 'r04', pattern: 'restoreStats', name: 'ひとみのみがき', desc: 'めを ぴかぴかに みがいて、さがった めいちゅうりつを もとに もどす。じぶんにも つかえる。', emoji: '👁️', power: 0, target: 'ally', accuracy: null, restoreStats: ['accuracy'], tags: ['め', 'ひかる'] }),
   mv({ id: 'r05', pattern: 'restoreStats', name: 'あしどりのおさらい', desc: 'あしの うごきを おもいだして、さがった かいひりつを もとに もどす。じぶんにも つかえる。', emoji: '👣', power: 0, target: 'ally', accuracy: null, restoreStats: ['evasion'], tags: ['あし', 'はやい'] }),
   mv({ id: 'r06', pattern: 'restoreStats', name: 'ちからとからのたてなおし', desc: 'こころを ひとつに して、さがった こうげきと ぼうぎょを もとに もどす。じぶんにも つかえる。', emoji: '🔰', power: 0, target: 'ally', accuracy: null, uses: 2, minLevel: 30, restoreStats: ['attack', 'defense'], tags: ['ちから', 'かたい', 'コウチュウ目'] }),
+  mv({ id: 'f01', pattern: 'flattenBoosts', name: 'ふきけしのかぜ', desc: 'ぶわっと かぜを おこして、あいてが あげた のうりょくを ぜんぶ もとの ふつうに もどす。', emoji: '🌬️', power: 0, target: 'oneFoe', accuracy: null, uses: 3, flattenBoosts: true, tags: ['かぜ', 'はね', 'とぶ'] }),
+  mv({ id: 'f02', pattern: 'flattenBoosts', name: 'まっしろなきりのまく', desc: 'あたり いちめんを しろい きりで つつみ、あいて ぜんいんの あがった のうりょくを ぜんぶ もとの ふつうに もどす。', emoji: '🌫️', power: 0, target: 'allFoes', accuracy: null, uses: 2, minLevel: 30, flattenBoosts: true, tags: ['きり', 'ひかる', 'チョウ目'] }),
   mv({ id: 'r07', pattern: 'restoreStats', name: 'めとあしのたてなおし', desc: 'おちついて いきを ととのえ、さがった めいちゅうりつと かいひりつを もとに もどす。じぶんにも つかえる。', emoji: '🎯', power: 0, target: 'ally', accuracy: null, uses: 2, minLevel: 30, restoreStats: ['accuracy', 'evasion'], tags: ['め', 'あし', 'トンボ目'] }),
 ]
 

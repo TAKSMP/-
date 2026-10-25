@@ -170,6 +170,7 @@ export interface SpecialMoveV2 {
   revive?: { ratio: number; chance: number } // たおれた みかたを HPの ratio ぶんで ふっかつ（chance の かくりつで せいこう）
   chaos?: boolean // なにが おこるか わからない（いろいろな こうかから ランダム）
   restoreStats?: StatKey[] // さがった のうりょくランク（こうげき・ぼうぎょ…）を もとに もどす（あがっている ぶんは そのまま）
+  flattenBoosts?: boolean // あいての あがった のうりょくランクを ぜんぶ もとに もどす（さがっている ぶんは そのまま）
   copyMove?: boolean // あいての わざを 1つ えらんで、このわざと いれかえて じぶんの わざに する
 }
 

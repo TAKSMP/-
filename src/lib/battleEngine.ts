@@ -928,6 +928,23 @@ function executeMove(
       )
     }
 
+    // ── あいての あがった のうりょくを フラットに もどす
+    if (move.flattenBoosts && !target.fainted) {
+      const fixed: StatKey[] = []
+      for (const k of Object.keys(target.rank) as StatKey[]) {
+        const base = k === 'evasion' ? BASE_EVASION : 0
+        if (target.rank[k] > base) {
+          target.rank[k] = base
+          fixed.push(k)
+        }
+      }
+      log.push(
+        fixed.length > 0
+          ? `🌀 ${target.name}の あがった ${fixed.map(statLabel).join('・')}が もとに もどった！`
+          : `…${target.name}の のうりょくは あがって いなかった。`,
+      )
+    }
+
     // ── のうりょくを いれかえる
     if (move.swapStats && !target.fainted) {
       const tmp = { ...actor.rank }

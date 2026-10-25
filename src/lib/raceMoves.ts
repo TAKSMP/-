@@ -64,6 +64,7 @@ export function raceEffectOf(m: SpecialMoveV2): RaceEffect {
 
   if (m.swapStats) return 'swap'
   if (m.stealStats || m.leech || m.drainRatio) return 'steal'
+  if (m.flattenBoosts) return wide ? 'wave' : 'slowShot'
   if (m.restSleep) return 'endless'
   if (m.regen) return 'endless'
   if (m.healRatio) return 'refill'

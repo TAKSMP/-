@@ -48,6 +48,7 @@ export function moveTier(m: SpecialMoveV2): 1 | 2 | 3 {
     return p >= 85 ? 3 : p >= 55 ? 2 : 1
   }
   if (m.restoreStats && m.restoreStats.length >= 2) return 2
+  if (m.flattenBoosts && m.target === 'allFoes') return 2
   return m.healRatio && m.healRatio >= 0.5 ? 2 : 1
 }
 
