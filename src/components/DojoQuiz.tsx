@@ -26,19 +26,19 @@ export function DojoQuiz({
   onClear: () => void
   onExit: () => void
 }) {
-  const [round, setRound] = useState(0) // やりなおす ごとに ふえる
-  const quiz = useMemo(() => buildQuiz(mode, tier), [mode, tier, round])
+  const quiz = useMemo(() => buildQuiz(mode, tier), [mode, tier])
   const [idx, setIdx] = useState(0)
   const [typed, setTyped] = useState('')
   const [picked, setPicked] = useState<string | null>(null)
   const [failed, setFailed] = useState<string | null>(null) // まちがえた ときの せいかい
   const [shownOk, setShownOk] = useState(false)
+  const [redo, setRedo] = useState(0) // まちがえた もんだいを やりなおした かいすう
   const [slow, setSlowState] = useState(isSlow())
   const [pic, setPic] = useState<string | null>(null) // イラストを みせている えらびかた
 
   const q = quiz[idx]
   // えらびかたの ならびは まいかい ランダム（まえと おなじ ばしょに こたえが こない）
-  const choices = useMemo(() => (q ? arrangeChoices(q) : []), [quiz, idx]) // eslint-disable-line react-hooks/exhaustive-deps
+  const choices = useMemo(() => (q ? arrangeChoices(q) : []), [quiz, idx, redo]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // リスニングは もんだいが 出たら じどうで よみあげる
   useEffect(() => {
@@ -58,6 +58,11 @@ export function DojoQuiz({
   }
 
   function next() {
+    if (redo > 0) {
+      // やりなおしの せいかい → どうじょうの さいしょの がめんへ
+      onExit()
+      return
+    }
     if (idx + 1 >= quiz.length) {
       sfx.win()
       onClear()
@@ -70,9 +75,9 @@ export function DojoQuiz({
     setPic(null)
   }
 
+  // まちがえた もんだいを もういちど（せいかいしたら どうじょうの さいしょの がめんへ もどる）
   function retry() {
-    setRound((r) => r + 1)
-    setIdx(0)
+    setRedo((r) => r + 1)
     setTyped('')
     setPicked(null)
     setShownOk(false)
@@ -86,12 +91,14 @@ export function DojoQuiz({
         <div className="dojo-fail-big">でなおしてきなさい！</div>
         <p className="dojo-fail-sub">
           {idx + 1}もんめで まちがえたよ。15もん ぜんぶ せいかいで ごうかく！
+          <br />
+          もういちど この もんだいを といて、せいかいしたら どうじょうに もどるよ。
         </p>
         <p className="dojo-fail-ans">
           せいかいは <b>{failed}</b>
         </p>
         <button className="btn btn-big btn-primary" onClick={retry}>
-          🔁 もういちど ちょうせん
+          🔁 この もんだいを もういちど
         </button>
         <button className="btn btn-ghost" onClick={onExit}>
           ← やめる
@@ -216,7 +223,7 @@ export function DojoQuiz({
         <div className="dojo-ok">
           <div className="dojo-ok-big">⭕ せいかい！</div>
           <button className="btn btn-big btn-primary" onClick={next}>
-            {idx + 1 >= quiz.length ? '🎉 ごうかく！' : 'つぎへ →'}
+            {redo > 0 ? '🏠 どうじょうに もどる' : idx + 1 >= quiz.length ? '🎉 ごうかく！' : 'つぎへ →'}
           </button>
         </div>
       )}
