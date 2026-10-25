@@ -2,7 +2,7 @@
 //  わざ道場の えいごもんだい
 // -------------------------------------------------------------
 //  ・write：ひっき（しんわざの しゅうとく）／ listen：リスニング（わざを きたえる）
-//  ・level 1〜3：わざの つよさ（★1〜3）に あわせて だす。各レベル 100もん（englishBank.json）
+//  ・level 1〜3：わざの つよさ（★1〜3）に あわせて だす。各レベル 200もん（ふつう100 + むずかしい100。englishBank.json）
 //  ・ぜんぶ 4たく。えらびかたの ならびは まいかい ランダム（まえと おなじ ばしょに こたえが こない）
 // =============================================================
 import BANK from './englishBank.json'
@@ -28,7 +28,7 @@ export interface EnglishQ {
 
 export const QUESTIONS: EnglishQ[] = BANK as EnglishQ[]
 
-export const QUIZ_LENGTH = 10
+export const QUIZ_LENGTH = 15
 
 function shuffle<T>(a: T[]): T[] {
   const r = [...a]
@@ -39,14 +39,14 @@ function shuffle<T>(a: T[]): T[] {
   return r
 }
 
-// わざの むずかしさ（★1〜3）ごとの もんだいの まぜかた [Lv1, Lv2, Lv3]（ごうけい 10もん）
+// わざの むずかしさ（★1〜3）ごとの もんだいの まぜかた [Lv1, Lv2, Lv3]（ごうけい 15もん）
 export const QUIZ_MIX: Record<1 | 2 | 3, [number, number, number]> = {
-  1: [10, 0, 0],
-  2: [4, 6, 0],
-  3: [2, 3, 5],
+  1: [9, 6, 0],
+  2: [3, 8, 4],
+  3: [0, 4, 11],
 }
 
-// ★の かずに あわせて 10もん（やさしい じゅんに ならべる。おなじ テストの なかでは かぶらない）
+// ★の かずに あわせて 15もん（やさしい じゅんに ならべる。おなじ テストの なかでは かぶらない）
 export function buildQuiz(mode: QuizMode, tier: 1 | 2 | 3): EnglishQ[] {
   const out: EnglishQ[] = []
   QUIZ_MIX[tier].forEach((n, i) => {
