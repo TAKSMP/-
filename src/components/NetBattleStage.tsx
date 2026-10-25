@@ -29,6 +29,7 @@ import { BASIC_ATTACK, moveSummary } from '../lib/moveLibrary'
 import { ParkScene } from './ParkScene'
 import { Confetti } from './Confetti'
 import { sfx } from '../lib/sound'
+import { MoveListButton } from './MoveListButton'
 
 interface Props {
   code: string
@@ -320,6 +321,7 @@ export function NetBattleStage({ code, role, onQuit }: Props) {
         <ParkScene index={0} />
       </div>
       <Confetti show={confetti} />
+      <MoveListButton />
       <button className="battle-flee" onClick={quit}>
         ✕ やめる
       </button>

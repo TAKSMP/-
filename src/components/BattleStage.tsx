@@ -28,6 +28,7 @@ import { BASIC_ATTACK, moveSummary } from '../lib/moveLibrary'
 import { Confetti } from './Confetti'
 import { ParkScene } from './ParkScene'
 import { sfx } from '../lib/sound'
+import { MoveListButton } from './MoveListButton'
 import { markMovesSeen } from '../lib/moveDex'
 
 // -------------------------------------------------------------
@@ -570,6 +571,7 @@ export function BattleStage({
       <button className="battle-flee" onClick={onQuit}>
         {quitLabel}
       </button>
+      <MoveListButton />
       <span className="stage-turn">ターン {shownTurn}</span>
 
       <div className="stage-scene stage2">

@@ -11,6 +11,7 @@ import { INSECT_ORDERS, canonicalOrder, orderEmoji } from '../data/orders'
 import { StarRating } from '../components/StarRating'
 import { Confetti } from '../components/Confetti'
 import { sfx } from '../lib/sound'
+import { MoveListButton } from '../components/MoveListButton'
 
 const OTHER = '__other__'
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -785,6 +786,7 @@ export function BattlePage({ bugs, onGoCapture }: Props) {
           <button className="battle-flee" onClick={reset}>
             ✕ やめる
           </button>
+          <MoveListButton />
 
           <div className="stage-scene">
             {fx && <BattleFx effect={fx.effect} attacker={fx.attacker} />}
