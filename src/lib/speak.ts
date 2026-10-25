@@ -91,6 +91,20 @@ export function speakWithMask(text: string, mask: (ms: number) => void, maskMs =
   run(0)
 }
 
+// ぶんの くぎり（. ? ! 。）で わけて、ひとつずつ よむ。くぎりごとに ひといき やすむ
+// （「.」を そのまま わたすと「ふる すとっぷ」と よむ こえが あるので、ピリオドは とって よむ）
+function splitSentences(text: string): string[] {
+  return text
+    .replace(/\s+/g, ' ')
+    .split(/(?<=[.!?。])\s+/)
+    .map((t) => t.replace(/[.。]+/g, ' ').replace(/\s+/g, ' ').trim())
+    .filter((t) => /[A-Za-z0-9]/.test(t))
+}
+
+// くぎりの あいだの ひといき（ミリびょう）
+const PAUSE_MS = 450
+const PAUSE_SLOW_MS = 800
+
 export function speakEnglish(
   text: string,
   onEnd?: () => void,
@@ -98,6 +112,7 @@ export function speakEnglish(
   gender?: Gender,
 ): void {
   if (!keepToken) token++
+  const my = token
   if (!speechSupported()) {
     onEnd?.()
     return
@@ -105,26 +120,39 @@ export function speakEnglish(
   try {
     const synth = window.speechSynthesis
     synth.cancel()
-    // 「.」を「ふる すとっぷ」と よむ こえが あるので、くとうてんは とって よむ
-    const u = new SpeechSynthesisUtterance(text.replace(/[.。]+/g, ' ').replace(/\s+/g, ' ').trim())
-    u.lang = 'en-US'
-    u.rate = slow ? SLOW_RATE : NORMAL_RATE
-    const { voice, pitch } = pickVoice(gender ?? takeGender())
-    if (voice) u.voice = voice
-    u.pitch = pitch
-    if (onEnd) {
+    const parts = splitSentences(text)
+    if (parts.length === 0) {
+      onEnd?.()
+      return
+    }
+    const { voice, pitch } = pickVoice(gender ?? takeGender()) // ぜんぶの ぶんを おなじ ひとの こえで
+    const rate = slow ? SLOW_RATE : NORMAL_RATE
+    const pause = slow ? PAUSE_SLOW_MS : PAUSE_MS
+    const run = (i: number) => {
+      if (my !== token) return
+      if (i >= parts.length) {
+        onEnd?.()
+        return
+      }
+      const u = new SpeechSynthesisUtterance(parts[i])
+      u.lang = 'en-US'
+      u.rate = rate
+      if (voice) u.voice = voice
+      u.pitch = pitch
       // おわり を まつ。ブラウザによっては onend が こない ので ほけんの タイマーも
       let done = false
       const fin = () => {
         if (done) return
         done = true
-        onEnd()
+        if (i + 1 < parts.length) window.setTimeout(() => run(i + 1), pause)
+        else run(i + 1)
       }
       u.onend = fin
       u.onerror = fin
-      window.setTimeout(fin, (700 + text.length * 120) / (slow ? SLOW_RATE : 1))
+      window.setTimeout(fin, (700 + parts[i].length * 120) / (slow ? SLOW_RATE : 1))
+      synth.speak(u)
     }
-    synth.speak(u)
+    run(0)
   } catch (e) {
     console.warn('よみあげに しっぱい', e)
   }
