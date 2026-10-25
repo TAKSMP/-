@@ -6,17 +6,18 @@
 //  ・つうしんで あそぶ：ともだちと さいだい 6にん（RaceNet.tsx）
 //  ・ストーリーモードの レベル・わざを そのまま ひきつぐ
 //    すばやさ → アクセルなしの はやさ／たいりょく → アクセルゲージ
-//  ストーリーの セーブは よむだけ（レースで レベルは かわらない）。
+//  1いに なると、ストーリーの レベルが あがる けいけんちを もらえる（raceExpGain）。
 // =============================================================
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import type { CaughtBug } from '../types'
-import { levelOf, loadStory } from '../lib/story'
+import { addExp, levelOf, loadStory, saveStory } from '../lib/story'
 import type { RacerInit } from '../lib/raceEngine'
 import {
   cpuRacerInits,
   loadRaceSetup,
   myRacerInit,
   RACE_COLORS,
+  raceExpGain,
   saveRaceSetup,
   shuffle,
   type RaceSetup,
@@ -25,6 +26,7 @@ import { RaceTrack, type RaceResult } from '../components/RaceTrack'
 import { RaceSlots } from '../components/RaceSlots'
 import { LapPicker, MyBugGrid, MyRacerCard, RaceHowto, RaceResults, StagePicker } from '../components/RaceParts'
 import { RaceNet } from './RaceNet'
+import { RaceExpPanel, type RaceExpInfo } from '../components/RaceExp'
 import { Confetti } from '../components/Confetti'
 import { sfx } from '../lib/sound'
 
@@ -99,7 +101,7 @@ export function RacePage({ bugs, onGoCapture }: Props) {
 type Phase = 'pick' | 'setup' | 'racing' | 'result'
 
 function SoloRace({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => void }) {
-  const save = useMemo(() => loadStory(), [])
+  const [save, setSave] = useState(() => loadStory())
   const [phase, setPhase] = useState<Phase>('pick')
   const [myBug, setMyBug] = useState<CaughtBug | null>(null)
   const [setup, setSetupState] = useState<RaceSetup>(() => loadRaceSetup())
@@ -107,6 +109,8 @@ function SoloRace({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => void }) {
   const [raceNo, setRaceNo] = useState(0)
   const [results, setResults] = useState<RaceResult[]>([])
   const [confetti, setConfetti] = useState(false)
+  // 1いで もらった けいけんち（2いいかは なし）
+  const [expInfo, setExpInfo] = useState<RaceExpInfo | null>(null)
 
   const setSetup = (s: RaceSetup) => {
     setSetupState(s)
@@ -133,6 +137,7 @@ function SoloRace({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => void }) {
   function start(fresh: boolean) {
     sfx.tap()
     if (fresh || racers.length === 0) setRacers(buildRacers())
+    setExpInfo(null)
     setRaceNo((n) => n + 1)
     setPhase('racing')
   }
@@ -144,7 +149,25 @@ function SoloRace({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => void }) {
       setConfetti(true)
       setTimeout(() => setConfetti(false), 600)
       sfx.win()
-    } else sfx.lose()
+      giveExp()
+    } else {
+      setExpInfo(null)
+      sfx.lose()
+    }
+  }
+
+  // 1いの ごほうび：ライバルの かず・つよさと しゅうかいで きまる けいけんち
+  function giveExp() {
+    if (!myBug) return
+    const rivals = racers
+      .filter((r) => r.id !== 'p0')
+      .map((r) => ({ level: r.level, skill: r.skill, human: r.human }))
+    const gain = raceExpGain(myLv, setup.laps, rivals)
+    if (gain <= 0) return
+    const res = addExp(save, myBug.id, gain)
+    saveStory(res.save)
+    setSave(res.save)
+    setExpInfo({ name: myBug.name, gain, before: res.before, after: res.after, levelUps: res.levelUps })
   }
 
   return (
@@ -238,6 +261,7 @@ function SoloRace({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => void }) {
 
       {phase === 'result' && (
         <div className="race-result">
+          {expInfo && <RaceExpPanel info={expInfo} />}
           <RaceResults results={results} racers={racers} viewerId="p0" />
           <div className="race-result-actions">
             <button className="btn btn-big btn-primary" onClick={() => start(false)}>

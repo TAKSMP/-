@@ -8,7 +8,7 @@
 // =============================================================
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CaughtBug } from '../types'
-import { levelOf, loadStory } from '../lib/story'
+import { addExp, levelOf, loadStory, saveStory } from '../lib/story'
 import type { RacerInit } from '../lib/raceEngine'
 import {
   cpuRacerInits,
@@ -16,6 +16,7 @@ import {
   MAX_RACERS,
   myRacerInit,
   RACE_COLORS,
+  raceExpGain,
   saveRaceSetup,
   shuffle,
   type RaceSetup,
@@ -39,6 +40,7 @@ import {
 import { RaceTrack, type RaceNetLink, type RaceResult } from '../components/RaceTrack'
 import { RaceSlots, type FixedRacer } from '../components/RaceSlots'
 import { LapPicker, MyBugGrid, MyRacerCard, RaceHowto, RaceResults, StagePicker } from '../components/RaceParts'
+import { RaceExpPanel, type RaceExpInfo } from '../components/RaceExp'
 import { Confetti } from '../components/Confetti'
 import { sfx } from '../lib/sound'
 import { normalizeRoomCode, ROOM_CODE_MIN } from '../lib/roomWords'
@@ -64,7 +66,7 @@ function saveName(name: string): void {
 type Phase = 'pick' | 'name' | 'menu' | 'joinEnter' | 'lobby' | 'racing' | 'result'
 
 export function RaceNet({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => void }) {
-  const save = useMemo(() => loadStory(), [])
+  const [save, setSave] = useState(() => loadStory())
   const [phase, setPhase] = useState<Phase>('pick')
   const [myBug, setMyBug] = useState<CaughtBug | null>(null)
   const [name, setName] = useState(loadSavedName)
@@ -81,6 +83,8 @@ export function RaceNet({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => voi
   const [playedNo, setPlayedNo] = useState<number | null>(null)
   const [results, setResults] = useState<RaceResult[]>([])
   const [confetti, setConfetti] = useState(false)
+  // 1いで もらった けいけんち（2いいかは なし）
+  const [expInfo, setExpInfo] = useState<RaceExpInfo | null>(null)
   const [hostSetup, setHostSetupState] = useState<RaceSetup>(loadRaceSetup)
   const inputsRef = useRef<Record<string, RaceInputDoc>>({})
   const lastUseRef = useRef<Record<string, number>>({})
@@ -282,7 +286,25 @@ export function RaceNet({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => voi
       setConfetti(true)
       setTimeout(() => setConfetti(false), 600)
       sfx.win()
-    } else sfx.lose()
+      giveExp()
+    } else {
+      setExpInfo(null)
+      sfx.lose()
+    }
+  }
+
+  // 1いの ごほうび：ライバルの かず・つよさと しゅうかいで きまる けいけんち
+  function giveExp() {
+    if (!myBug || !race || !myRacerId) return
+    const rivals = race.racers
+      .filter((r) => r.id !== myRacerId)
+      .map((r) => ({ level: r.level, skill: r.skill, human: r.human }))
+    const gain = raceExpGain(levelOf(save, myBug.id).level, race.laps, rivals)
+    if (gain <= 0) return
+    const r = addExp(save, myBug.id, gain)
+    saveStory(r.save)
+    setSave(r.save)
+    setExpInfo({ name: myBug.name, gain, before: r.before, after: r.after, levelUps: r.levelUps })
   }
 
   const fixed: FixedRacer[] = playerList.map(([u, p], i) => ({
@@ -486,6 +508,7 @@ export function RaceNet({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => voi
 
       {phase === 'result' && race && myRacerId && (
         <div className="race-result">
+          {expInfo && <RaceExpPanel info={expInfo} />}
           <RaceResults results={results} racers={race.racers} viewerId={myRacerId} />
           <div className="race-result-actions">
             {isHost ? (

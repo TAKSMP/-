@@ -8,7 +8,7 @@
 // =============================================================
 import type { CaughtBug } from '../types'
 import { mainPhoto } from './storage'
-import { levelOf, MAX_LEVEL, movesOf, statsWithLevel, type StorySave } from './story'
+import { expToNext, levelOf, MAX_LEVEL, movesOf, statsWithLevel, type StorySave } from './story'
 import type { RacerInit } from './raceEngine'
 import { toRaceMove } from './raceMoves'
 
@@ -151,4 +151,45 @@ export function saveRaceSetup(s: RaceSetup): void {
   } catch {
     // ほぞん できなくても きにしない
   }
+}
+
+// =============================================================
+//  レースで もらえる けいけんち
+// -------------------------------------------------------------
+//  きじゅん：じぶんと おなじ くらいの つよさの ライバル 5ひき（＝6ひきで レース）と
+//            3しゅう はしって 1いに なると、ちょうど レベルが 1つ あがる ぶん。
+//  ・ライバルが おおい／つよい ほど ふえる
+//  ・しゅうが おおい ほど ふえる
+//  ・1い いがいは 0（もらえない）
+// =============================================================
+export const RACE_BASE_RIVALS = 5 // きじゅんの ライバルの かず
+export const RACE_BASE_LAPS = 3 // きじゅんの しゅうかい
+const RIVAL_LV_MIN = 0.3 // よわい ライバルでも これ いじょうは かぞえる
+const RIVAL_LV_MAX = 2 // つよすぎる ライバルは ここで うちどめ
+const skillMul = (skill: number) => 0.85 + 0.3 * Math.max(0, Math.min(1, skill))
+const SKILL_BASE = skillMul(cpuSkill(5)) // CPUレベル5（ふつう）を 1.0 とする
+
+export interface RaceRival {
+  level: number
+  skill: number // CPUの うまさ 0〜1（ひとは つかわない）
+  human?: boolean
+}
+
+// ライバル 1ひきぶんの「つよさ」。1.0 が「じぶんと おなじ くらい」
+export function raceRivalScore(myLevel: number, rival: RaceRival): number {
+  const lv = Math.max(
+    RIVAL_LV_MIN,
+    Math.min(RIVAL_LV_MAX, rival.level / Math.max(1, myLevel)),
+  )
+  // ひと どうしの つうしんレースは うまさが わからないので ふつう あつかい
+  const sk = rival.human ? SKILL_BASE : skillMul(rival.skill)
+  return lv * (sk / SKILL_BASE)
+}
+
+// 1いの ときに もらえる けいけんち（1い いがいは よばない）
+export function raceExpGain(myLevel: number, laps: number, rivals: RaceRival[]): number {
+  if (rivals.length === 0) return 0
+  const field = rivals.reduce((t, r) => t + raceRivalScore(myLevel, r), 0) / RACE_BASE_RIVALS
+  const lap = Math.max(1, laps) / RACE_BASE_LAPS
+  return Math.max(1, Math.round(expToNext(myLevel) * field * lap))
 }
