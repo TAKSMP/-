@@ -23,6 +23,7 @@ export interface EnglishQ {
   answers: string[] // せいかい（さいしょの 1つを 見せる）
   choices?: string[] // えらびかた：せいかいを ふくむ（ならびは arrangeChoices で まぜる）
   hint?: string
+  why?: string // まちがえた とき だす、こどもむけの かんたんな かいせつ
   pics?: Record<string, string> // えいごの えらびかた → イラスト（えもじ）
 }
 

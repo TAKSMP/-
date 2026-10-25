@@ -6827,3 +6827,26 @@ body.race-full .page-head {
 .battle-stage .stage-turn {
   right: 128px;
 }
+
+/* --- まちがえた ときの かいせつ --- */
+.dojo-why {
+  margin: 10px 0 14px;
+  padding: 10px 12px;
+  background: #fff8e1;
+  border: 2px solid #f5d77a;
+  border-radius: 14px;
+  text-align: left;
+}
+.dojo-why-title {
+  margin: 0 0 4px;
+  font-weight: 900;
+  font-size: 14px;
+  color: #a86b00;
+}
+.dojo-why-text {
+  margin: 0 0 8px;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--ink);
+}

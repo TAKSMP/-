@@ -4,15 +4,24 @@
 //  ひとつでも まちがえたら「でなおしてきなさい！」
 // =============================================================
 import { useEffect, useMemo, useState } from 'react'
-import { arrangeChoices, buildQuiz, isCorrect, type QuizMode } from '../data/englishQuiz'
+import { arrangeChoices, buildQuiz, isCorrect, type EnglishQ, type QuizMode } from '../data/englishQuiz'
 import { isSlow, setSlow, speakEnglish, speakWithMask, speechSupported, stopSpeaking } from '../lib/speak'
 import { sfx } from '../lib/sound'
 
 // ひっきもんだいで よみあげる えいご（1ぎょうめが えいごの ときだけ）。□は「ぴろぴろ」で かくす
-const isEnglish = (t: string) => /^[A-Za-z]/.test(t.trim())
+// 1もじめが □ の ぶん（□ old are you? など）も よみあげる
+const isEnglish = (t: string) => /^[A-Za-z□]/.test(t.trim())
 function bodyEnglish(body?: string): string | null {
   const first = body?.split('\n')[0] ?? ''
   return isEnglish(first) ? first : null
+}
+
+// せいかいの えいごを よみあげる ぶん（あなうめは □ を こたえで うめる）
+function sayAnswer(q: EnglishQ): string | null {
+  const ans = q.answers[0] ?? ''
+  const first = (q.body ?? '').split('\n')[0]
+  if (/^[A-Za-z]/.test(ans.trim())) return first.includes('□') ? first.replace('□', ans) : ans
+  return q.speak ?? bodyEnglish(q.body)?.replace('□', '') ?? null
 }
 
 export function DojoQuiz({
@@ -97,6 +106,17 @@ export function DojoQuiz({
         <p className="dojo-fail-ans">
           せいかいは <b>{failed}</b>
         </p>
+        {q?.why && (
+          <div className="dojo-why">
+            <p className="dojo-why-title">💡 かいせつ</p>
+            <p className="dojo-why-text">{q.why}</p>
+            {q && sayAnswer(q) && (
+              <button className="btn dojo-speak dojo-kiku" onClick={() => speakEnglish(sayAnswer(q)!)}>
+                🔊 せいかいを きく
+              </button>
+            )}
+          </div>
+        )}
         <button className="btn btn-big btn-primary" onClick={retry}>
           🔁 この もんだいを もういちど
         </button>
