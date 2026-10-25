@@ -6,7 +6,7 @@
 //  ・つうしんで あそぶ：ともだちと さいだい 6にん（RaceNet.tsx）
 //  ・ストーリーモードの レベル・わざを そのまま ひきつぐ
 //    すばやさ → アクセルなしの はやさ／たいりょく → アクセルゲージ
-//  1いに なると、ストーリーの レベルが あがる けいけんちを もらえる（raceExpGain）。
+//  3いまでに なると、ストーリーの レベルが あがる けいけんちを もらえる（raceExpGain）。
 // =============================================================
 import { useState } from 'react'
 import type { CaughtBug } from '../types'
@@ -109,7 +109,7 @@ function SoloRace({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => void }) {
   const [raceNo, setRaceNo] = useState(0)
   const [results, setResults] = useState<RaceResult[]>([])
   const [confetti, setConfetti] = useState(false)
-  // 1いで もらった けいけんち（2いいかは なし）
+  // 3いまでに もらった けいけんち（4い いかは なし）
   const [expInfo, setExpInfo] = useState<RaceExpInfo | null>(null)
 
   const setSetup = (s: RaceSetup) => {
@@ -145,29 +145,32 @@ function SoloRace({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => void }) {
   function finish(res: RaceResult[]) {
     setResults(res)
     setPhase('result')
-    if (res.find((r) => r.id === 'p0')?.rank === 1) {
-      setConfetti(true)
-      setTimeout(() => setConfetti(false), 600)
+    const myRank = res.find((r) => r.id === 'p0')?.rank ?? 99
+    if (myRank <= 3) {
+      if (myRank === 1) {
+        setConfetti(true)
+        setTimeout(() => setConfetti(false), 600)
+      }
       sfx.win()
-      giveExp()
+      giveExp(myRank)
     } else {
       setExpInfo(null)
       sfx.lose()
     }
   }
 
-  // 1いの ごほうび：ライバルの かず・つよさと しゅうかいで きまる けいけんち
-  function giveExp() {
+  // 3いまでの ごほうび：ライバルの かず・つよさ・しゅうかい・じゅんいで きまる けいけんち
+  function giveExp(rank: number) {
     if (!myBug) return
     const rivals = racers
       .filter((r) => r.id !== 'p0')
       .map((r) => ({ level: r.level, skill: r.skill, human: r.human }))
-    const gain = raceExpGain(myLv, setup.laps, rivals)
+    const gain = raceExpGain(myLv, setup.laps, rivals, rank)
     if (gain <= 0) return
     const res = addExp(save, myBug.id, gain)
     saveStory(res.save)
     setSave(res.save)
-    setExpInfo({ name: myBug.name, gain, before: res.before, after: res.after, levelUps: res.levelUps })
+    setExpInfo({ name: myBug.name, rank, gain, before: res.before, after: res.after, levelUps: res.levelUps })
   }
 
   return (

@@ -160,7 +160,7 @@ export function saveRaceSetup(s: RaceSetup): void {
 //            3しゅう はしって 1いに なると、ちょうど レベルが 1つ あがる ぶん。
 //  ・ライバルが おおい／つよい ほど ふえる
 //  ・しゅうが おおい ほど ふえる
-//  ・1い いがいは 0（もらえない）
+//  ・3いまで もらえる（1い 100% ／ 2い 50% ／ 3い 25%。4い いかは 0）
 // =============================================================
 export const RACE_BASE_RIVALS = 5 // きじゅんの ライバルの かず
 export const RACE_BASE_LAPS = 3 // きじゅんの しゅうかい
@@ -186,10 +186,14 @@ export function raceRivalScore(myLevel: number, rival: RaceRival): number {
   return lv * (sk / SKILL_BASE)
 }
 
-// 1いの ときに もらえる けいけんち（1い いがいは よばない）
-export function raceExpGain(myLevel: number, laps: number, rivals: RaceRival[]): number {
-  if (rivals.length === 0) return 0
+// じゅんいごとの わりあい（1い・2い・3い）。4い いかは もらえない
+export const RACE_RANK_SHARE = [1, 0.5, 0.25] as const
+
+// 3いまでに もらえる けいけんち（rank＝じゅんい。4い いかは 0）
+export function raceExpGain(myLevel: number, laps: number, rivals: RaceRival[], rank = 1): number {
+  const share = RACE_RANK_SHARE[rank - 1] ?? 0
+  if (rivals.length === 0 || share <= 0) return 0
   const field = rivals.reduce((t, r) => t + raceRivalScore(myLevel, r), 0) / RACE_BASE_RIVALS
   const lap = Math.max(1, laps) / RACE_BASE_LAPS
-  return Math.max(1, Math.round(expToNext(myLevel) * field * lap))
+  return Math.max(1, Math.round(expToNext(myLevel) * field * lap * share))
 }

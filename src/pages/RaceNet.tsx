@@ -83,7 +83,7 @@ export function RaceNet({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => voi
   const [playedNo, setPlayedNo] = useState<number | null>(null)
   const [results, setResults] = useState<RaceResult[]>([])
   const [confetti, setConfetti] = useState(false)
-  // 1いで もらった けいけんち（2いいかは なし）
+  // 3いまでに もらった けいけんち（4い いかは なし）
   const [expInfo, setExpInfo] = useState<RaceExpInfo | null>(null)
   const [hostSetup, setHostSetupState] = useState<RaceSetup>(loadRaceSetup)
   const inputsRef = useRef<Record<string, RaceInputDoc>>({})
@@ -282,29 +282,32 @@ export function RaceNet({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => voi
   function finish(res: RaceResult[]) {
     setResults(res)
     setPhase('result')
-    if (res.find((r) => r.id === myRacerId)?.rank === 1) {
-      setConfetti(true)
-      setTimeout(() => setConfetti(false), 600)
+    const myRank = res.find((r) => r.id === myRacerId)?.rank ?? 99
+    if (myRank <= 3) {
+      if (myRank === 1) {
+        setConfetti(true)
+        setTimeout(() => setConfetti(false), 600)
+      }
       sfx.win()
-      giveExp()
+      giveExp(myRank)
     } else {
       setExpInfo(null)
       sfx.lose()
     }
   }
 
-  // 1いの ごほうび：ライバルの かず・つよさと しゅうかいで きまる けいけんち
-  function giveExp() {
+  // 3いまでの ごほうび：ライバルの かず・つよさ・しゅうかい・じゅんいで きまる けいけんち
+  function giveExp(rank: number) {
     if (!myBug || !race || !myRacerId) return
     const rivals = race.racers
       .filter((r) => r.id !== myRacerId)
       .map((r) => ({ level: r.level, skill: r.skill, human: r.human }))
-    const gain = raceExpGain(levelOf(save, myBug.id).level, race.laps, rivals)
+    const gain = raceExpGain(levelOf(save, myBug.id).level, race.laps, rivals, rank)
     if (gain <= 0) return
     const r = addExp(save, myBug.id, gain)
     saveStory(r.save)
     setSave(r.save)
-    setExpInfo({ name: myBug.name, gain, before: r.before, after: r.after, levelUps: r.levelUps })
+    setExpInfo({ name: myBug.name, rank, gain, before: r.before, after: r.after, levelUps: r.levelUps })
   }
 
   const fixed: FixedRacer[] = playerList.map(([u, p], i) => ({

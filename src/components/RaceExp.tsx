@@ -1,13 +1,14 @@
 // =============================================================
 //  レースで もらった けいけんちを 見せる パネル
 // -------------------------------------------------------------
-//  1いの ときだけ でる。レベルが あがったら おおきく しらせる。
+//  3いまでの ときだけ でる。レベルが あがったら おおきく しらせる。
 // =============================================================
 import type { BugLevel } from '../lib/story'
 import { expToNext, MAX_LEVEL } from '../lib/story'
 
 export interface RaceExpInfo {
   name: string
+  rank?: number // じゅんい（1〜3）
   gain: number
   before: BugLevel
   after: BugLevel
@@ -22,7 +23,7 @@ export function RaceExpPanel({ info }: { info: RaceExpInfo }) {
   return (
     <div className={'race-exp' + (info.levelUps > 0 ? ' up' : '')}>
       <p className="race-exp-gain">
-        ✨ {info.name}は けいけんち <b>{info.gain}</b> を もらった！
+        ✨ {info.rank ? `${info.rank}いの ごほうび！ ` : ''}{info.name}は けいけんち <b>{info.gain}</b> を もらった！
       </p>
       {info.levelUps > 0 && (
         <p className="race-exp-up">
