@@ -14,6 +14,7 @@ import { sfx } from '../lib/sound'
 import {
   DOJO_MIN_LEVEL,
   addUltimate,
+  ULTIMATE_LEVELS,
   allMovesOf,
   applyTraining,
   baseMovesOf,
@@ -348,9 +349,9 @@ export function DojoPage({ bugs }: { bugs: CaughtBug[] }) {
           if (mode === 'learn' && pendingEntry) {
             const mv = { ...pendingEntry.move } as SpecialMoveV2
             if (mv.ultimate) {
-              // さいきょうわざは しゅるい（こうげき／へんか／かいふく）ごとに 1つ。もっていれば とりかえを えらばせる
-              const same = (save.ultimates?.[bug.id] ?? []).some((m) => m.ultimate === mv.ultimate)
-              if (same) {
+              // さいきょうわざは 3つまで。いっぱいなら、もっている 3つの うち すきな 1つと とりかえを えらばせる
+              const full = (save.ultimates?.[bug.id] ?? []).length >= ULTIMATE_LEVELS.length
+              if (full) {
                 setStep('replace')
                 return
               }
@@ -384,7 +385,7 @@ export function DojoPage({ bugs }: { bugs: CaughtBug[] }) {
   if (step === 'replace' && pendingEntry) {
     const mv = { ...pendingEntry.move } as SpecialMoveV2
     const cur = mv.ultimate
-      ? (save.ultimates?.[bug.id] ?? []).filter((m) => m.ultimate === mv.ultimate)
+      ? (save.ultimates?.[bug.id] ?? [])
       : allMovesOf(save, bug).slice(0, moveSlots(level))
     return wrap(
       <div className="dojo-panel">
@@ -399,7 +400,7 @@ export function DojoPage({ bugs }: { bugs: CaughtBug[] }) {
         </div>
         <p className="story-learn-q">
           {mv.ultimate
-            ? 'さいきょうわざは しゅるい ごとに 1つ。この わざと とりかえる？'
+            ? 'さいきょうわざは 3つまで。どの さいきょうわざと とりかえる？'
             : 'どの わざと とりかえる？'}
         </p>
         <div className="story-learn-list">
@@ -410,7 +411,7 @@ export function DojoPage({ bugs }: { bugs: CaughtBug[] }) {
               onClick={() => {
                 sfx.tap()
                 if (mv.ultimate) {
-                  commit(addUltimate(save, bug.id, mv))
+                  commit(addUltimate(save, bug.id, mv, m.id))
                 } else {
                   const all = [...allMovesOf(save, bug)]
                   all[i] = mv

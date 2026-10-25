@@ -350,7 +350,7 @@ function splitUltimates(
     outMoves[id] = list.filter((m) => !m.ultimate)
     for (const m of ult) {
       const have = outUlt[id] ?? []
-      if (!have.some((x) => x.ultimate === m.ultimate)) outUlt[id] = [...have, m]
+      if (!have.some((x) => x.id === m.id)) outUlt[id] = [...have, m]
     }
   }
   return { moves: outMoves, ultimates: outUlt }
@@ -543,9 +543,10 @@ export function allMovesOf(save: StorySave, bug: CaughtBug): SpecialMoveV2[] {
 // いつも さいしんの せってい（つかえる かいすう など）で かえす
 export function ultimatesOf(save: StorySave, bugId: string, level: number): SpecialMoveV2[] {
   const owned = save.ultimates?.[bugId] ?? []
-  return ULTIMATE_LEVELS.filter((u) => u.level <= level)
-    .map((u) => owned.find((m) => m.ultimate === u.group))
-    .filter((m): m is SpecialMoveV2 => !!m)
+  // さいきょうわざは しゅるいに かかわらず、レベルで ひらいた わく（Lv30/40/50 で 1/2/3つ）ぶん つかえる
+  const slots = ULTIMATE_LEVELS.filter((u) => u.level <= level).length
+  return owned
+    .slice(0, slots)
     .map((m) => {
       const def = ULTIMATE_MOVES.find((x) => x.id === m.id)
       return def ? { ...def } : m
@@ -740,14 +741,31 @@ export function missingUltimates(
   bugId: string,
   level: number,
 ): { level: number; group: UltimateGroup }[] {
-  const owned = save.ultimates?.[bugId] ?? []
-  return ULTIMATE_LEVELS.filter((u) => u.level <= level && !owned.some((m) => m.ultimate === u.group))
+  // もっている わざは しゅるいを とわず わくに はいる（とりかえで しゅるいが かたよっても OK）。
+  // おなじ しゅるいの わざで うまっている わくから さきに かぞえ、のこりの わくに ほかの わざを あてる
+  const remaining = [...(save.ultimates?.[bugId] ?? [])]
+  const missing: { level: number; group: UltimateGroup }[] = []
+  for (const u of ULTIMATE_LEVELS.filter((x) => x.level <= level)) {
+    const i = remaining.findIndex((m) => m.ultimate === u.group)
+    if (i >= 0) remaining.splice(i, 1)
+    else missing.push(u)
+  }
+  return missing.slice(remaining.length)
 }
 
-// さいきょうわざを べつわくに おぼえる（おなじ しゅるいは 1つだけ）
-export function addUltimate(save: StorySave, bugId: string, move: SpecialMoveV2): StorySave {
-  const have = (save.ultimates?.[bugId] ?? []).filter((m) => m.ultimate !== move.ultimate)
-  return { ...save, ultimates: { ...(save.ultimates ?? {}), [bugId]: [...have, move] } }
+// さいきょうわざを べつわくに おぼえる（さいだい 3つ）。
+// replaceId を わたすと、もっている さいきょうわざの すきな 1つと とりかえる（しゅるいは とわない）
+export function addUltimate(
+  save: StorySave,
+  bugId: string,
+  move: SpecialMoveV2,
+  replaceId?: string,
+): StorySave {
+  const cur = save.ultimates?.[bugId] ?? []
+  const i = replaceId ? cur.findIndex((m) => m.id === replaceId) : -1
+  const have = cur.filter((m) => m.id !== move.id || m.id === replaceId)
+  const list = i >= 0 ? have.map((m) => (m.id === replaceId ? move : m)) : [...have, move]
+  return { ...save, ultimates: { ...(save.ultimates ?? {}), [bugId]: list } }
 }
 
 // その虫に にあう、まだ もっていない さいきょうわざを 1つ えらぶ（虫ごとに いつも おなじ）
