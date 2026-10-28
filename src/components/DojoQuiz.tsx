@@ -4,7 +4,7 @@
 //  ひとつでも まちがえたら「でなおしてきなさい！」
 // =============================================================
 import { useEffect, useMemo, useState } from 'react'
-import { arrangeChoices, buildQuiz, isCorrect, type EnglishQ, type QuizMode } from '../data/englishQuiz'
+import { arrangeChoices, buildQuiz, isCorrect, type EnglishQ, type QuizMode, type QuizVariant } from '../data/englishQuiz'
 import { isSlow, setSlow, speakEnglish, speakWithMask, speechSupported, stopSpeaking } from '../lib/speak'
 import { sfx } from '../lib/sound'
 
@@ -27,15 +27,17 @@ function sayAnswer(q: EnglishQ): string | null {
 export function DojoQuiz({
   mode,
   tier,
+  variant = 'kids',
   onClear,
   onExit,
 }: {
   mode: QuizMode
   tier: 1 | 2 | 3
+  variant?: QuizVariant
   onClear: () => void
   onExit: () => void
 }) {
-  const quiz = useMemo(() => buildQuiz(mode, tier), [mode, tier])
+  const quiz = useMemo(() => buildQuiz(mode, tier, variant), [mode, tier, variant])
   const [idx, setIdx] = useState(0)
   const [typed, setTyped] = useState('')
   const [picked, setPicked] = useState<string | null>(null)
@@ -44,6 +46,7 @@ export function DojoQuiz({
   const [redo, setRedo] = useState(0) // まちがえた もんだいを やりなおした かいすう
   const [slow, setSlowState] = useState(isSlow())
   const [pic, setPic] = useState<string | null>(null) // イラストを みせている えらびかた
+  const [askQuit, setAskQuit] = useState(false) // 「ほんとうに やめますか？」を だして いる
 
   const q = quiz[idx]
   // えらびかたの ならびは まいかい ランダム（まえと おなじ ばしょに こたえが こない）
@@ -132,6 +135,15 @@ export function DojoQuiz({
 
   return (
     <div className="dojo-panel dojo-quiz">
+      <button
+        className="dojo-slow dojo-quit-top"
+        onClick={() => {
+          sfx.tap()
+          setAskQuit(true)
+        }}
+      >
+        ← やめる
+      </button>
       <button
         className={'dojo-slow' + (slow ? ' on' : '')}
         aria-pressed={slow}
@@ -247,9 +259,34 @@ export function DojoQuiz({
           </button>
         </div>
       )}
-      <button className="btn btn-ghost dojo-quit" onClick={onExit}>
-        ← やめる
-      </button>
+      {askQuit && (
+        <div className="dojo-confirm-back" onClick={() => setAskQuit(false)}>
+          <div className="dojo-confirm" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <p className="dojo-confirm-q">ほんとうに やめますか？</p>
+            <div className="dojo-confirm-btns">
+              <button
+                className="btn btn-big btn-primary"
+                onClick={() => {
+                  sfx.tap()
+                  setAskQuit(false)
+                }}
+              >
+                つづける
+              </button>
+              <button
+                className="btn btn-big"
+                onClick={() => {
+                  sfx.tap()
+                  stopSpeaking()
+                  onExit()
+                }}
+              >
+                やめる
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

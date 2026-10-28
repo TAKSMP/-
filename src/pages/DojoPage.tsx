@@ -70,7 +70,8 @@ function valueText(m: SpecialMoveV2, key: TrainKey): string {
   }
 }
 
-export function DojoPage({ bugs }: { bugs: CaughtBug[] }) {
+export function DojoPage({ bugs, variant = 'kids' }: { bugs: CaughtBug[]; variant?: 'kids' | 'adult' }) {
+  const adult = variant === 'adult'
   const [save, setSave] = useState<StorySave>(() => loadStory())
   const [step, setStep] = useState<Step>('menu')
   const [mode, setMode] = useState<Mode>('learn')
@@ -129,7 +130,12 @@ export function DojoPage({ bugs }: { bugs: CaughtBug[] }) {
   if (step === 'menu') {
     return wrap(
       <div className="dojo-panel">
-        <h2 className="dojo-title">🥋 わざ<ruby>道場<rt>どうじょう</rt></ruby></h2>
+        <h2 className="dojo-title">{adult ? <>🥋 わざ道場（おとな）</> : <>🥋 わざ<ruby>道場<rt>どうじょう</rt></ruby></>}</h2>
+        {adult && (
+          <p className="dojo-lead">
+            ハワイ旅行で つかえる <b>英会話</b> の テストだよ。ぜんぶ せいかいしたら ねがいが かなう！
+          </p>
+        )}
         <p className="dojo-lead">
           ここは <b>しんわざ</b> と <b>きたえる</b> ばしょ。ただし、つかえるのは{' '}
           <b>レベル{DOJO_MIN_LEVEL}いじょう</b> の虫だけ！ えいごの テストに ぜんぶ せいかいしたら ねがいが かなうよ。
@@ -331,6 +337,7 @@ export function DojoPage({ bugs }: { bugs: CaughtBug[] }) {
       <DojoQuiz
         mode={mode === 'learn' ? 'write' : 'listen'}
         tier={tier}
+        variant={variant}
         onExit={() => setStep(mode === 'learn' ? 'pickMove' : 'pickAspect')}
         onClear={() => {
           sfx.tap()

@@ -23,6 +23,7 @@ type Game =
   | 'storyMenu'
   | 'story'
   | 'dojo'
+  | 'dojoAdult'
   | 'battleMenu'
   | 'battle1'
   | 'battle2'
@@ -80,6 +81,11 @@ export function PlayPage({ bugs, onGoCapture }: Props) {
           <span className="game-title">わざ<ruby>道場<rt>どうじょう</rt></ruby></span>
           <span className="game-desc">えいごの テストで わざを おぼえる・きたえる</span>
         </button>
+        <button className="game-card dojo" onClick={() => go('dojoAdult')}>
+          <span className="game-emoji">🌺</span>
+          <span className="game-title">わざ道場（おとな）</span>
+          <span className="game-desc">ハワイ旅行で つかう 英会話の テスト（むずかしい）</span>
+        </button>
       </div>,
     )
   }
@@ -101,6 +107,16 @@ export function PlayPage({ bugs, onGoCapture }: Props) {
       'ストーリー',
       header(<>🥋 わざ<ruby>道場<rt>どうじょう</rt></ruby></>, 'えいごを がんばって つよくなろう！'),
       <DojoPage bugs={bugs} />,
+    )
+  }
+
+  // わざ道場（おとな）：ハワイ旅行の えいかいわ
+  if (game === 'dojoAdult') {
+    return frame(
+      'storyMenu',
+      'ストーリー',
+      header('🌺 わざ道場（おとな）', 'ハワイ旅行で つかう 英会話'),
+      <DojoPage bugs={bugs} variant="adult" />,
     )
   }
 

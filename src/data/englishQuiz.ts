@@ -6,6 +6,7 @@
 //  ・ぜんぶ 4たく。えらびかたの ならびは まいかい ランダム（まえと おなじ ばしょに こたえが こない）
 // =============================================================
 import BANK from './englishBank.json'
+import BANK_ADULT from './englishBankAdult.json'
 
 export type QuizMode = 'write' | 'listen'
 export type QuizFmt = 'choice' | 'input'
@@ -28,6 +29,9 @@ export interface EnglishQ {
 }
 
 export const QUESTIONS: EnglishQ[] = BANK as EnglishQ[]
+// おとな用（ハワイ旅行で つかう えいかいわ）
+export const QUESTIONS_ADULT: EnglishQ[] = BANK_ADULT as EnglishQ[]
+export type QuizVariant = 'kids' | 'adult'
 
 export const QUIZ_LENGTH = 15
 
@@ -48,10 +52,11 @@ export const QUIZ_MIX: Record<1 | 2 | 3, [number, number, number]> = {
 }
 
 // ★の かずに あわせて 15もん（やさしい じゅんに ならべる。おなじ テストの なかでは かぶらない）
-export function buildQuiz(mode: QuizMode, tier: 1 | 2 | 3): EnglishQ[] {
+export function buildQuiz(mode: QuizMode, tier: 1 | 2 | 3, variant: QuizVariant = 'kids'): EnglishQ[] {
+  const bank = variant === 'adult' ? QUESTIONS_ADULT : QUESTIONS
   const out: EnglishQ[] = []
   QUIZ_MIX[tier].forEach((n, i) => {
-    const pool = shuffle(QUESTIONS.filter((q) => q.mode === mode && q.level === i + 1))
+    const pool = shuffle(bank.filter((q) => q.mode === mode && q.level === i + 1))
     out.push(...pool.slice(0, n))
   })
   return out

@@ -4705,21 +4705,21 @@
 {
 "mode": "write",
 "level": 3,
-"kind": "あなうめ",
+"kind": "ことば（うごき）",
 "fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
 "answers": [
-"are"
+"sing"
 ],
 "choices": [
-"are",
-"is",
-"am",
-"do"
+"sing",
+"climb",
+"fly",
+"dance"
 ],
-"body": "How □ you?\n（げんき？）",
-"id": "w3-045",
-"why": "「How are you?」だと いみが ぴったり！ カッコの ヒントを よく よんで みよう。"
+"body": "The bird can □.\n（とりは うたう ことが できる）",
+"why": "「うたう」は えいごで「sing」。",
+"id": "w3-045"
 },
 {
 "mode": "write",
@@ -19205,918 +19205,6 @@
 {
 "mode": "write",
 "level": 3,
-"kind": "ぶんぽう（be）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"is"
-],
-"choices": [
-"is",
-"are",
-"am",
-"be"
-],
-"body": "Mika □ happy.\n（ミカは うれしい）",
-"why": "「Mika」は ひとりだけだから「is」を つかうよ。（I は am、ふたり いじょうは are）",
-"id": "hw3-001"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（be）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"is"
-],
-"choices": [
-"is",
-"are",
-"am",
-"be"
-],
-"body": "Mika □ sleepy.\n（ミカは ねむい）",
-"why": "「Mika」は ひとりだけだから「is」を つかうよ。（I は am、ふたり いじょうは are）",
-"id": "hw3-002"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（be）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"are"
-],
-"choices": [
-"are",
-"is",
-"am",
-"be"
-],
-"body": "The ants □ hungry.\n（ありたちは おなかが すいている）",
-"why": "「The ants」は ふたり いじょう（または You）だから「are」を つかうよ。",
-"id": "hw3-003"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（be）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"is"
-],
-"choices": [
-"is",
-"are",
-"am",
-"be"
-],
-"body": "Mika □ small.\n（ミカは ちいさい）",
-"why": "「Mika」は ひとりだけだから「is」を つかうよ。（I は am、ふたり いじょうは are）",
-"id": "hw3-004"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（be）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"are"
-],
-"choices": [
-"are",
-"is",
-"am",
-"be"
-],
-"body": "You □ hungry.\n（あなたは おなかが すいている）",
-"why": "「You」は ふたり いじょう（または You）だから「are」を つかうよ。",
-"id": "hw3-005"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（have/has）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"have"
-],
-"choices": [
-"have",
-"has",
-"having",
-"haves"
-],
-"body": "The bees □ two big eyes.\n（はちたちは おおきな めが 2つ もっている）",
-"why": "「have」は I・You・We や ふたり いじょうの ときに つかうよ。ひとりの ときだけ「has」だよ。",
-"id": "hw3-006"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（have/has）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"have"
-],
-"choices": [
-"have",
-"has",
-"having",
-"haves"
-],
-"body": "I □ two wings.\n（わたしは はねが 2まい もっている）",
-"why": "「have」は I・You・We や ふたり いじょうの ときに つかうよ。ひとりの ときだけ「has」だよ。",
-"id": "hw3-007"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（have/has）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"has"
-],
-"choices": [
-"has",
-"have",
-"having",
-"haves"
-],
-"body": "Ken □ a pet dog.\n（ケンは ペットの いぬを 1ぴき もっている）",
-"why": "「Ken」は ひとりだから「has」を つかうよ。",
-"id": "hw3-008"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（have/has）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"have"
-],
-"choices": [
-"have",
-"has",
-"having",
-"haves"
-],
-"body": "We □ a small net.\n（わたしたちは ちいさな あみを 1つ もっている）",
-"why": "「have」は I・You・We や ふたり いじょうの ときに つかうよ。ひとりの ときだけ「has」だよ。",
-"id": "hw3-009"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（a/an）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"an"
-],
-"choices": [
-"an",
-"a",
-"some",
-"many"
-],
-"body": "I see □ orange.\n（オレンジが 1つ みえる）",
-"why": "「orange」は「オ」の おとで はじまるよ。ア・イ・ウ・エ・オの おとで はじまる ことばの まえには「an」を つけるよ。",
-"id": "hw3-010"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（a/an）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"an"
-],
-"choices": [
-"an",
-"a",
-"some",
-"many"
-],
-"body": "I see □ owl.\n（ふくろうが 1つ みえる）",
-"why": "「owl」は「オ」の おとで はじまるよ。ア・イ・ウ・エ・オの おとで はじまる ことばの まえには「an」を つけるよ。",
-"id": "hw3-011"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（a/an）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"a"
-],
-"choices": [
-"a",
-"an",
-"some",
-"many"
-],
-"body": "I see □ dog.\n（いぬが 1つ みえる）",
-"why": "「dog」は ア・イ・ウ・エ・オの おとでは はじまらないよ。だから「a」を つけるよ。（an は ア・イ・ウ・エ・オの おとの まえだけ）",
-"id": "hw3-012"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（a/an）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"an"
-],
-"choices": [
-"an",
-"a",
-"some",
-"many"
-],
-"body": "I see □ apple.\n（りんごが 1つ みえる）",
-"why": "「apple」は「ア」の おとで はじまるよ。ア・イ・ウ・エ・オの おとで はじまる ことばの まえには「an」を つけるよ。",
-"id": "hw3-013"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（ひてい）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"don't"
-],
-"choices": [
-"don't",
-"doesn't",
-"isn't",
-"aren't"
-],
-"body": "The ants □ know the answer.\n（ありたちは こたえを しらない）",
-"why": "「don't」は I・You・We・They や ふたり いじょうの ときに つかうよ。ひとりの ときは「doesn't」だよ。",
-"id": "hw3-014"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（ひてい）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"doesn't"
-],
-"choices": [
-"doesn't",
-"don't",
-"isn't",
-"aren't"
-],
-"body": "Ken □ know the answer.\n（ケンは こたえを しらない）",
-"why": "「Ken」は ひとりだから「doesn't」。ひとり いがいは「don't」だよ。",
-"id": "hw3-015"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（ひてい）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"doesn't"
-],
-"choices": [
-"doesn't",
-"don't",
-"isn't",
-"aren't"
-],
-"body": "Mika □ eat bugs.\n（ミカは むしを たべない）",
-"why": "「Mika」は ひとりだから「doesn't」。ひとり いがいは「don't」だよ。",
-"id": "hw3-016"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（ぜんちし）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"in"
-],
-"choices": [
-"in",
-"on",
-"under",
-"by"
-],
-"body": "The mantis is □ the bag.\n（かまきりは かばんの なかに いる）",
-"why": "「in」は『なか』の いみ。in＝なか、on＝うえ、under＝した、by＝よこ だよ。",
-"id": "hw3-017"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（ぜんちし）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"on"
-],
-"choices": [
-"on",
-"in",
-"under",
-"by"
-],
-"body": "The caterpillar is □ the bag.\n（あおむしは かばんの うえに いる）",
-"why": "「on」は『うえ』の いみ。in＝なか、on＝うえ、under＝した、by＝よこ だよ。",
-"id": "hw3-018"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（ぜんちし）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"in"
-],
-"choices": [
-"in",
-"on",
-"under",
-"by"
-],
-"body": "The caterpillar is □ the box.\n（あおむしは はこの なかに いる）",
-"why": "「in」は『なか』の いみ。in＝なか、on＝うえ、under＝した、by＝よこ だよ。",
-"id": "hw3-019"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（ぎもん）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"Who"
-],
-"choices": [
-"Who",
-"How old",
-"Where",
-"When"
-],
-"body": "□ is that girl?\n（あの おんなのこは だれですか）",
-"why": "「Who」は『だれ』。ひとを きく ときに つかうよ。",
-"id": "hw3-020"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（ぎもん）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"What color"
-],
-"choices": [
-"What color",
-"When",
-"How many",
-"Where"
-],
-"body": "□ is the ladybug?\n（てんとうむしは なにいろですか）",
-"why": "「What color」は『なにいろ』。いろを きく ときに つかうよ。",
-"id": "hw3-021"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（ぎもん）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"How"
-],
-"choices": [
-"How",
-"When",
-"Where",
-"Which"
-],
-"body": "□ old are you?\n（なんさいですか）",
-"why": "「How old」で『なんさい』と きくよ。",
-"id": "hw3-022"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（ぎもん）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"What"
-],
-"choices": [
-"What",
-"Where",
-"How many",
-"How old"
-],
-"body": "□ is your name?\n（なまえは なんですか）",
-"why": "「What」は『なに』。なまえを きく ときは「What is your name?」だよ。",
-"id": "hw3-023"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（this/these）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"These"
-],
-"choices": [
-"These",
-"This",
-"That",
-"Them"
-],
-"body": "□ are bees.\n（これらは はちです）",
-"why": "ひとつの ものは「This」、いくつも ある ものは「These」を つかうよ。",
-"id": "hw3-024"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（this/these）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"This"
-],
-"choices": [
-"This",
-"These",
-"Those",
-"Them"
-],
-"body": "□ is a bee.\n（これは はちです）",
-"why": "ひとつの ものは「This」、いくつも ある ものは「These」を つかうよ。",
-"id": "hw3-025"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（this/these）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"This"
-],
-"choices": [
-"This",
-"These",
-"Those",
-"Them"
-],
-"body": "□ is an ant.\n（これは ありです）",
-"why": "ひとつの ものは「This」、いくつも ある ものは「These」を つかうよ。",
-"id": "hw3-026"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（She/He）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"She"
-],
-"choices": [
-"She",
-"He",
-"We",
-"They"
-],
-"body": "Yuki is my friend. □ eats rice.\n（ユキは わたしの ともだち。かのじょは ごはんを たべている）",
-"why": "「Yuki」は おんなのこ だから「She」。（おんなのこ＝She、おとこのこ＝He、ふたり いじょう＝They）",
-"id": "hw3-027"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（She/He）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"She"
-],
-"choices": [
-"She",
-"He",
-"We",
-"They"
-],
-"body": "Hana is my friend. □ eats rice.\n（ハナは わたしの ともだち。かのじょは ごはんを たべている）",
-"why": "「Hana」は おんなのこ だから「She」。（おんなのこ＝She、おとこのこ＝He、ふたり いじょう＝They）",
-"id": "hw3-028"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（She/He）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"He"
-],
-"choices": [
-"He",
-"She",
-"We",
-"They"
-],
-"body": "Kai is my friend. □ likes bugs.\n（カイは わたしの ともだち。かれは むしが すき）",
-"why": "「Kai」は おとこのこ だから「He」。（おんなのこ＝She、おとこのこ＝He、ふたり いじょう＝They）",
-"id": "hw3-029"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（Do/Does）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"Does"
-],
-"choices": [
-"Does",
-"Do",
-"Is",
-"Are"
-],
-"body": "□ Yuki like bugs?\n（ユキは むしが すきですか）",
-"why": "「Yuki」は ひとりだから「Does」で はじめるよ。",
-"id": "hw3-030"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（Do/Does）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"Does"
-],
-"choices": [
-"Does",
-"Do",
-"Is",
-"Are"
-],
-"body": "□ Taro like bugs?\n（タロウは むしが すきですか）",
-"why": "「Taro」は ひとりだから「Does」で はじめるよ。",
-"id": "hw3-031"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（Do/Does）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"Does"
-],
-"choices": [
-"Does",
-"Do",
-"Is",
-"Are"
-],
-"body": "□ Mika like bugs?\n（ミカは むしが すきですか）",
-"why": "「Mika」は ひとりだから「Does」で はじめるよ。",
-"id": "hw3-032"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（わたしの・かれの）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"Her"
-],
-"choices": [
-"Her",
-"His",
-"She",
-"He"
-],
-"body": "Emi has a cat. □ cat is white.\n（エミは ねこを かっている。かのじょの ねこは しろい）",
-"why": "「かのじょの」は「Her」。（かのじょの＝Her、かれの＝His）",
-"id": "hw3-033"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ぶんぽう（わたしの・かれの）",
-"fmt": "choice",
-"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
-"answers": [
-"Her"
-],
-"choices": [
-"Her",
-"His",
-"She",
-"He"
-],
-"body": "Nana has a cat. □ cat is white.\n（ナナは ねこを かっている。かのじょの ねこは しろい）",
-"why": "「かのじょの」は「Her」。（かのじょの＝Her、かれの＝His）",
-"id": "hw3-034"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ただしい ぶん",
-"fmt": "choice",
-"title": "ただしい えいごの ぶんを えらぼう（むずかしい）",
-"answers": [
-"Riku doesn't like cakes."
-],
-"choices": [
-"Riku doesn't like cakes.",
-"Riku don't like cakes.",
-"Riku doesn't likes cakes.",
-"Riku isn't like cakes."
-],
-"body": "「リクは ケーキが すきじゃ ありません」と ただしく かいて あるのは どれ？",
-"why": "ひとりの ひと（Riku）の ひていは「doesn't」。あとの ことばは ふつうの かたち「like」だよ。",
-"id": "hw3-035"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ただしい ぶん",
-"fmt": "choice",
-"title": "ただしい えいごの ぶんを えらぼう（むずかしい）",
-"answers": [
-"Nana doesn't like bananas."
-],
-"choices": [
-"Nana doesn't like bananas.",
-"Nana don't like bananas.",
-"Nana doesn't likes bananas.",
-"Nana isn't like bananas."
-],
-"body": "「ナナは バナナが すきじゃ ありません」と ただしく かいて あるのは どれ？",
-"why": "ひとりの ひと（Nana）の ひていは「doesn't」。あとの ことばは ふつうの かたち「like」だよ。",
-"id": "hw3-036"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ただしい ぶん",
-"fmt": "choice",
-"title": "ただしい えいごの ぶんを えらぼう（むずかしい）",
-"answers": [
-"My name is Emi."
-],
-"choices": [
-"My name is Emi.",
-"My name am Emi.",
-"Name my is Emi.",
-"My is name Emi."
-],
-"body": "「わたしの なまえは エミです」と ただしく かいて あるのは どれ？",
-"why": "「わたしの なまえは〜」は「My name is 〜」。ことばの じゅんばんが だいじだよ。",
-"id": "hw3-037"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ただしい ぶん",
-"fmt": "choice",
-"title": "ただしい えいごの ぶんを えらぼう（むずかしい）",
-"answers": [
-"My name is Riku."
-],
-"choices": [
-"My name is Riku.",
-"My name am Riku.",
-"Name my is Riku.",
-"My is name Riku."
-],
-"body": "「わたしの なまえは リクです」と ただしく かいて あるのは どれ？",
-"why": "「わたしの なまえは〜」は「My name is 〜」。ことばの じゅんばんが だいじだよ。",
-"id": "hw3-038"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ただしい ぶん",
-"fmt": "choice",
-"title": "ただしい えいごの ぶんを えらぼう（むずかしい）",
-"answers": [
-"Taro doesn't like strawberries."
-],
-"choices": [
-"Taro doesn't like strawberries.",
-"Taro don't like strawberries.",
-"Taro doesn't likes strawberries.",
-"Taro isn't like strawberries."
-],
-"body": "「タロウは いちごが すきじゃ ありません」と ただしく かいて あるのは どれ？",
-"why": "ひとりの ひと（Taro）の ひていは「doesn't」。あとの ことばは ふつうの かたち「like」だよ。",
-"id": "hw3-039"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ただしい ぶん",
-"fmt": "choice",
-"title": "ただしい えいごの ぶんを えらぼう（むずかしい）",
-"answers": [
-"It is an egg."
-],
-"choices": [
-"It is an egg.",
-"It is a egg.",
-"It am an egg.",
-"It is egg."
-],
-"body": "「それは たまごです」と ただしく かいて あるのは どれ？",
-"why": "「egg」は ア・イ・ウ・エ・オの おとで はじまるから「an」。まえに「a / an」を つけるのも わすれずに！",
-"id": "hw3-040"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ただしい ぶん",
-"fmt": "choice",
-"title": "ただしい えいごの ぶんを えらぼう（むずかしい）",
-"answers": [
-"Hana doesn't like cookies."
-],
-"choices": [
-"Hana doesn't like cookies.",
-"Hana don't like cookies.",
-"Hana doesn't likes cookies.",
-"Hana isn't like cookies."
-],
-"body": "「ハナは クッキーが すきじゃ ありません」と ただしく かいて あるのは どれ？",
-"why": "ひとりの ひと（Hana）の ひていは「doesn't」。あとの ことばは ふつうの かたち「like」だよ。",
-"id": "hw3-041"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ただしい ぶん",
-"fmt": "choice",
-"title": "ただしい えいごの ぶんを えらぼう（むずかしい）",
-"answers": [
-"It is an owl."
-],
-"choices": [
-"It is an owl.",
-"It is a owl.",
-"It am an owl.",
-"It is owl."
-],
-"body": "「それは ふくろうです」と ただしく かいて あるのは どれ？",
-"why": "「owl」は ア・イ・ウ・エ・オの おとで はじまるから「an」。まえに「a / an」を つけるのも わすれずに！",
-"id": "hw3-042"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ただしい ぶん",
-"fmt": "choice",
-"title": "ただしい えいごの ぶんを えらぼう（むずかしい）",
-"answers": [
-"I like blue butterflies."
-],
-"choices": [
-"I like blue butterflies.",
-"I like butterflies blue.",
-"I blue like butterflies.",
-"blue I like butterflies."
-],
-"body": "「わたしは あおい ちょうちょが すきです」と ただしく かいて あるのは どれ？",
-"why": "えいごでは「いろ」のあとに「もの」。『あおい ちょうちょ』は「blue butterflies」の じゅんだよ。",
-"id": "hw3-043"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ただしい ぶん",
-"fmt": "choice",
-"title": "ただしい えいごの ぶんを えらぼう（むずかしい）",
-"answers": [
-"The ladybug can swim."
-],
-"choices": [
-"The ladybug can swim.",
-"The ladybug can swims.",
-"The ladybug can to swim.",
-"The ladybug cans swim."
-],
-"body": "「てんとうむしは およぐ ことが できます」と ただしく かいて あるのは どれ？",
-"why": "「can」の あとは ふつうの かたちの ことば「swim」を おくよ。「s」も「to」も いらないよ。",
-"id": "hw3-044"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ただしい ぶん",
-"fmt": "choice",
-"title": "ただしい えいごの ぶんを えらぼう（むずかしい）",
-"answers": [
-"Ken likes apples."
-],
-"choices": [
-"Ken likes apples.",
-"Ken like apples.",
-"Ken liking apples.",
-"Ken does likes apples."
-],
-"body": "「ケンは りんごが すきです」と ただしく かいて あるのは どれ？",
-"why": "ひとりの ひと（Ken）が すきな ときは「likes」。さいごの「s」を わすれずに！",
-"id": "hw3-045"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ただしい ぶん",
-"fmt": "choice",
-"title": "ただしい えいごの ぶんを えらぼう（むずかしい）",
-"answers": [
-"My name is Taro."
-],
-"choices": [
-"My name is Taro.",
-"My name am Taro.",
-"Name my is Taro.",
-"My is name Taro."
-],
-"body": "「わたしの なまえは タロウです」と ただしく かいて あるのは どれ？",
-"why": "「わたしの なまえは〜」は「My name is 〜」。ことばの じゅんばんが だいじだよ。",
-"id": "hw3-046"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ただしい ぶん",
-"fmt": "choice",
-"title": "ただしい えいごの ぶんを えらぼう（むずかしい）",
-"answers": [
-"The dragonfly can dance."
-],
-"choices": [
-"The dragonfly can dance.",
-"The dragonfly can dances.",
-"The dragonfly can to dance.",
-"The dragonfly cans dance."
-],
-"body": "「とんぼは おどる ことが できます」と ただしく かいて あるのは どれ？",
-"why": "「can」の あとは ふつうの かたちの ことば「dance」を おくよ。「s」も「to」も いらないよ。",
-"id": "hw3-047"
-},
-{
-"mode": "write",
-"level": 3,
-"kind": "ただしい ぶん",
-"fmt": "choice",
-"title": "ただしい えいごの ぶんを えらぼう（むずかしい）",
-"answers": [
-"Ken doesn't like cookies."
-],
-"choices": [
-"Ken doesn't like cookies.",
-"Ken don't like cookies.",
-"Ken doesn't likes cookies.",
-"Ken isn't like cookies."
-],
-"body": "「ケンは クッキーが すきじゃ ありません」と ただしく かいて あるのは どれ？",
-"why": "ひとりの ひと（Ken）の ひていは「doesn't」。あとの ことばは ふつうの かたち「like」だよ。",
-"id": "hw3-048"
-},
-{
-"mode": "write",
-"level": 3,
 "kind": "ぶんしょう（かず）",
 "fmt": "choice",
 "title": "よんで こたえよう（むずかしい）",
@@ -23101,5 +22189,917 @@
 "speak": "Ken has seven bees. Four are fast. The others are slow.",
 "why": "ぜんぶで 7ひき。はやい はちが 4ひき で、のこりの おそい はちが 3ひき。（7 − 4 ＝ 3）",
 "id": "hl3-100"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（たべもの）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"tomatoes"
+],
+"choices": [
+"tomatoes",
+"cakes",
+"carrots",
+"apples"
+],
+"body": "Kai likes □.\n（カイは トマトが すき）",
+"why": "「トマト」は えいごで「tomatoes」。ぶんの ヒントの いみに ぴったりだよ。",
+"id": "hw3-101"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（たべもの）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"cakes"
+],
+"choices": [
+"cakes",
+"bananas",
+"carrots",
+"ice cream"
+],
+"body": "Mika likes □.\n（ミカは ケーキが すき）",
+"why": "「ケーキ」は えいごで「cakes」。ぶんの ヒントの いみに ぴったりだよ。",
+"id": "hw3-102"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（たべもの）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"ice cream"
+],
+"choices": [
+"ice cream",
+"strawberries",
+"cakes",
+"juice"
+],
+"body": "Sora likes □.\n（ソラは アイスクリームが すき）",
+"why": "「アイスクリーム」は えいごで「ice cream」。ぶんの ヒントの いみに ぴったりだよ。",
+"id": "hw3-103"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（たべもの）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"bananas"
+],
+"choices": [
+"bananas",
+"apples",
+"carrots",
+"cookies"
+],
+"body": "Mika likes □.\n（ミカは バナナが すき）",
+"why": "「バナナ」は えいごで「bananas」。ぶんの ヒントの いみに ぴったりだよ。",
+"id": "hw3-104"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（たべもの）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"tomatoes"
+],
+"choices": [
+"tomatoes",
+"strawberries",
+"bananas",
+"cookies"
+],
+"body": "Nana likes □.\n（ナナは トマトが すき）",
+"why": "「トマト」は えいごで「tomatoes」。ぶんの ヒントの いみに ぴったりだよ。",
+"id": "hw3-105"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（たべもの）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"strawberries"
+],
+"choices": [
+"strawberries",
+"cookies",
+"juice",
+"tomatoes"
+],
+"body": "Emi likes □.\n（エミは いちごが すき）",
+"why": "「いちご」は えいごで「strawberries」。ぶんの ヒントの いみに ぴったりだよ。",
+"id": "hw3-106"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（たべもの）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"tomatoes"
+],
+"choices": [
+"tomatoes",
+"bananas",
+"bread",
+"apples"
+],
+"body": "Mika likes □.\n（ミカは トマトが すき）",
+"why": "「トマト」は えいごで「tomatoes」。ぶんの ヒントの いみに ぴったりだよ。",
+"id": "hw3-107"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（たべもの）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"cookies"
+],
+"choices": [
+"cookies",
+"juice",
+"bread",
+"apples"
+],
+"body": "Riku likes □.\n（リクは クッキーが すき）",
+"why": "「クッキー」は えいごで「cookies」。ぶんの ヒントの いみに ぴったりだよ。",
+"id": "hw3-108"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（いろ）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"purple"
+],
+"choices": [
+"purple",
+"blue",
+"white",
+"red"
+],
+"body": "I see a □ mantis.\n（むらさきの かまきりが みえる）",
+"why": "「むらさきの」は えいごで「purple」。",
+"id": "hw3-109"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（いろ）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"white"
+],
+"choices": [
+"white",
+"blue",
+"black",
+"yellow"
+],
+"body": "I see a □ snail.\n（しろい かたつむりが みえる）",
+"why": "「しろい」は えいごで「white」。",
+"id": "hw3-110"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（いろ）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"yellow"
+],
+"choices": [
+"yellow",
+"orange",
+"purple",
+"pink"
+],
+"body": "I see a □ caterpillar.\n（きいろい あおむしが みえる）",
+"why": "「きいろい」は えいごで「yellow」。",
+"id": "hw3-111"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（いろ）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"green"
+],
+"choices": [
+"green",
+"red",
+"pink",
+"purple"
+],
+"body": "I see a □ mantis.\n（みどりの かまきりが みえる）",
+"why": "「みどりの」は えいごで「green」。",
+"id": "hw3-112"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（いろ）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"green"
+],
+"choices": [
+"green",
+"black",
+"yellow",
+"white"
+],
+"body": "I see a □ caterpillar.\n（みどりの あおむしが みえる）",
+"why": "「みどりの」は えいごで「green」。",
+"id": "hw3-113"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（いろ）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"purple"
+],
+"choices": [
+"purple",
+"blue",
+"yellow",
+"red"
+],
+"body": "I see a □ butterfly.\n（むらさきの ちょうちょが みえる）",
+"why": "「むらさきの」は えいごで「purple」。",
+"id": "hw3-114"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（いろ）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"orange"
+],
+"choices": [
+"orange",
+"white",
+"pink",
+"black"
+],
+"body": "I see a □ beetle.\n（オレンジの かぶとむしが みえる）",
+"why": "「オレンジの」は えいごで「orange」。",
+"id": "hw3-115"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（むし）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"cricket"
+],
+"choices": [
+"cricket",
+"ladybug",
+"beetle",
+"spider"
+],
+"body": "The □ can jump.\n（こおろぎは ジャンプする ことが できる）",
+"why": "「こおろぎ」は えいごで「cricket」。",
+"id": "hw3-116"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（むし）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"bee"
+],
+"choices": [
+"bee",
+"dragonfly",
+"grasshopper",
+"spider"
+],
+"body": "The □ can fly.\n（はちは とぶ ことが できる）",
+"why": "「はち」は えいごで「bee」。",
+"id": "hw3-117"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（むし）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"butterfly"
+],
+"choices": [
+"butterfly",
+"bee",
+"cricket",
+"ant"
+],
+"body": "The □ can fly.\n（ちょうちょは とぶ ことが できる）",
+"why": "「ちょうちょ」は えいごで「butterfly」。",
+"id": "hw3-118"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（むし）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"beetle"
+],
+"choices": [
+"beetle",
+"ant",
+"snail",
+"spider"
+],
+"body": "The □ can fly.\n（かぶとむしは とぶ ことが できる）",
+"why": "「かぶとむし」は えいごで「beetle」。",
+"id": "hw3-119"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（むし）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"dragonfly"
+],
+"choices": [
+"dragonfly",
+"ladybug",
+"ant",
+"grasshopper"
+],
+"body": "The □ can fly.\n（とんぼは とぶ ことが できる）",
+"why": "「とんぼ」は えいごで「dragonfly」。",
+"id": "hw3-120"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（むし）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"ladybug"
+],
+"choices": [
+"ladybug",
+"snail",
+"ant",
+"butterfly"
+],
+"body": "The □ can fly.\n（てんとうむしは とぶ ことが できる）",
+"why": "「てんとうむし」は えいごで「ladybug」。",
+"id": "hw3-121"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（むし）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"spider"
+],
+"choices": [
+"spider",
+"snail",
+"dragonfly",
+"butterfly"
+],
+"body": "The □ can climb.\n（くもは のぼる ことが できる）",
+"why": "「くも」は えいごで「spider」。",
+"id": "hw3-122"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（うごき）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"fly"
+],
+"choices": [
+"fly",
+"swim",
+"dance",
+"jump"
+],
+"body": "The bird can □.\n（とりは とぶ ことが できる）",
+"why": "「とぶ」は えいごで「fly」。",
+"id": "hw3-123"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（うごき）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"sing"
+],
+"choices": [
+"sing",
+"run",
+"dance",
+"fly"
+],
+"body": "The bird can □.\n（とりは うたう ことが できる）",
+"why": "「うたう」は えいごで「sing」。",
+"id": "hw3-124"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（うごき）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"swim"
+],
+"choices": [
+"swim",
+"jump",
+"walk",
+"climb"
+],
+"body": "The fish can □.\n（さかなは およぐ ことが できる）",
+"why": "「およぐ」は えいごで「swim」。",
+"id": "hw3-125"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（うごき）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"jump"
+],
+"choices": [
+"jump",
+"fly",
+"walk",
+"run"
+],
+"body": "The frog can □.\n（かえるは ジャンプする ことが できる）",
+"why": "「ジャンプする」は えいごで「jump」。",
+"id": "hw3-126"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（うごき）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"jump"
+],
+"choices": [
+"jump",
+"dance",
+"walk",
+"climb"
+],
+"body": "The rabbit can □.\n（うさぎは ジャンプする ことが できる）",
+"why": "「ジャンプする」は えいごで「jump」。",
+"id": "hw3-127"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（うごき）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"jump"
+],
+"choices": [
+"jump",
+"sing",
+"walk",
+"fly"
+],
+"body": "The cat can □.\n（ねこは ジャンプする ことが できる）",
+"why": "「ジャンプする」は えいごで「jump」。",
+"id": "hw3-128"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（うごき）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"swim"
+],
+"choices": [
+"swim",
+"run",
+"jump",
+"dance"
+],
+"body": "The frog can □.\n（かえるは およぐ ことが できる）",
+"why": "「およぐ」は えいごで「swim」。",
+"id": "hw3-129"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ことば（うごき）",
+"fmt": "choice",
+"title": "ぶんの □に はいる ことばを えらぼう（むずかしい）",
+"answers": [
+"run"
+],
+"choices": [
+"run",
+"climb",
+"walk",
+"fly"
+],
+"body": "The dog can □.\n（いぬは はしる ことが できる）",
+"why": "「はしる」は えいごで「run」。",
+"id": "hw3-130"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ぶんしょう（かず）",
+"fmt": "choice",
+"title": "よんで こたえよう（むずかしい）",
+"answers": [
+"2ひき"
+],
+"choices": [
+"2ひき",
+"3びき",
+"5ひき",
+"1ぴき"
+],
+"body": "Kai has five crickets. Three are slow. The others are fast.\n\nはやい こおろぎは なんびき？",
+"why": "ぜんぶで 5ひき。おそい こおろぎが 3ひき で、のこりの はやい こおろぎが 2ひき。（5 − 3 ＝ 2）",
+"id": "hw3-131"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ぶんしょう（かず）",
+"fmt": "choice",
+"title": "よんで こたえよう（むずかしい）",
+"answers": [
+"4ひき"
+],
+"choices": [
+"4ひき",
+"5ひき",
+"9ひき",
+"3びき"
+],
+"body": "Taro has nine grasshoppers. Four are black. The others are red.\n\nくろい ばったは なんびき？",
+"why": "ぜんぶで 9ひき。くろい ばったが 4ひき で、のこりの あかい ばったが 5ひき。（9 − 4 ＝ 5）",
+"id": "hw3-132"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ぶんしょう（かず）",
+"fmt": "choice",
+"title": "よんで こたえよう（むずかしい）",
+"answers": [
+"2ひき"
+],
+"choices": [
+"2ひき",
+"5ひき",
+"7ひき",
+"3びき"
+],
+"body": "Hana has seven crickets. Two are red. The others are black.\n\nあかい こおろぎは なんびき？",
+"why": "ぜんぶで 7ひき。あかい こおろぎが 2ひき で、のこりの くろい こおろぎが 5ひき。（7 − 2 ＝ 5）",
+"id": "hw3-133"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ぶんしょう（かず）",
+"fmt": "choice",
+"title": "よんで こたえよう（むずかしい）",
+"answers": [
+"5ひき"
+],
+"choices": [
+"5ひき",
+"1ぴき",
+"6ぴき",
+"4ひき"
+],
+"body": "Yuki has six ladybugs. One is red. The others are black.\n\nくろい てんとうむしは なんびき？",
+"why": "ぜんぶで 6ひき。あかい てんとうむしが 1ひき で、のこりの くろい てんとうむしが 5ひき。（6 − 1 ＝ 5）",
+"id": "hw3-134"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ぶんしょう（すき）",
+"fmt": "choice",
+"title": "よんで こたえよう（むずかしい）",
+"answers": [
+"かぶとむしと ケーキ"
+],
+"choices": [
+"かぶとむしと ケーキ",
+"かぶとむしと アイスクリーム",
+"ケーキと アイスクリーム",
+"アイスクリームと いちご"
+],
+"body": "Mika likes beetles and cakes. She doesn't like ice cream.\n\nミカが すきなのは、どれと どれ？",
+"why": "ぶんに「likes beetles and cakes」と あるよ。「likes」は『すき』。「doesn't like」の ものは すきじゃ ないよ。",
+"id": "hw3-135"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ぶんしょう（すき）",
+"fmt": "choice",
+"title": "よんで こたえよう（むずかしい）",
+"answers": [
+"ぎゅうにゅう"
+],
+"choices": [
+"ぎゅうにゅう",
+"ちょうちょ",
+"トマト",
+"かぶとむし"
+],
+"body": "Nana likes butterflies and tomatoes. She doesn't like milk.\n\nナナが すきじゃ ない ものは？",
+"why": "ぶんに「doesn't like milk」と あるよ。「doesn't like」は『すきじゃ ない』の いみ。",
+"id": "hw3-136"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ぶんしょう（すき）",
+"fmt": "choice",
+"title": "よんで こたえよう（むずかしい）",
+"answers": [
+"ちょうちょと トマト"
+],
+"choices": [
+"ちょうちょと トマト",
+"ちょうちょと りんご",
+"トマトと りんご",
+"りんごと いちご"
+],
+"body": "Ken likes butterflies and tomatoes. He doesn't like apples.\n\nケンが すきなのは、どれと どれ？",
+"why": "ぶんに「likes butterflies and tomatoes」と あるよ。「likes」は『すき』。「doesn't like」の ものは すきじゃ ないよ。",
+"id": "hw3-137"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ぶんしょう（ばしょ）",
+"fmt": "choice",
+"title": "よんで こたえよう（むずかしい）",
+"answers": [
+"うえ"
+],
+"choices": [
+"うえ",
+"なか",
+"した",
+"よこ"
+],
+"body": "The snail is by the bag. The bee is on the bag.\n\nはちは かばんの どこに いる？",
+"why": "ぶんに「The bee is on the bag」と あるよ。「on」は『うえ』の いみ。（in＝なか、on＝うえ、under＝した、by＝よこ）",
+"id": "hw3-138"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ぶんしょう（ばしょ）",
+"fmt": "choice",
+"title": "よんで こたえよう（むずかしい）",
+"answers": [
+"した"
+],
+"choices": [
+"した",
+"なか",
+"うえ",
+"よこ"
+],
+"body": "The cricket is under the box. The bee is by the box.\n\nこおろぎは はこの どこに いる？",
+"why": "ぶんに「The cricket is under the box」と あるよ。「under」は『した』の いみ。（in＝なか、on＝うえ、under＝した、by＝よこ）",
+"id": "hw3-139"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ぶんしょう（ばしょ）",
+"fmt": "choice",
+"title": "よんで こたえよう（むずかしい）",
+"answers": [
+"うえ"
+],
+"choices": [
+"うえ",
+"なか",
+"した",
+"よこ"
+],
+"body": "The beetle is under the bag. The dragonfly is on the bag.\n\nとんぼは かばんの どこに いる？",
+"why": "ぶんに「The dragonfly is on the bag」と あるよ。「on」は『うえ』の いみ。（in＝なか、on＝うえ、under＝した、by＝よこ）",
+"id": "hw3-140"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ぶんしょう（じゅんばん）",
+"fmt": "choice",
+"title": "よんで こたえよう（むずかしい）",
+"answers": [
+"ジャンプする"
+],
+"choices": [
+"ジャンプする",
+"はしる",
+"あるく",
+"うたう"
+],
+"body": "First, the caterpillar runs. Then, it walks. Last, it jumps.\n\nあおむしは さいごに なにを した？",
+"why": "「First」は『さいしょ』、「Then」は『そのあと』、「Last」は『さいご』。さいごには「jumps」＝『ジャンプする』だよ。",
+"id": "hw3-141"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ぶんしょう（じゅんばん）",
+"fmt": "choice",
+"title": "よんで こたえよう（むずかしい）",
+"answers": [
+"あるく"
+],
+"choices": [
+"あるく",
+"はっぱを たべる",
+"ジャンプする",
+"うたう"
+],
+"body": "First, the bee walks. Then, it eats leaves. Last, it jumps.\n\nはちは さいしょに なにを した？",
+"why": "「First」は『さいしょ』、「Then」は『そのあと』、「Last」は『さいご』。さいしょには「walks」＝『あるく』だよ。",
+"id": "hw3-142"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ぶんしょう（じゅんばん）",
+"fmt": "choice",
+"title": "よんで こたえよう（むずかしい）",
+"answers": [
+"おどる"
+],
+"choices": [
+"おどる",
+"あるく",
+"はしる",
+"ジャンプする"
+],
+"body": "First, the caterpillar dances. Then, it walks. Last, it runs.\n\nあおむしは さいしょに なにを した？",
+"why": "「First」は『さいしょ』、「Then」は『そのあと』、「Last」は『さいご』。さいしょには「dances」＝『おどる』だよ。",
+"id": "hw3-143"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ぶんしょう（じゅんばん）",
+"fmt": "choice",
+"title": "よんで こたえよう（むずかしい）",
+"answers": [
+"きに のぼる"
+],
+"choices": [
+"きに のぼる",
+"おどる",
+"ねる",
+"うたう"
+],
+"body": "First, the bee dances. Then, it sleeps. Last, it climbs a tree.\n\nはちは さいごに なにを した？",
+"why": "「First」は『さいしょ』、「Then」は『そのあと』、「Last」は『さいご』。さいごには「climbs a tree」＝『きに のぼる』だよ。",
+"id": "hw3-144"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ぶんしょう（じかん）",
+"fmt": "choice",
+"title": "よんで こたえよう（むずかしい）",
+"answers": [
+"7じ はん"
+],
+"choices": [
+"7じ はん",
+"8じ",
+"7じ",
+"8じ はん"
+],
+"body": "Taro gets up at six. He eats breakfast at seven thirty. He goes to school at eight.\n\nタロウは なんじに あさごはんを たべる？",
+"why": "ぶんに「at seven thirty」と あるよ。『7じ はん』の ことだよ。（thirty は『はん』）",
+"id": "hw3-145"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ぶんしょう（じかん）",
+"fmt": "choice",
+"title": "よんで こたえよう（むずかしい）",
+"answers": [
+"8じ はん"
+],
+"choices": [
+"8じ はん",
+"6じ はん",
+"10じ",
+"8じ"
+],
+"body": "Hana gets up at seven thirty. She eats breakfast at eight. She goes to school at eight thirty.\n\nハナは なんじに がっこうへ いく？",
+"why": "ぶんに「at eight thirty」と あるよ。『8じ はん』の ことだよ。（thirty は『はん』）",
+"id": "hw3-146"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ぶんしょう（くらべる）",
+"fmt": "choice",
+"title": "よんで こたえよう（むずかしい）",
+"answers": [
+"ばった"
+],
+"choices": [
+"ばった",
+"あり",
+"かたつむり",
+"とんぼ"
+],
+"body": "The grasshopper is faster than the ant. The ant is faster than the snail.\n\nいちばん はやい のは どれ？",
+"why": "「faster than」は『〜より はやい』の いみ。ばった＞あり＞かたつむりの じゅんに はやいだよ。",
+"id": "hw3-147"
+},
+{
+"mode": "write",
+"level": 3,
+"kind": "ぶんしょう（くらべる）",
+"fmt": "choice",
+"title": "よんで こたえよう（むずかしい）",
+"answers": [
+"かぶとむし"
+],
+"choices": [
+"かぶとむし",
+"はち",
+"あり",
+"ちょうちょ"
+],
+"body": "The beetle is bigger than the bee. The bee is bigger than the ant.\n\nいちばん おおきい のは どれ？",
+"why": "「bigger than」は『〜より おおきい』の いみ。かぶとむし＞はち＞ありの じゅんに おおきいだよ。",
+"id": "hw3-148"
 }
 ]

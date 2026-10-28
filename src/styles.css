@@ -6757,6 +6757,28 @@ body.race-full .page-head {
   cursor: pointer;
 }
 .dojo-slow.on { background: #bfe4ff; border-color: #3a9be0; }
+/* やめる：「ゆっくりさいせい」と おなじ わくの おおきさで ひだりうえ */
+.dojo-slow.dojo-quit-top { right: auto; left: 8px; min-width: 152px; text-align: center; border-color: #e3c4c4; }
+.dojo-confirm-back {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.dojo-confirm {
+  background: #fff;
+  border-radius: 20px;
+  padding: 22px 18px 18px;
+  width: min(320px, 100%);
+  text-align: center;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+}
+.dojo-confirm-q { margin: 0 0 16px; font-size: 18px; font-weight: 900; }
+.dojo-confirm-btns { display: flex; flex-direction: column; gap: 10px; }
 .dojo-dots { padding-top: 26px; }
 .dojo-pic {
   display: flex;
