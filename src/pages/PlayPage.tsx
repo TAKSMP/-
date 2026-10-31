@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import type { CaughtBug } from '../types'
 import { QuizPage } from './QuizPage'
+import { BattleQuizPage } from './BattleQuizPage'
 import { BattlePage } from './BattlePage'
 import { BattlePage2 } from './BattlePage2'
 import { StoryPage } from './StoryPage'
@@ -19,7 +20,9 @@ interface Props {
 // バトルの なかは → 1たい1／2たい2／まえのばん／つうしんバトル
 type Game =
   | null
+  | 'quizMenu'
   | 'quiz'
+  | 'battleQuiz'
   | 'storyMenu'
   | 'story'
   | 'dojo'
@@ -60,8 +63,38 @@ export function PlayPage({ bugs, onGoCapture }: Props) {
     </header>
   )
 
+  // クイズ → むしクイズ／バトルクイズ
+  if (game === 'quizMenu') {
+    return frame(
+      null,
+      'ゲーム',
+      header('🧠 クイズ', 'どっちの クイズに する？'),
+      <div className="game-menu">
+        <button className="game-card quiz" onClick={() => go('quiz')}>
+          <span className="game-emoji">🐞❓</span>
+          <span className="game-title">むしクイズ</span>
+          <span className="game-desc">虫の なまえや ひみつを あてよう</span>
+        </button>
+        <button className="game-card battle" onClick={() => go('battleQuiz')}>
+          <span className="game-emoji">⚔️❓</span>
+          <span className="game-title">バトルクイズ</span>
+          <span className="game-desc">バトルの ばめんで いちばん いい わざを えらぼう！</span>
+        </button>
+      </div>,
+    )
+  }
+
   if (game === 'quiz') {
-    return frame(null, 'ゲーム', null, <QuizPage bugs={bugs} onGoCapture={onGoCapture} />)
+    return frame('quizMenu', 'クイズ', null, <QuizPage bugs={bugs} onGoCapture={onGoCapture} />)
+  }
+
+  if (game === 'battleQuiz') {
+    return frame(
+      'quizMenu',
+      'クイズ',
+      header('⚔️ バトルクイズ', 'この ばめん、どの わざを つかう？'),
+      <BattleQuizPage bugs={bugs} />,
+    )
   }
 
   // ストーリー → ストーリーモード／わざ道場
@@ -221,10 +254,10 @@ export function PlayPage({ bugs, onGoCapture }: Props) {
         <p className="sub">あつめた虫で ゲームしよう！</p>
       </header>
       <div className="game-menu">
-        <button className="game-card quiz" onClick={() => go('quiz')}>
+        <button className="game-card quiz" onClick={() => go('quizMenu')}>
           <span className="game-emoji">🧠</span>
           <span className="game-title">クイズ</span>
-          <span className="game-desc">虫の なまえや ひみつを あてよう</span>
+          <span className="game-desc">むしクイズ／バトルクイズ</span>
         </button>
         <button className="game-card story" onClick={() => go('storyMenu')}>
           <span className="game-emoji">🗺️</span>

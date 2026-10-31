@@ -6872,3 +6872,98 @@ body.race-full .page-head {
   line-height: 1.7;
   color: var(--ink);
 }
+
+/* =========================================================
+   バトルクイズ
+   ========================================================= */
+.bq-note {
+  font-size: 13px;
+  opacity: 0.8;
+}
+.bq-progress {
+  margin: 10px auto 16px;
+  max-width: 280px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.bq-progress-bar {
+  margin-top: 6px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+.bq-progress-bar > div {
+  height: 100%;
+  background: var(--yellow);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+/* 1ぴきぶん（FighterSlot ＋ すばやさ） */
+.bq-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  max-width: 180px;
+}
+.bq-slot .stage2-slot {
+  width: 100%;
+  max-width: none;
+}
+.bq-spd {
+  font-size: 10px;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+.bq-moves .stage-btn .bq-desc {
+  font-size: 9px;
+  font-weight: 600;
+  opacity: 0.75;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.bq-result {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 14px;
+  padding: 10px 12px;
+  box-shadow: var(--shadow);
+  max-height: 42vh;
+  overflow-y: auto;
+}
+.bq-result.ok {
+  outline: 3px solid var(--green);
+}
+.bq-result.ng {
+  outline: 3px solid var(--danger);
+}
+.bq-result-title {
+  font-weight: 900;
+  font-size: 17px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+.bq-result-answer {
+  font-size: 13px;
+  font-weight: 800;
+}
+.bq-why {
+  margin: 6px 0 8px;
+  font-size: 13px;
+  line-height: 1.6;
+  font-weight: 700;
+}
+.bq-result-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
