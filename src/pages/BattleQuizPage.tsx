@@ -142,6 +142,7 @@ export function BattleQuizPage({ bugs }: Props) {
   const [glowUid, setGlowUid] = useState<string | null>(null)
   const [rankPop, setRankPop] = useState<{ uid: string; up: boolean } | null>(null)
   const [confetti, setConfetti] = useState(false)
+  const [hint, setHint] = useState(false) // わざの せつめいを 見せるか
   const [cleared, setCleared] = useState<Set<number>>(() => loadCleared())
   const logRef = useRef<HTMLDivElement>(null)
   // 音を ならす ための からっぽの わざ表（わざリストの「見た」きろくは つけない）
@@ -161,6 +162,7 @@ export function BattleQuizPage({ bugs }: Props) {
     setShownFighters(f.fighters)
     setLog(r.q.log.map((l) => fill(l, r.names)))
     setStep('question')
+    setHint(false)
     setPicked(null)
     setReplayMove(null)
     setSteps([])
@@ -395,6 +397,17 @@ export function BattleQuizPage({ bugs }: Props) {
       <button className="battle-flee" onClick={quit}>
         ✕ やめる
       </button>
+      {step === 'question' && (
+        <button
+          className={'bq-hint-btn' + (hint ? ' on' : '')}
+          onClick={() => {
+            sfx.tap()
+            setHint((h) => !h)
+          }}
+        >
+          💡 {hint ? 'ヒントを とじる' : 'ヒント'}
+        </button>
+      )}
       <span className="stage-turn">
         だい {index + 1}もん / {rounds.length}　⭐{score}
       </span>
@@ -434,7 +447,7 @@ export function BattleQuizPage({ bugs }: Props) {
                       {m.ultimate && '👑 '}
                       {moveSummary(m)}
                     </small>
-                    <small className="bq-desc">{m.desc}</small>
+                    {hint && <small className="bq-desc">{m.desc}</small>}
                   </button>
                 )
               })}
