@@ -6992,3 +6992,186 @@ body.race-full .page-head {
 .bq-stage .stage-scene.stage2 {
   padding-top: 90px;
 }
+
+/* ===== Optional forest design. Classic rules above remain unchanged. ===== */
+.design-picker-options { display:flex; gap:10px; flex-wrap:wrap; margin:10px 0; }
+.design-picker-options .btn { flex:1; min-width:130px; font-size:14px; padding:12px 8px; }
+.design-picker-options .design-selected { background:#397e28; color:white; box-shadow:0 3px 0 #245b1c; }
+.design-forest {
+  --green:#65a84b; --green-dark:#43882d; --green-deep:#326b25;
+  --yellow:#f8d987; --sky:#9bd9f3; --brown:#8f542c;
+  --ink:#4a2b18; --cream:#fff6dd; --card:#fffaf0;
+  --shadow:0 3px 10px rgba(49,85,32,.12); --radius:20px;
+  background:linear-gradient(180deg,#a5ddf8 0%,#e1f5e5 42%,#c9e9b9 100%);
+  isolation:isolate;
+}
+.design-forest::before {
+  content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:radial-gradient(ellipse at 5% 0%,rgba(74,139,42,.22),transparent 25%),
+    radial-gradient(ellipse at 95% 0%,rgba(65,141,47,.2),transparent 25%),
+    radial-gradient(ellipse at 0% 100%,rgba(66,144,52,.19),transparent 24%),
+    radial-gradient(ellipse at 100% 100%,rgba(64,135,40,.18),transparent 24%);
+}
+.design-forest .page-head h1 { display:table; margin:0 auto 10px; padding:8px 24px;
+  color:#fffaf0; font-weight:900; text-shadow:0 2px 1px #57321c;
+  background:linear-gradient(170deg,#a86a39,#80431e); border:3px solid #78401e; border-radius:22px;
+  box-shadow:0 4px 0 #603719; }
+.design-forest .page-head .sub { color:#43613a; }
+.design-forest .btn:not(.btn-danger), .design-forest .tabbar-btn { border-radius:17px; }
+.design-forest .btn-ghost { background:#fff5dc; color:#654021; box-shadow:0 3px 0 #dfc99d; }
+.design-forest .btn-primary { background:#5b9e36; color:white; box-shadow:0 3px 0 #36701d; }
+.design-forest .section-title { color:#704525; }
+.design-forest .tabbar { background:rgba(255,249,230,.97); border-top:2px solid #e2cda6; }
+.design-forest .tabbar-btn.active { color:#347d26; }
+.design-forest .settings-fab { background:#94552d; }
+.design-forest .modal { background:#fff8e8; }
+@media (prefers-reduced-motion:reduce) { .design-forest *, .design-forest *::before { transition:none !important; } }
+
+/* Forest home: original approved illustration with accessible interactive hit areas. */
+.design-forest:has(.forest-home) { background:#c7e7c3; }
+.forest-home { position:relative; width:min(100%, 460px, calc((100dvh - 8px) * 708 / 1536)); aspect-ratio:708 / 1536; margin:0 auto; overflow:hidden; }
+.forest-home-art { display:block; width:100%; height:100%; object-fit:fill; }
+.forest-home-hit, .forest-home-settings { position:absolute; display:block; border:0; padding:0; background:transparent; cursor:pointer; border-radius:16px; }
+.forest-home-hit { width:40%; height:13.7%; }
+.forest-home-hit.left-top { left:9.3%; top:48.6%; }
+.forest-home-hit.right-top { left:51.1%; top:48.6%; }
+.forest-home-hit.left-bottom { left:9.3%; top:63.7%; }
+.forest-home-hit.right-bottom { left:51.1%; top:63.7%; }
+.forest-home-settings { right:0; top:0; width:14%; height:10%; }
+.forest-home-hit:focus-visible, .forest-home-settings:focus-visible { outline:4px solid #fff; outline-offset:-5px; background:rgba(255,255,255,.16); }
+.design-forest .forest-return-home { position:relative; z-index:5; margin:8px 12px 0; border:2px solid #7e4d24; border-radius:20px; background:#fff5dc; color:#654021; padding:8px 15px; font-weight:900; cursor:pointer; }
+.design-forest:has(.forest-home) .settings-fab { display:none; }
+
+.forest-home-settings { top:1.5%; right:2%; width:10%; height:5%; background:#98572e; border:2px solid #fff0c7; border-radius:50%; color:white; font-size:clamp(16px,5vw,25px); box-shadow:0 2px 5px #553c25; }
+
+/* ============================================================
+   Forest v3 — Capture screen only. No capture logic is modified.
+   Deliberately quiet content area: nature at the edges, not on cards.
+   ============================================================ */
+.design-forest .capture { --forest-border:#e7d7ad; color:#513a27; }
+.design-forest .capture .page-head { margin:12px auto 28px; }
+.design-forest .capture .page-head h1 { font-size:clamp(21px,5.7vw,27px); padding:10px 22px; max-width:max-content; }
+.design-forest .capture .page-head .sub { margin:12px auto 0; max-width:300px; line-height:1.6; color:#45664b; }
+.design-forest .capture .dropzone {
+  margin:0 auto; padding:32px 20px 28px; max-width:440px;
+  border:2px solid var(--forest-border); border-radius:24px;
+  background:#fff8e8; box-shadow:0 5px 16px rgba(54,82,45,.10);
+  text-align:center;
+}
+.design-forest .capture .dropzone-emoji { font-size:52px; margin-bottom:12px; }
+.design-forest .capture .dropzone > p:not(.hint) { color:#563d28; font-weight:800; line-height:1.65; margin:0 0 24px; }
+.design-forest .capture .capture-buttons { display:flex; flex-direction:column; gap:12px; max-width:320px; margin:auto; }
+.design-forest .capture .capture-buttons .btn { width:100%; min-height:58px; font-size:17px; border-radius:17px; }
+.design-forest .capture .capture-buttons .btn-camera { background:#4b9736; color:white; box-shadow:0 4px 0 #327024; }
+.design-forest .capture .capture-buttons .btn-ghost { background:#fff; border:2px solid #ddcda8; color:#674525; box-shadow:0 3px 0 #ddcda8; }
+.design-forest .capture .dropzone .hint { margin:24px auto 0; max-width:310px; font-size:12px; line-height:1.75; color:#65705b; }
+.design-forest .capture .result { max-width:460px; margin:0 auto; }
+.design-forest .capture .result-photo { border-radius:20px; overflow:hidden; border:3px solid #fff8e8; box-shadow:0 4px 14px rgba(45,71,40,.14); }
+.design-forest .capture .result-card, .design-forest .capture .chatgpt-box {
+  background:#fff9eb; border:1px solid var(--forest-border); border-radius:20px;
+  box-shadow:0 3px 12px rgba(45,71,40,.08);
+}
+.design-forest .capture input, .design-forest .capture select, .design-forest .capture textarea {
+  max-width:100%; border-radius:12px; border-color:#d8cba9; background:#fffefa;
+}
+.design-forest .capture .result-actions .btn-primary { background:#4b9736; color:#fff; }
+@media(max-width:370px) { .design-forest .capture .dropzone { padding:24px 14px; } }
+
+/* Forest v4 — Encyclopedia index, collection cards and detail overlay.
+   Scoped exclusively to forest mode; original theme remains untouched. */
+.design-forest .zukan { color:#503925; }
+.design-forest .zukan .page-head { margin:12px auto 22px; }
+.design-forest .zukan .zukan-count { max-width:440px; margin:0 auto 24px; padding:16px 20px; background:#fff8e8; border:2px solid #e6d4ac; border-radius:20px; color:#3e7c2d; box-shadow:0 4px 0 rgba(104,77,36,.12); }
+.design-forest .zukan .mokuji-title { max-width:440px; margin:0 auto 12px; color:#684424; font-size:18px; }
+.design-forest .zukan .mokuji-list { max-width:440px; margin:auto; gap:11px; }
+.design-forest .zukan .mokuji-item { min-height:65px; background:#fff9eb; border:2px solid #e4d3ae; border-radius:18px; box-shadow:0 3px 0 #d9c49b; padding:12px 17px; }
+.design-forest .zukan .mokuji-item.empty { opacity:.55; box-shadow:none; }
+.design-forest .zukan .mokuji-name { color:#543a26; }
+.design-forest .zukan .mokuji-count { color:#448b32; }
+.design-forest .zukan .mokuji-empty { max-width:440px; margin:0 auto 22px; background:#fff9eb; border:2px solid #e4d3ae; border-radius:20px; }
+.design-forest .zukan .back-btn { background:#fff7e5; color:#6a4528; border:2px solid #dfcba4; border-radius:999px; padding:10px 17px; font-weight:800; }
+.design-forest .zukan .bug-grid { gap:12px; }
+.design-forest .zukan .bug-card { background:#fff9eb; border:2px solid #e4d3ae; border-radius:19px; overflow:hidden; box-shadow:0 3px 0 rgba(101,78,40,.12); }
+.design-forest .modal-backdrop .modal { border:2px solid #e4d3ae; border-radius:23px; box-shadow:0 15px 50px rgba(34,58,28,.22); }
+.design-forest .modal-backdrop .modal-photo { border-radius:16px; overflow:hidden; }
+.design-forest .modal-backdrop .modal-name { color:#644222; }
+.design-forest .modal-backdrop .modal-fields, .design-forest .modal-backdrop .modal-fact { background:#fffaf0; border-radius:14px; }
+@media(max-width:370px) { .design-forest .zukan .mokuji-item { padding:10px 12px; gap:8px; } }
+
+/* Forest v5 — Mission progress and earned badges. Scoped to forest mode.
+   No mission calculations, rewards, storage, or reset behavior are changed. */
+.design-forest .mission { color:#503925; }
+.design-forest .mission .page-head { margin:12px auto 24px; }
+.design-forest .mission .page-head .sub { max-width:310px; margin:12px auto 0; line-height:1.6; }
+.design-forest .mission .mission-cards { max-width:460px; margin:0 auto; gap:14px; }
+.design-forest .mission .mission-card {
+  padding:19px 19px 18px; background:#fff9eb; border:2px solid #e5d5b1;
+  border-top:5px solid #70aa5b; border-radius:20px;
+  box-shadow:0 4px 12px rgba(46,80,38,.09);
+}
+.design-forest .mission .mission-card.lv-normal { border-top-color:#d7a94d; }
+.design-forest .mission .mission-card.lv-hard { border-top-color:#c98669; }
+.design-forest .mission .mission-card-head { font-size:14px; gap:10px; }
+.design-forest .mission .mission-track { color:#58734b; font-variant-numeric:tabular-nums; }
+.design-forest .mission .mission-emoji { font-size:34px; margin:12px 0 7px; }
+.design-forest .mission .mission-title { font-size:17px; line-height:1.55; margin:6px 0 14px; }
+.design-forest .mission .mission-bar { height:13px; background:#e9e7d8; }
+.design-forest .mission .mission-bar-fill { background:linear-gradient(90deg,#85bf6c,#4c993b); }
+.design-forest .mission .mission-progress { margin-top:10px; font-size:15px; }
+.design-forest .mission .mission-remain { color:#687960; }
+.design-forest .mission .mission-reward { margin-top:10px; color:#806039; line-height:1.5; }
+.design-forest .mission .mission-clear { color:#3d842d; }
+.design-forest .mission .mission-hint {
+  max-width:460px; margin:20px auto; padding:18px; background:#fff9eb;
+  border:1px solid #e5d5b1; border-radius:18px;
+}
+.design-forest .mission .badge-section { max-width:460px; margin:30px auto 0; }
+.design-forest .mission .badge-title { color:#684424; font-size:17px; margin-bottom:16px; }
+.design-forest .mission .badge-grid { gap:10px; }
+.design-forest .mission .badge-item {
+  min-width:0; padding:14px 6px; background:#fff9eb;
+  border:1px solid #e5d5b1; border-radius:16px;
+  box-shadow:0 2px 7px rgba(46,80,38,.07);
+}
+.design-forest .mission .badge-item.locked { background:#f2f0e6; opacity:.72; box-shadow:none; }
+.design-forest .mission .badge-name { color:#523c2b; line-height:1.4; }
+.design-forest .mission .badge-goal { color:#69725f; }
+.design-forest .mission .mission-reset {
+  margin-top:20px; min-height:46px; background:#fff7e7;
+  border:1px solid #d9c8a3; color:#6d5338;
+}
+.design-forest .mission .badge-toast-inner { background:#fff9eb; border:2px solid #e5d5b1; border-radius:22px; }
+@media(max-width:370px) {
+  .design-forest .mission .mission-card { padding:15px 13px; }
+  .design-forest .mission .badge-grid { gap:7px; }
+  .design-forest .mission .badge-item { padding:11px 4px; }
+}
+
+/* Forest v6 — game selection, quiz, battle and racing presentation only.
+   All selectors are gated by design-forest to preserve the original theme. */
+.design-forest .game-menu, .design-forest .race-mode-menu { gap:14px; max-width:480px; margin-inline:auto; }
+.design-forest .game-card { background:#fff9eb; border:2px solid #e5d5b1; border-radius:20px; padding:18px; box-shadow:0 4px 10px rgba(47,77,37,.09); color:#513c2a; min-height:92px; }
+.design-forest .game-card.quiz, .design-forest .game-card.battle, .design-forest .game-card.story, .design-forest .game-card.race, .design-forest .game-card.dojo { background:#fff9eb; border-color:#e5d5b1; }
+.design-forest .game-card:focus-visible { outline:3px solid #468b38; outline-offset:3px; }
+.design-forest .game-card .game-title { color:#4b7337; font-weight:900; }
+.design-forest .game-card .game-desc { color:#726552; line-height:1.55; }
+.design-forest .game-card .game-emoji { font-size:32px; }
+.design-forest .quiz .page-head { margin:12px auto 22px; }
+.design-forest .quiz-start, .design-forest .quiz-card, .design-forest .quiz-done { max-width:480px; margin-inline:auto; padding:24px 18px; border:2px solid #e5d5b1; border-radius:22px; background:#fff9eb; box-shadow:0 4px 12px rgba(47,77,37,.08); }
+.design-forest .quiz-options { gap:12px; }
+.design-forest .quiz-options button { border-radius:16px; min-height:52px; }
+.design-forest .quiz-photo { border-radius:18px; overflow:hidden; }
+.design-forest .quiz-prompt { color:#513c2a; line-height:1.55; }
+.design-forest .quiz-progress, .design-forest .quiz-score, .design-forest .quiz-streak { color:#4b7337; }
+.design-forest .battle-step, .design-forest .dojo-panel, .design-forest .net-battle-menu { background:#fff9eb; border:2px solid #e5d5b1; border-radius:20px; box-shadow:0 4px 12px rgba(47,77,37,.08); }
+.design-forest .battle-step-title, .design-forest .dojo-title { color:#654421; }
+.design-forest .statcard, .design-forest .story-bug { background:#fffaf0; border:2px solid #e5d5b1; border-radius:17px; }
+.design-forest .race .game-card { min-height:92px; }
+.design-forest .race .race-lineup-actions .btn-primary, .design-forest .quiz .btn-primary { background:#4b9736; color:#fff; border-radius:16px; }
+@media(max-width:370px) { .design-forest .game-card { padding:14px 12px; } .design-forest .quiz-start, .design-forest .quiz-card, .design-forest .quiz-done { padding:18px 12px; } }
+
+/* v7: compact phones and safe-area handling for the forest home. */
+.design-forest .forest-home { max-height:calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 8px); }
+.design-forest .forest-home-hit { touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+.design-forest .forest-home-hit:active { background:rgba(255,255,255,.15); }
+.design-forest .forest-return-home { touch-action:manipulation; }

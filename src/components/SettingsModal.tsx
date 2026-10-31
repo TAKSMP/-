@@ -19,12 +19,14 @@ import {
 
 interface Props {
   onClose: () => void
+  designTheme: 'classic' | 'forest'
+  onDesignThemeChange: (theme: 'classic' | 'forest') => void
   onChanged: () => void
   onDataRestored: (bugs: CaughtBug[]) => void
 }
 
 // せってい画面：出す虫・ひっさつわざリスト・レベルもどし・データのバックアップ／復元。
-export function SettingsModal({ onClose, onChanged, onDataRestored }: Props) {
+export function SettingsModal({ onClose, onChanged, onDataRestored, designTheme, onDesignThemeChange }: Props) {
   const [dexOpen, setDexOpen] = useState(false)
   const [fieldBugsOpen, setFieldBugsOpen] = useState(false)
   const [dataBusy, setDataBusy] = useState(false)
@@ -145,6 +147,14 @@ export function SettingsModal({ onClose, onChanged, onDataRestored }: Props) {
 
         <h2 className="modal-name">⚙️ せってい</h2>
 
+        <section className="settings-dex design-picker" aria-label="デザインをえらぶ">
+          <h3>🎨 デザイン</h3>
+          <p>いつでも もとのデザインに もどせるよ。</p>
+          <div className="design-picker-options">
+            <button type="button" className={`btn ${designTheme === 'classic' ? 'design-selected' : 'btn-ghost'}`} aria-pressed={designTheme === 'classic'} onClick={() => onDesignThemeChange('classic')}>もとのデザイン</button>
+            <button type="button" className={`btn ${designTheme === 'forest' ? 'design-selected' : 'btn-ghost'}`} aria-pressed={designTheme === 'forest'} onClick={() => onDesignThemeChange('forest')}>🌿 森のデザイン</button>
+          </div>
+        </section>
         <section className="settings-dex">
           <h3>🗺️ マップに 出る むし</h3>
           <p>

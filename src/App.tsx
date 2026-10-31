@@ -1,3 +1,4 @@
+import forestHome from './assets/forest-home.jpg'
 import { useEffect, useState } from 'react'
 import type { CaptureInput, CaughtBug } from './types'
 import {
@@ -42,6 +43,8 @@ async function recompressBugs(bugs: CaughtBug[]): Promise<CaughtBug[] | null> {
   return changed ? out : null
 }
 
+type DesignTheme = 'classic' | 'forest'
+
 type Tab = 'capture' | 'zukan' | 'search' | 'quiz' | 'mission'
 
 const TABS: { id: Tab; label: string; emoji: string }[] = [
@@ -54,6 +57,16 @@ const TABS: { id: Tab; label: string; emoji: string }[] = [
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('capture')
+  const [forestHomeOpen, setForestHomeOpen] = useState(true)
+  const [designTheme, setDesignTheme] = useState<DesignTheme>(() => {
+    try { return localStorage.getItem('chomushi-design-theme') === 'forest' ? 'forest' : 'classic' }
+    catch { return 'classic' }
+  })
+  function changeDesignTheme(next: DesignTheme) {
+    setDesignTheme(next)
+    if (next === 'forest') setForestHomeOpen(true)
+    try { localStorage.setItem('chomushi-design-theme', next) } catch { /* storage unavailable */ }
+  }
   const [bugs, setBugs] = useState<CaughtBug[]>([])
   const [settingsOpen, setSettingsOpen] = useState(false)
   // バックアップを復元したり、せっていでレベルをもどしたりしたら、
@@ -98,7 +111,7 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div className={`app design-${designTheme}`}>
       <button
         className="settings-fab"
         onClick={() => {
@@ -111,7 +124,25 @@ export default function App() {
         ⚙️
       </button>
 
-      <main className="app-main">
+      {designTheme === 'forest' && forestHomeOpen && (
+        <section className="forest-home" aria-label="ちょうむし ホーム">
+          <img src={forestHome} alt="ちょうむし 森のホーム画面" className="forest-home-art" draggable={false} />
+          <button className="forest-home-settings" aria-label="せってい" onClick={() => setSettingsOpen(true)}>⚙</button>
+          {([
+            ['capture', 'しらべる', 'left top'],
+            ['zukan', 'ずかん', 'right top'],
+            ['mission', 'ミッション', 'left bottom'],
+            ['quiz', 'ゲーム', 'right bottom'],
+          ] as const).map(([id, label, position]) => (
+            <button key={id} className={`forest-home-hit ${position.replace(' ', '-')}`}
+              aria-label={`${label}をひらく`} title={label} onClick={() => { sfx.nav(); setTab(id); setForestHomeOpen(false) }} />
+          ))}
+        </section>
+      )}
+      {designTheme === 'forest' && !forestHomeOpen && (
+        <button className="forest-return-home" onClick={() => setForestHomeOpen(true)} aria-label="ホームにもどる">⌂ ホーム</button>
+      )}
+      <main className="app-main" style={{display: designTheme === 'forest' && forestHomeOpen ? 'none' : undefined}}>
         {/* 「しらべる」はタブを切りかえても入力が消えないよう、
             アンマウントせずに 非表示にするだけにする（登録するまでデータ保持）。 */}
         <div style={{ display: tab === 'capture' ? 'contents' : 'none' }}>
@@ -159,7 +190,7 @@ export default function App() {
       </main>
 
       {/* した の ナビゲーション */}
-      <nav className="tabbar">
+      <nav className="tabbar" style={{display: designTheme === 'forest' && forestHomeOpen ? 'none' : undefined}}>
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -181,6 +212,8 @@ export default function App() {
       {settingsOpen && (
         <SettingsModal
           onClose={() => setSettingsOpen(false)}
+          designTheme={designTheme}
+          onDesignThemeChange={changeDesignTheme}
           // レベルを もどした ときなど、ストーリー側の セーブが かわった ときに
           // PlayPage を つくりなおして（key で）、さいしんの データを 読みなおさせる
           onChanged={() => setDataVersion((v) => v + 1)}
