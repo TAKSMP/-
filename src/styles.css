@@ -7187,3 +7187,112 @@ body.race-full .page-head {
 .mokuji-search-link:active { background:#f3e2b8; }
 .design-forest .zukan .mokuji-head { max-width:440px; margin:18px auto 12px; }
 .design-forest .zukan .mokuji-head .mokuji-title { margin:0; max-width:none; }
+
+/* =========================================================
+   チャイルドロック
+   ========================================================= */
+.lock-badge {
+  position: fixed;
+  top: max(6px, env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 250;
+  border: 2px solid #fff;
+  background: rgba(60, 90, 40, 0.88);
+  color: #fff;
+  font-weight: 900;
+  font-size: 13px;
+  line-height: 1;
+  padding: 7px 12px;
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.lock-back {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: rgba(30, 40, 20, 0.6);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fade 0.2s ease;
+}
+.lock-pop {
+  position: relative;
+  background: var(--cream, #fffbe8);
+  border-radius: 26px;
+  width: 100%;
+  max-width: 380px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 20px 18px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  animation: rise 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+.lock-pop-title { margin: 0 0 10px; font-size: 20px; font-weight: 900; }
+.lock-week { display: flex; justify-content: space-between; gap: 4px; margin: 8px 0 12px; }
+.lock-day { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; font-weight: 900; font-size: 16px; }
+.lock-day rt { font-size: 9px; font-weight: 700; }
+.lock-day.today { color: #c2570c; }
+.lock-mark { width: 34px; height: 34px; max-width: 100%; border-radius: 50%; border: 3px dashed #d4cfae; box-sizing: border-box; }
+.lock-mark.on { border: 4px solid #e0392b; background: rgba(224, 57, 43, 0.08); }
+.lock-left { font-size: 24px; font-weight: 900; margin: 6px 0; }
+.lock-left b { font-size: 34px; color: #e0392b; }
+.lock-sub { margin: 4px 0 8px; font-size: 14px; font-weight: 700; }
+.lock-note { margin: 4px 0 12px; font-size: 12px; opacity: 0.75; }
+.lock-bye { padding-top: 24px; }
+.lock-bugs { display: flex; justify-content: center; align-items: flex-end; gap: 6px; font-size: 62px; line-height: 1; }
+.lock-bug { display: inline-block; animation: lock-hop 1.1s ease-in-out infinite; }
+.lock-bug.b0 { animation-delay: 0s; }
+.lock-bug.b1 { animation-delay: 0.18s; font-size: 84px; }
+.lock-bug.b2 { animation-delay: 0.36s; }
+@keyframes lock-hop { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-14px) rotate(4deg); } }
+.lock-bubble {
+  position: relative;
+  margin: 18px 4px 16px;
+  padding: 14px 10px;
+  background: #fff;
+  border: 3px solid #f4b942;
+  border-radius: 22px;
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1.4;
+}
+.lock-bubble::before {
+  content: '';
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  margin-left: -10px;
+  border: 10px solid transparent;
+  border-bottom-color: #f4b942;
+  border-top: 0;
+}
+.lock-input { width: 100%; box-sizing: border-box; font-size: 18px; padding: 10px 12px; border: 2px solid #cfe3c4; border-radius: 12px; margin: 6px 0; font-family: inherit; }
+.lock-bad { color: #d12a1b; font-weight: 800; font-size: 14px; margin: 4px 0; }
+.lock-editor { text-align: left; max-width: 420px; }
+.lock-editor .lock-pop-title { text-align: center; }
+.lock-switch, .lock-check { display: flex; align-items: center; gap: 8px; font-weight: 800; padding: 4px 0; cursor: pointer; }
+.lock-switch { font-size: 17px; background: #fff; border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; }
+.lock-switch input, .lock-check input { width: 22px; height: 22px; flex: none; }
+.lock-check.strong { font-size: 16px; }
+.lock-field { display: flex; flex-direction: column; gap: 4px; margin: 10px 0; font-weight: 800; font-size: 14px; }
+.lock-field select { font-family: inherit; font-size: 16px; padding: 9px 10px; border-radius: 10px; border: 2px solid #cfe3c4; background: #fff; }
+.lock-h4 { margin: 12px 0 6px; font-size: 15px; }
+.lock-tree { background: #fff; border-radius: 14px; padding: 8px 12px 10px; }
+.lock-quick { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+.lock-quick .btn { padding: 6px 10px; font-size: 13px; }
+.lock-sec { padding-top: 6px; border-top: 1px dashed #e0dcc0; }
+.lock-sec:first-of-type { border-top: 0; }
+.lock-grp { margin-left: 18px; }
+.lock-leaves { margin-left: 18px; display: flex; flex-direction: column; }
+.lock-grp > .lock-leaves { margin-left: 18px; }
+.lock-editor .lock-sub { text-align: center; margin-top: 12px; }
+.lock-done { width: 100%; margin-top: 12px; }
+.lock-section .lock-section-note { font-size: 12px; }

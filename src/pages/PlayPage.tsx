@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import type { CaughtBug } from '../types'
 import { QuizPage } from './QuizPage'
 import { BattleQuizPage } from './BattleQuizPage'
@@ -10,10 +10,19 @@ import { RacePage } from './RacePage'
 import { RacePageOld } from './RacePageOld'
 import { NetBattlePage } from './NetBattlePage'
 import { sfx } from '../lib/sound'
+import { guardLock } from '../lib/childLock'
 
 interface Props {
   bugs: CaughtBug[]
   onGoCapture: () => void
+  onActiveChange?: (lockKey: string | null) => void // いま あそんでいる ゲーム（チャイルドロック用）
+  resetSignal?: number // かわったら ゲームの メニューに もどる
+}
+
+// 画面（Game）→ チャイルドロックの 項目キー（メニューは null）
+const LOCK_KEY: Partial<Record<string, string>> = {
+  quiz: 'quiz', battleQuiz: 'battleQuiz', story: 'story', dojo: 'dojo', dojoAdult: 'dojoAdult',
+  battle1: 'battle1', battle2: 'battle2', battleOld: 'battleOld', net: 'net', race: 'race', raceOld: 'raceOld',
 }
 
 // ゲーム → クイズ／ストーリー（ストーリーモード／わざ道場）／バトル／レース。
@@ -36,13 +45,22 @@ type Game =
   | 'raceOld'
 
 // 「ゲーム」ページ。クイズ・ストーリー・バトル・レースを えらべる。
-export function PlayPage({ bugs, onGoCapture }: Props) {
+export function PlayPage({ bugs, onGoCapture, onActiveChange, resetSignal }: Props) {
   const [game, setGame] = useState<Game>(null)
 
   function go(g: Game) {
+    // ロック中の ゲームは ひらけない（「また あそぼうね」を だす）
+    if (g && !guardLock(LOCK_KEY[g])) return
     sfx.tap()
     setGame(g)
   }
+
+  useEffect(() => {
+    onActiveChange?.((game && LOCK_KEY[game]) || null)
+  }, [game, onActiveChange])
+  useEffect(() => {
+    if (resetSignal) setGame(null)
+  }, [resetSignal])
 
   // もどる ボタンと みだし つきの ページわく
   function frame(back: Game, backLabel: string, head: ReactNode, body: ReactNode) {

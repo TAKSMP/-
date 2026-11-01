@@ -19,6 +19,8 @@ import { PlayPage } from './pages/PlayPage'
 import { MissionPage } from './pages/MissionPage'
 import { SettingsModal } from './components/SettingsModal'
 import { sfx } from './lib/sound'
+import { ChildLockLayer } from './components/ChildLockLayer'
+import { guardLock, lockReasonFor } from './lib/childLock'
 
 // 図鑑の中の「大きすぎる写真」を小さくしなおす（容量節約）。
 // 変わったものがあれば あたらしい配列を、なければ null をかえす。
@@ -69,6 +71,24 @@ export default function App() {
   }
   const [bugs, setBugs] = useState<CaughtBug[]>([])
   const [settingsOpen, setSettingsOpen] = useState(false)
+  // チャイルドロック：いま ひらいている ゲーム／時間ぎれで メニューへ もどす 合図
+  const [gameKey, setGameKey] = useState<string | null>(null)
+  const [playReset, setPlayReset] = useState(0)
+  // タブを ひらく（ロック中の タブは ひらけない）
+  function goTab(id: Tab): boolean {
+    if (id !== 'quiz' && !guardLock(id)) return false
+    setTab(id)
+    return true
+  }
+  const lockKeyNow = designTheme === 'forest' && forestHomeOpen ? null : tab === 'quiz' ? gameKey : tab
+  function handleTimeUp() {
+    setPlayReset((n) => n + 1)
+    setGameKey(null)
+    if (tab !== 'quiz' && lockReasonFor(tab)) {
+      if (designTheme === 'forest') setForestHomeOpen(true)
+      else setTab('quiz')
+    }
+  }
   // バックアップを復元したり、せっていでレベルをもどしたりしたら、
   // 各ページの内部状態も新しいデータで作りなおす。
   const [dataVersion, setDataVersion] = useState(0)
@@ -137,7 +157,7 @@ export default function App() {
             ['quiz', 'ゲーム', 'right bottom'],
           ] as const).map(([id, label, position]) => (
             <button key={id} className={`forest-home-hit ${position.replace(' ', '-')}`}
-              aria-label={`${label}をひらく`} title={label} onClick={() => { sfx.nav(); setTab(id); setForestHomeOpen(false) }} />
+              aria-label={`${label}をひらく`} title={label} onClick={() => { if (goTab(id)) { sfx.nav(); setForestHomeOpen(false) } }} />
           ))}
         </section>
       )}
@@ -162,8 +182,8 @@ export default function App() {
             onSetMain={handleSetMain}
             onUpdate={handleUpdate}
             pastPlaces={collectPlaces(bugs)}
-            onGoCapture={() => setTab('capture')}
-            onGoSearch={designTheme === 'forest' ? () => setTab('search') : undefined}
+            onGoCapture={() => goTab('capture')}
+            onGoSearch={designTheme === 'forest' ? () => goTab('search') : undefined}
           />
         )}
         {tab === 'search' && (
@@ -180,14 +200,16 @@ export default function App() {
           <PlayPage
             key={`play-${dataVersion}`}
             bugs={bugs}
-            onGoCapture={() => setTab('capture')}
+            onGoCapture={() => goTab('capture')}
+            onActiveChange={setGameKey}
+            resetSignal={playReset}
           />
         )}
         {tab === 'mission' && (
           <MissionPage
             key={`mission-${dataVersion}`}
             bugs={bugs}
-            onGoCapture={() => setTab('capture')}
+            onGoCapture={() => goTab('capture')}
           />
         )}
       </main>
@@ -200,8 +222,7 @@ export default function App() {
             key={t.id}
             className={'tabbar-btn' + (tab === t.id ? ' active' : '')}
             onClick={() => {
-              sfx.nav()
-              setTab(t.id)
+              if (goTab(t.id)) sfx.nav()
             }}
           >
             <span className="tabbar-emoji">{t.emoji}</span>
@@ -213,6 +234,8 @@ export default function App() {
         ))}
       </nav>
       )}
+
+      <ChildLockLayer activeKey={lockKeyNow} onTimeUp={handleTimeUp} deferUntilExit={tab === 'quiz'} />
 
       {settingsOpen && (
         <SettingsModal

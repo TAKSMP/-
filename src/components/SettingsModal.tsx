@@ -1,6 +1,7 @@
 import { useRef, useState, type ChangeEvent } from 'react'
 import { MoveDexModal } from './MoveDexModal'
 import { FieldBugsModal } from './FieldBugsModal'
+import { ChildLockSettings } from './ChildLockSettings'
 import { sfx } from '../lib/sound'
 import type { CaughtBug } from '../types'
 import {
@@ -276,6 +277,8 @@ export function SettingsModal({ onClose, onChanged, onDataRestored, designTheme,
             </p>
           )}
         </section>
+
+        <ChildLockSettings />
       </div>
 
       {dexOpen && <MoveDexModal onClose={() => setDexOpen(false)} />}
