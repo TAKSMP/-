@@ -48,7 +48,6 @@ function PasswordPrompt({ onOk, onCancel }: { onOk: () => void; onCancel: () => 
     <div className="lock-back" onClick={onCancel}>
       <form className="lock-pop lock-pass" onClick={(e) => e.stopPropagation()} onSubmit={(e) => { e.preventDefault(); submit() }}>
         <h3 className="lock-pop-title">🔒 パスワード</h3>
-        <p className="lock-sub">おうちの人が パスワードを 入れてください。</p>
         <input
           ref={ref}
           className="lock-input"
