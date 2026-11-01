@@ -112,17 +112,19 @@ export default function App() {
 
   return (
     <div className={`app design-${designTheme}`}>
-      <button
-        className="settings-fab"
-        onClick={() => {
-          sfx.tap()
-          setSettingsOpen(true)
-        }}
-        aria-label="せってい"
-        title="せってい"
-      >
-        ⚙️
-      </button>
+      {(designTheme !== 'forest' || (tab === 'quiz' && !forestHomeOpen)) && (
+        <button
+          className="settings-fab"
+          onClick={() => {
+            sfx.tap()
+            setSettingsOpen(true)
+          }}
+          aria-label="せってい"
+          title="せってい"
+        >
+          ⚙️
+        </button>
+      )}
 
       {designTheme === 'forest' && forestHomeOpen && (
         <section className="forest-home" aria-label="ちょうむし ホーム">
@@ -161,6 +163,7 @@ export default function App() {
             onUpdate={handleUpdate}
             pastPlaces={collectPlaces(bugs)}
             onGoCapture={() => setTab('capture')}
+            onGoSearch={designTheme === 'forest' ? () => setTab('search') : undefined}
           />
         )}
         {tab === 'search' && (
@@ -190,7 +193,8 @@ export default function App() {
       </main>
 
       {/* した の ナビゲーション */}
-      <nav className="tabbar" style={{display: designTheme === 'forest' && forestHomeOpen ? 'none' : undefined}}>
+      {designTheme !== 'forest' && (
+      <nav className="tabbar">
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -208,6 +212,7 @@ export default function App() {
           </button>
         ))}
       </nav>
+      )}
 
       {settingsOpen && (
         <SettingsModal

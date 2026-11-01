@@ -15,6 +15,8 @@ interface Props {
   onUpdate: (bugId: string, patch: BugPatch) => void
   pastPlaces: string[]
   onGoCapture: () => void
+  // 森のデザインのときだけ わたされる：「けんさく」がめんへ いく
+  onGoSearch?: () => void
 }
 
 const OTHER = '__other__' // 30分類に入らない虫のまとめ
@@ -27,6 +29,7 @@ export function ZukanPage({
   onUpdate,
   pastPlaces,
   onGoCapture,
+  onGoSearch,
 }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const selected = selectedId
@@ -144,7 +147,20 @@ export function ZukanPage({
         </div>
       )}
 
-      <h3 className="mokuji-title">もくじ</h3>
+      <div className="mokuji-head">
+        <h3 className="mokuji-title">もくじ</h3>
+        {onGoSearch && (
+          <button
+            className="mokuji-search-link"
+            onClick={() => {
+              sfx.nav()
+              onGoSearch()
+            }}
+          >
+            🔍 けんさく
+          </button>
+        )}
+      </div>
       <div className="mokuji-list">
         {mokuji.map((it) => (
           <button

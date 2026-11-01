@@ -7175,3 +7175,15 @@ body.race-full .page-head {
 .design-forest .forest-home-hit { touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
 .design-forest .forest-home-hit:active { background:rgba(255,255,255,.15); }
 .design-forest .forest-return-home { touch-action:manipulation; }
+
+/* v10: forest — no bottom tab bar; settings only in game; zukan -> search link */
+.design-forest .app-main { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+.design-forest .forest-return-home { align-self:flex-start; width:auto; }
+.design-forest .settings-fab { top:8px; right:12px; }
+@media (min-width: 581px) { .design-forest .settings-fab { right: calc(50% - 280px + 12px); } }
+.mokuji-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:18px 4px 10px; }
+.mokuji-head .mokuji-title { margin:0; }
+.mokuji-search-link { border:2px solid #7e4d24; border-radius:18px; background:#fff5dc; color:#654021; padding:6px 14px; font-weight:900; font-size:14px; cursor:pointer; touch-action:manipulation; }
+.mokuji-search-link:active { background:#f3e2b8; }
+.design-forest .zukan .mokuji-head { max-width:440px; margin:18px auto 12px; }
+.design-forest .zukan .mokuji-head .mokuji-title { margin:0; max-width:none; }
