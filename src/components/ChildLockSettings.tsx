@@ -20,7 +20,6 @@ export function ChildLockSettings() {
   return (
     <section className="settings-dex lock-section">
       <h3>🔒 チャイルドロック</h3>
-      <p>あそぶ 時間や 日数を おうちの人が 決められます。パスワードが ひつようです。</p>
       <button type="button" className="btn btn-primary settings-dex-btn" onClick={() => { sfx.tap(); setAskPass(true) }}>
         🔒 ひらく
       </button>
