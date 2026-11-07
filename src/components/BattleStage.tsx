@@ -7,6 +7,7 @@
 //  ・おわったら onFinish で かちまけを かえす
 //  あたらしい せんとうを はじめる ときは key を かえて つくり直すこと。
 // =============================================================
+import { countHiki } from '../lib/format'
 import { useEffect, useRef, useState } from 'react'
 import type { SpecialMoveV2 } from '../types'
 import type { StatKey } from '../types'
@@ -458,6 +459,19 @@ export function BattleStage({
     pushCmd({ actorUid: pc.actorUid, moveIndex: pc.moveIndex, targetUid: pc.targetUid, copyIndex })
   }
 
+  // ── のこりは おまかせ：まだ きめていない じぶんの虫の めいれいを CPUが きめる
+  function autoRest() {
+    sfx.tap()
+    const f = fieldRef.current
+    const decided = new Set(cmdsRef.current.map((c) => c.actorUid))
+    const auto = f.fighters
+      .filter((x) => x.side === 'me' && !x.fainted && !decided.has(x.uid))
+      .map((x) => chooseCpuCommand(f, x))
+    const next = [...cmdsRef.current, ...auto]
+    cmdsRef.current = next
+    setCmds(next)
+  }
+
   // ── 1ターンぶんを けいさんして、さいせいを はじめる
   function runTurn() {
     if (runningRef.current) return
@@ -526,6 +540,9 @@ export function BattleStage({
   //  みため
   // -----------------------------------------------------------
   const cur = !field.over ? nextActor(field, cmds) : undefined
+  const undecidedCount = field.fighters.filter(
+    (x) => x.side === 'me' && !x.fainted && !cmds.some((c) => c.actorUid === x.uid),
+  ).length
   // さいせい中は そのときの スナップショット、ふだんは いまの ばめん
   const shownFighters = playback
     ? playback.steps[playback.index].fighters
@@ -575,8 +592,8 @@ export function BattleStage({
       <span className="stage-turn">ターン {shownTurn}</span>
 
       <div className="stage-scene stage2">
-        <div className="stage2-side foe">{foeFighters.map(slotOf)}</div>
-        <div className="stage2-side me">{myFighters.map(slotOf)}</div>
+        <div className={`stage2-side foe n${foeFighters.length}`}>{foeFighters.map(slotOf)}</div>
+        <div className={`stage2-side me n${myFighters.length}`}>{myFighters.map(slotOf)}</div>
       </div>
 
       <div className="stage-bottom">
@@ -659,6 +676,11 @@ export function BattleStage({
                 <small>なんかいでも つかえる</small>
               </button>
             </div>
+            {undecidedCount >= 2 && (
+              <button className="stage-auto" onClick={autoRest}>
+                🤖 のこりは おまかせ（{countHiki(undecidedCount)}）
+              </button>
+            )}
           </>
         ) : (
           <div className="stage-actions">

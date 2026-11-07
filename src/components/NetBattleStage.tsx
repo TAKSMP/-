@@ -7,9 +7,10 @@
 //  ・じぶんの がわの 生きている虫 ぜんいんぶん、じゅんばんに わざを えらび、
 //    そろったら 1かいだけ Firebase に 送る。
 // =============================================================
+import { countHiki } from '../lib/format'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { SpecialMoveV2 } from '../types'
-import { type Command, type Field, type Fighter, type Side } from '../lib/battleEngine'
+import { chooseCpuCommand, type Command, type Field, type Fighter, type Side } from '../lib/battleEngine'
 import {
   BUILD_ID,
   hydrateField,
@@ -225,6 +226,17 @@ export function NetBattleStage({ code, role, onQuit }: Props) {
   const buildMismatch = opponentBuild !== BUILD_ID
   const shownTurn = playback ? liteField.turnCount - 1 : liteField.turnCount
 
+  // のこりは おまかせ：まだ きめていない じぶんの虫の めいれいを CPUが きめる
+  const undecided = shown.filter(
+    (x) => x.side === mySide && !x.fainted && !cmds.some((c) => c.actorUid === x.uid),
+  )
+  function autoRest() {
+    sfx.tap()
+    const pseudo = { ...liteField, fighters: shown } as unknown as Field
+    const auto = undecided.map((x) => chooseCpuCommand(pseudo, x as Fighter))
+    setCmds((c) => [...c, ...auto])
+  }
+
   // つぎの 1行へ（がめんを タップ）。さいごまで 見たら おわり
   function advanceStep() {
     if (!playback) return
@@ -328,8 +340,8 @@ export function NetBattleStage({ code, role, onQuit }: Props) {
       <span className="stage-turn">ターン {shownTurn}</span>
 
       <div className="stage-scene stage2">
-        <div className="stage2-side foe">{foeFighters.map(slotOf)}</div>
-        <div className="stage2-side me">{myFighters.map(slotOf)}</div>
+        <div className={`stage2-side foe n${foeFighters.length}`}>{foeFighters.map(slotOf)}</div>
+        <div className={`stage2-side me n${myFighters.length}`}>{myFighters.map(slotOf)}</div>
       </div>
 
       <div className="stage-bottom">
@@ -420,6 +432,11 @@ export function NetBattleStage({ code, role, onQuit }: Props) {
                 <small>なんかいでも つかえる</small>
               </button>
             </div>
+            {undecided.length >= 2 && (
+              <button className="stage-auto" onClick={autoRest}>
+                🤖 のこりは おまかせ（{countHiki(undecided.length)}）
+              </button>
+            )}
           </>
         ) : null}
       </div>

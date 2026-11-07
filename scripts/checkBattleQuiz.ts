@@ -4,7 +4,7 @@ import { BATTLE_QUIZ } from '../src/data/battleQuiz'
 import { moveOf, playQuizTurn, type Cast } from '../src/lib/battleQuiz'
 
 const castOf = (n: string): Cast => ({ name: n, photo: '', bug: { id: n, name: n, order: '', rarity: 1, habitat: '', captures: [], mainCaptureId: '', corrected: false } })
-const cast = { me: [castOf('ミー'), castOf('ミー2')], foe: [castOf('テキ'), castOf('テキ2')] }
+const cast = { me: ['ミー', 'ミー2', 'ミー3', 'ミー4'].map(castOf), foe: ['テキ', 'テキ2', 'テキ3', 'テキ4'].map(castOf) }
 const verbose = process.argv.includes('-v')
 const only = process.argv.find((a) => /^\d+$/.test(a))
 let errors = 0

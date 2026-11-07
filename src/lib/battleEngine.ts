@@ -36,7 +36,9 @@ export const SLEEP_MAX_TURNS = 4
 export const PARALYSIS_FAIL_CHANCE = 0.125 // まひで うごけない かくりつ（8かいに 1かい）
 export const PARALYSIS_SPEED_MUL = 0.5 // まひの すばやさ ていか
 export const CRIT_MUL = 1.5
-export const SPREAD_MUL = 0.75 // ぜんたいわざの いりょく ほせい
+export const SPREAD_MUL = 0.75 // ぜんたいわざの いりょく ほせい（2ひきに あたる とき）
+export const SPREAD_MUL_MANY = 0.6 // 3びき いじょうに あたる とき（3たい3・4たい4）
+export const spreadMul = (targets: number): number => (targets >= 3 ? SPREAD_MUL_MANY : targets >= 2 ? SPREAD_MUL : 1)
 export const BASE_EVASION = 0 // かいひランクの しょきち
 // すばやさの さが 1 で めいちゅうりつ 1%ぶん、あいてが はやいほど よけやすい（さいだい ±10%）
 export const SPEED_EVASION_PER_POINT = 0.01
@@ -322,7 +324,7 @@ function critChance(stage: number): number {
 }
 
 interface HitOpts {
-  spread: boolean
+  spread: number // ぜんたいわざが あたる かず（1なら ほせい なし）
   late: boolean
 }
 
@@ -347,7 +349,7 @@ function calcDamage(
   const crit = rng() < critChance(move.critStage ?? 0)
   let dmg = (((power / 10) * (a + 2)) / (d / 2 + 3)) * DAMAGE_SCALE + 1
   if (crit) dmg *= CRIT_MUL
-  if (opts.spread) dmg *= SPREAD_MUL
+  dmg *= spreadMul(opts.spread)
   dmg *= 0.9 + rng() * 0.2 // すこしだけ ゆらす
   return { dmg: Math.max(1, Math.round(dmg)), crit }
 }
@@ -512,7 +514,7 @@ export function chaosEffect(field: Field, actor: Fighter, log: string[], rng: Rn
       const synth = { ...BASIC_ATTACK, power: 110 } as SpecialMoveV2
       for (const t of foes) {
         if (t.fainted) continue
-        const { dmg } = calcDamage(actor, t, synth, { spread: foes.length > 1, late: false }, rng)
+        const { dmg } = calcDamage(actor, t, synth, { spread: foes.filter((x) => !x.fainted).length, late: false }, rng)
         const dealt = applyDamage(actor, t, dmg, log)
         log.push(`${t.name}に ${dealt}の ダメージ！`)
       }
@@ -760,9 +762,7 @@ function executeMove(
     log.push('…しかし あいてが いない！')
     return
   }
-  const spread =
-    (move.target === 'allFoes' || move.target === 'allOthers') &&
-    targets.length > 1
+  const spread = move.target === 'allFoes' || move.target === 'allOthers' ? targets.length : 1
 
   let totalDealt = 0
 
@@ -1147,7 +1147,7 @@ function endOfTurn(f: Field, log: string[], rng: Rng): void {
       name: p.fromName,
       uid: p.fromUid,
     } as Fighter
-    const { dmg } = calcDamage(dummy, target, p.move, { spread: false, late: false }, rng)
+    const { dmg } = calcDamage(dummy, target, p.move, { spread: 1, late: false }, rng)
     log.push(`💫 ${p.fromName}の しかけた こうげきが はつどう！`)
     applyDamage(dummy, target, dmg, log)
     log.push(`${target.name}に ${dmg}の ダメージ！`)
@@ -1222,8 +1222,10 @@ function checkOver(f: Field): void {
 export function chooseCpuCommand(f: Field, actor: Fighter, rng: Rng = Math.random): Command {
   const foes = aliveOf(f, actor.side === 'me' ? 'foe' : 'me')
   if (foes.length === 0) return { actorUid: actor.uid, moveIndex: -1 }
-  // いちばん HPが すくない あいてを ねらう
-  const target = [...foes].sort((a, b) => a.hp - b.hp)[0]
+  // ねらう あいて：はんぶんは いちばん HPが すくない あいて、のこりは ランダム
+  // （3たい3・4たい4で CPUが みんな おなじ 1ぴきを ねらわない ように）
+  const weakest = [...foes].sort((a, b) => a.hp - b.hp)[0]
+  const target = foes.length > 1 && rng() < 0.5 ? foes[Math.floor(rng() * foes.length)] : weakest
   // たおれている みかた（ふっかつの わざの あいて）
   const fallen = f.fighters.find(
     (x) => x.side === actor.side && x.uid !== actor.uid && x.fainted,
@@ -1245,6 +1247,16 @@ export function chooseCpuCommand(f: Field, actor: Fighter, rng: Rng = Math.rando
   const healer = usable.find((x) => x.m.healRatio || x.m.restSleep)
   if (healer && actor.hp <= actor.maxHp * 0.35) {
     return { actorUid: actor.uid, moveIndex: healer.i, targetUid: actor.uid }
+  }
+  // みかたを なおせる わざは、いちばん けがを している みかたに つかう
+  const allyHealer = usable.find((x) => x.m.healRatio && (x.m.target === 'ally' || x.m.target === 'selfSide'))
+  if (allyHealer) {
+    const hurt = aliveOf(f, actor.side)
+      .filter((x) => x.uid !== actor.uid || allyHealer.m.target === 'selfSide')
+      .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]
+    if (hurt && hurt.hp <= hurt.maxHp * 0.4) {
+      return { actorUid: actor.uid, moveIndex: allyHealer.i, targetUid: hurt.uid }
+    }
   }
   // とどめが させそうな わざが あれば つかう
   const finisher = usable.find(
@@ -1272,8 +1284,14 @@ export function chooseCpuCommand(f: Field, actor: Fighter, rng: Rng = Math.rando
         copyIndex: best?.i,
       }
     }
+    const allyPick =
+      pick.m.target === 'ally'
+        ? [...aliveOf(f, actor.side)].filter((x) => x.uid !== actor.uid).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]
+        : undefined
     const t =
-      pick.m.target === 'self' || pick.m.target === 'ally'
+      pick.m.target === 'ally' && allyPick
+        ? allyPick.uid
+        : pick.m.target === 'self' || pick.m.target === 'ally'
         ? actor.uid
         : pick.m.target === 'fallenAlly'
           ? (fallen?.uid ?? actor.uid)

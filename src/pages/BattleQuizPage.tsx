@@ -97,7 +97,7 @@ function pickCast(bugs: CaughtBug[], count: number): Cast[] {
 
 // 「{me}」などを じっさいの なまえに
 function fill(text: string, names: Record<string, string>): string {
-  return text.replace(/\{(me2?|foe2?)\}/g, (_, k: string) => names[k] ?? k)
+  return text.replace(/\{(me[234]?|foe[234]?)\}/g, (_, k: string) => names[k] ?? k)
 }
 
 function rankOf(score: number, total: number): { emoji: string; title: string } {
@@ -190,8 +190,12 @@ export function BattleQuizPage({ bugs }: Props) {
         names: {
           me: me[0]?.name ?? '',
           me2: me[1]?.name ?? '',
+          me3: me[2]?.name ?? '',
+          me4: me[3]?.name ?? '',
           foe: foe[0]?.name ?? '',
           foe2: foe[1]?.name ?? '',
+          foe3: foe[2]?.name ?? '',
+          foe4: foe[3]?.name ?? '',
         },
         scene: Math.floor(Math.random() * 6),
       }
@@ -366,6 +370,7 @@ export function BattleQuizPage({ bugs }: Props) {
   const foes = shownFighters.filter((x) => x.side === 'foe')
   const mine = shownFighters.filter((x) => x.side === 'me')
   const big = q.me.length === 1 && q.foe.length === 1
+  const many = q.me.length >= 3 || q.foe.length >= 3
 
   const slot = (f: Fighter) => (
     <div className="bq-slot" key={f.uid}>
@@ -379,7 +384,7 @@ export function BattleQuizPage({ bugs }: Props) {
         onTap={() => {}}
       />
       <span className="bq-spd">
-        💨 すばやさ {f.base.speed}
+        💨 {many ? '' : 'すばやさ '}{f.base.speed}
         {f.recharge > 0 && ' ・😵 うごけない'}
         {f.counterGuard && ' ・🦔 かまえ'}
         {f.regen && ' ・🌱 かいふく中'}
@@ -413,8 +418,8 @@ export function BattleQuizPage({ bugs }: Props) {
       </span>
 
       <div className="stage-scene stage2">
-        <div className="stage2-side foe">{foes.map(slot)}</div>
-        <div className="stage2-side me">{mine.map(slot)}</div>
+        <div className={`stage2-side foe n${foes.length}`}>{foes.map(slot)}</div>
+        <div className={`stage2-side me n${mine.length}`}>{mine.map(slot)}</div>
       </div>
 
       <div className="stage-bottom">

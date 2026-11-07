@@ -6,6 +6,7 @@
 //  ③マップを 1マスずつ すすむ → ④マスの虫と バトル
 //  ⑤ゴールで ステージクリア
 // =============================================================
+import { countHiki } from '../lib/format'
 import { useEffect, useRef, useState } from 'react'
 import type { CaughtBug } from '../types'
 import { mainPhoto } from '../lib/storage'
@@ -34,6 +35,10 @@ import {
   expForWin,
   expToNext,
   DOUBLE_ENCOUNTER_CHANCE,
+  TRIPLE_ENCOUNTER_CHANCE,
+  QUAD_ENCOUNTER_CHANCE,
+  MAX_COMPANIONS,
+  foeTeamOf,
   isCleared,
   isSeen,
   learnLevelCrossed,
@@ -264,7 +269,9 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   // 2ひき いっしょの であいで、「〇〇が なかまの 〇〇を つれてきた！」を 見せたか
   const [allyIntroShown, setAllyIntroShown] = useState(false)
   // むしかご：つれていく なかま（この バトルだけ）
-  const [companionId, setCompanionId] = useState<string | null>(null)
+  const [companionIds, setCompanionIds] = useState<string[]>([])
+  // 「なかまを つれていく？」で えらんでいる なかま
+  const [partySel, setPartySel] = useState<string[]>([])
   const [pendingCell, setPendingCell] = useState<StoryCell | null>(null)
   const [cageOpen, setCageOpen] = useState(false)
   // あるく がめん上部の 虫の なまえを タップした ときの、いまの ステータス表示
@@ -331,7 +338,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     setGoFlash(false)
     setCelebrations([])
     setRecruit(null)
-    setCompanionId(null)
+    setCompanionIds([])
     setPendingCell(null)
     setCageOpen(false)
     setNotice(null)
@@ -390,7 +397,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     const next = releaseFromCage(save, bugId)
     setSave(next)
     saveStory(next)
-    if (companionId === bugId) setCompanionId(null)
+    setCompanionIds((ids) => ids.filter((x) => x !== bugId))
     setNotice(b ? `👋 ${b.name} を にがして あげた。` : null)
   }
 
@@ -473,9 +480,21 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     const enemy = pool[Math.floor(Math.random() * pool.length)]
     const [encId] = assignEncounters([enemy.order], `f${Math.random()}`)
     const level = pickLevel()
-    // 大きい あるく マップ（つるせ）では、たまに 2匹いっしょに であう
-    const doubleUp = field.engine === 'world' && Math.random() < DOUBLE_ENCOUNTER_CHANCE
-    const ally = doubleUp ? pool[Math.floor(Math.random() * pool.length)] : null
+    // 大きい あるく マップ（つるせ）では、たまに 2〜4ひき いっしょに であう
+    const r = Math.random()
+    const groupSize =
+      field.engine !== 'world'
+        ? 1
+        : r < QUAD_ENCOUNTER_CHANCE
+          ? 4
+          : r < QUAD_ENCOUNTER_CHANCE + TRIPLE_ENCOUNTER_CHANCE
+            ? 3
+            : r < QUAD_ENCOUNTER_CHANCE + TRIPLE_ENCOUNTER_CHANCE + DOUBLE_ENCOUNTER_CHANCE
+              ? 2
+              : 1
+    const rand = () => pool[Math.floor(Math.random() * pool.length)]
+    const ally = groupSize >= 2 ? rand() : null
+    const moreAllies = Array.from({ length: Math.max(0, groupSize - 2) }, () => ({ bugId: rand().id, level: pickLevel() }))
     setEncounterCell({
       index: -1,
       kind: 'battle',
@@ -483,6 +502,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
       level,
       allyBugId: ally ? ally.id : undefined,
       allyLevel: ally ? pickLevel() : undefined,
+      moreAllies: moreAllies.length > 0 ? moreAllies : undefined,
       encounterId: encId,
       encounterMode: field.engine === 'world' && catchMode ? 'catch' : undefined,
       col: 0,
@@ -577,16 +597,21 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
   // ── むしかごに なかまが いれば、つれていくか きいてから バトル
   function beginBattle(cell: StoryCell) {
     if (cageOf(save).length === 0) {
-      startBattle(cell, null)
+      startBattle(cell, [])
       return
     }
+    // まえに つれていった なかま（いまも むしかごに いる虫）を はじめから えらんでおく。
+    // てきの かずより おおくは えらばない（なかまは さいだい 3びき）
+    const foeN = foeTeamOf(cell).length
+    const keep = Math.min(MAX_COMPANIONS, Math.max(0, foeN - 1))
+    setPartySel((save.lastCompanionIds ?? []).filter((id) => cageOf(save).includes(id)).slice(0, keep))
     setPendingCell(cell)
     setGoFlash(false)
     setPhase('party')
   }
 
   // ── バトルを はじめる
-  function startBattle(cell: StoryCell, companion: string | null) {
+  function startBattle(cell: StoryCell, companions: string[]) {
     if (!myBug || !stage || !cell.bugId) return
     const enemy = bugs.find((b) => b.id === cell.bugId)
     if (!enemy) return
@@ -595,27 +620,27 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     const mine: Fighter[] = [
       makeFighter(myBug, statsFor(myBug, myLv), 'me0', 'me', mainPhoto(myBug)),
     ]
-    const buddy = companion ? bugs.find((x) => x.id === companion) : null
-    if (buddy) {
+    const buddies = companions
+      .map((id) => bugs.find((x) => x.id === id))
+      .filter((b): b is CaughtBug => !!b)
+      .slice(0, MAX_COMPANIONS)
+    buddies.forEach((buddy, i) => {
       mine.push(
-        makeFighter(buddy, statsFor(buddy, levelOf(save, buddy.id).level), 'me1', 'me', mainPhoto(buddy)),
+        makeFighter(buddy, statsFor(buddy, levelOf(save, buddy.id).level), `me${i + 1}`, 'me', mainPhoto(buddy)),
       )
-    }
-    // てき（さきの ステージでは なかまを つれてくる）
-    const foes: Fighter[] = [
-      makeFighter(enemy, statsFor(enemy, cell.level ?? 1), 'foe0', 'foe', mainPhoto(enemy)),
-    ]
-    const foeAlly = cell.allyBugId ? bugs.find((b) => b.id === cell.allyBugId) : null
-    if (foeAlly) {
-      foes.push(
-        makeFighter(foeAlly, statsFor(foeAlly, cell.allyLevel ?? 1), 'foe1', 'foe', mainPhoto(foeAlly)),
-      )
-    }
+    })
+    // てき（さきの ステージでは なかまを つれてくる。さいだい 4ひき）
+    const foes: Fighter[] = []
+    foeTeamOf(cell).forEach((t, i) => {
+      const b = bugs.find((x) => x.id === t.bugId)
+      if (b) foes.push(makeFighter(b, statsFor(b, t.level), `foe${i}`, 'foe', mainPhoto(b)))
+    })
     setFighters([...mine, ...foes])
-    setCompanionId(companion)
-    // 直近 つれていった なかまを おぼえておく（つぎの「つれていく？」で ひだり はしに 出す）
-    if (companion && companion !== save.lastCompanionId) {
-      const nextSave = { ...save, lastCompanionId: companion }
+    setCompanionIds(buddies.map((b) => b.id))
+    // 直近 つれていった なかまを おぼえておく（つぎの「つれていく？」で はじめから えらんでおく）
+    const ids = buddies.map((b) => b.id)
+    if (ids.length > 0 && ids.join() !== (save.lastCompanionIds ?? []).join()) {
+      const nextSave = { ...save, lastCompanionIds: ids, lastCompanionId: ids[0] }
       setSave(nextSave)
       saveStory(nextSave)
     }
@@ -641,7 +666,12 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
         const lv = levelOf(next, myBug.id).level
         const gain = Math.max(
           1,
-          Math.round(expForWin(enemy, lv, battleCell.level ?? 1) * (first ? 1 : 0.5)),
+          // てきが おおいほど すこし おおめ（1ぴき ふえる ごとに +25%）
+          Math.round(
+            expForWin(enemy, lv, battleCell.level ?? 1) *
+              (first ? 1 : 0.5) *
+              (1 + 0.25 * (foeTeamOf(battleCell).length - 1)),
+          ),
         )
         const res = addExp(next, myBug.id, gain)
         next = res.save
@@ -654,8 +684,7 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
         })
         queue.push(...celebrationsFor(myBug, res, next, false))
         // つれていった なかまにも おなじ けいけんち。レベルアップも わざも おなじように 見せる
-        const buddy = companionId ? bugs.find((x) => x.id === companionId) : null
-        if (buddy) {
+        for (const buddy of companionIds.map((id) => bugs.find((x) => x.id === id)).filter((b): b is CaughtBug => !!b)) {
           const pr = addExp(next, buddy.id, gain)
           next = pr.save
           bars.push({
@@ -1436,16 +1465,31 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     const enc = findEncounter(encounterCell.encounterId)
     const lv = encounterCell.level ?? 1
     // 2ひき いっしょの であいなら、バトルの まえに「なかまを つれてきた」を 1回 見せる
-    const allyBug = encounterCell.allyBugId ? bugs.find((b) => b.id === encounterCell.allyBugId) : null
+    const allyBugs = foeTeamOf(encounterCell)
+      .slice(1)
+      .map((t) => bugs.find((b) => b.id === t.bugId))
+      .filter((b): b is CaughtBug => !!b)
+    const allyBug = allyBugs[0] ?? null
     const allyIntroModal = allyBug && enemy && !allyIntroShown && (
       <div className="modal-backdrop">
         <div className="modal story-recruit" onClick={(e) => e.stopPropagation()}>
           <div className="story-levelup-emoji">👥</div>
-          <img className="story-recruit-photo" src={mainPhoto(allyBug)} alt={allyBug.name} />
+          <div className="story-recruit-photos">
+            {allyBugs.map((b, i) => (
+              <img key={i} className="story-recruit-photo" src={mainPhoto(b)} alt={b.name} />
+            ))}
+          </div>
           <p className="story-recruit-text">
-            <b>{enemy.name}</b> が なかまの <b>{allyBug.name}</b> を つれてきた！
+            <b>{enemy.name}</b> が なかまの{' '}
+            {allyBugs.map((b, i) => (
+              <span key={i}>
+                {i > 0 && '・'}
+                <b>{b.name}</b>
+              </span>
+            ))}{' '}
+            を つれてきた！
           </p>
-          <p className="story-recruit-sub">2ひき いっしょに たたかう ことに なるよ。</p>
+          <p className="story-recruit-sub">{countHiki(allyBugs.length + 1)} いっしょに たたかう ことに なるよ。</p>
           <div className="battle-result-actions">
             <button
               className="btn btn-big btn-primary"
@@ -1467,7 +1511,12 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
         <div className="story-enc-inner">
           <div className="story-enc-emoji">{enc?.emoji ?? '❗'}</div>
           <p className="story-enc-text">
-            {enc && enemy ? enc.text(enemy.name) : 'てきが あらわれた！'}
+            {enc && enemy
+              ? // 「なかまを よんだが だれも こない」は、なかまが いる ときには つかわない
+                enc.id === 'x46' && allyBugs.length > 0
+                ? `${enemy.name} が おおきな おとを だして なかまを よんだ。すると なかまが かけつけてきた！`
+                : enc.text(enemy.name)
+              : 'てきが あらわれた！'}
           </p>
           {enemy && (
             <div className="story-enc-bug">
@@ -1555,43 +1604,68 @@ export function StoryPage({ bugs, onGoCapture }: Props) {
     ) : null
   }
 
-  // ③.7 なかまを つれていく？
+  // ③.7 なかまを つれていく？（さいだい 3びき）
   if (phase === 'party' && stage && pendingCell) {
-    const enemy = bugs.find((b) => b.id === pendingCell.bugId)
-    const foeAlly = pendingCell.allyBugId ? bugs.find((b) => b.id === pendingCell.allyBugId) : null
-    // 直近 つれていった なかまを、いちばん ひだりに
-    const partyList = save.lastCompanionId
-      ? [...cageList].sort((a, b) =>
-          a.id === save.lastCompanionId ? -1 : b.id === save.lastCompanionId ? 1 : 0,
-        )
-      : cageList
-    const start = (id: string | null) => {
+    const foeTeam = foeTeamOf(pendingCell)
+      .map((t) => ({ bug: bugs.find((b) => b.id === t.bugId), level: t.level }))
+      .filter((t): t is { bug: CaughtBug; level: number } => !!t.bug)
+    // 直近 つれていった なかまを、ひだりに
+    const recent = save.lastCompanionIds ?? []
+    const rank = (id: string) => (recent.includes(id) ? recent.indexOf(id) : 99)
+    const partyList = [...cageList].sort((a, b) => rank(a.id) - rank(b.id))
+    const toggle = (id: string) => {
+      sfx.tap()
+      setPartySel((cur) =>
+        cur.includes(id) ? cur.filter((x) => x !== id) : cur.length >= MAX_COMPANIONS ? cur : [...cur, id],
+      )
+    }
+    const start = (ids: string[]) => {
       if (goFlash) return
       setGoFlash(true)
       sfx.battleStart()
-      window.setTimeout(() => startBattle(pendingCell, id), 950)
+      window.setTimeout(() => startBattle(pendingCell, ids), 950)
     }
     return (
       <div className="story-encounter">
         <ParkScene index={stage.sceneIndex} />
         <div className="story-enc-inner">
           <p className="story-party-foe">
-            あいて：<b>{enemy?.name}</b>
-            {(pendingCell.level ?? 1) > 1 && ` Lv${pendingCell.level}`}
-            {foeAlly && <> と <b>{foeAlly.name}</b></>}
-          </p>
-          <h3 className="story-party-title">なかまを つれていく？</h3>
-          <div className="story-party-list">
-            {partyList.map((b) => (
-              <button key={b.id} className="story-party-pick" onClick={() => start(b.id)}>
-                <img src={mainPhoto(b)} alt={b.name} />
-                <span className="story-party-name">{b.name}</span>
-                <span className="story-party-lv">Lv {levelOf(save, b.id).level}</span>
-              </button>
+            あいて（{countHiki(foeTeam.length)}）：
+            {foeTeam.map((t, i) => (
+              <span key={i}>
+                {i > 0 && '・'}
+                <b>{t.bug.name}</b>
+                {t.level > 1 && ` Lv${t.level}`}
+              </span>
             ))}
+          </p>
+          <h3 className="story-party-title">
+            なかまを つれていく？ <small>（さいだい {MAX_COMPANIONS}びき）</small>
+          </h3>
+          <div className="story-party-list">
+            {partyList.map((b) => {
+              const on = partySel.includes(b.id)
+              return (
+                <button
+                  key={b.id}
+                  className={'story-party-pick' + (on ? ' on' : '')}
+                  aria-pressed={on}
+                  disabled={!on && partySel.length >= MAX_COMPANIONS}
+                  onClick={() => toggle(b.id)}
+                >
+                  {on && <span className="story-party-check">✓</span>}
+                  <img src={mainPhoto(b)} alt={b.name} />
+                  <span className="story-party-name">{b.name}</span>
+                  <span className="story-party-lv">Lv {levelOf(save, b.id).level}</span>
+                </button>
+              )
+            })}
           </div>
-          <button className="btn btn-big btn-primary story-enc-go" onClick={() => start(null)}>
-            ひとりで いく 🐛
+          <p className="story-party-count">
+            {'🐛'.repeat(1 + partySel.length)} <b>VS</b> {'🐛'.repeat(foeTeam.length)}
+          </p>
+          <button className="btn btn-big btn-primary story-enc-go" onClick={() => start(partySel)}>
+            {partySel.length === 0 ? 'ひとりで いく 🐛' : `${countHiki(partySel.length + 1)}で いく ⚔️`}
           </button>
           <button
             className="btn btn-ghost battle-back"

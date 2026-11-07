@@ -1,11 +1,12 @@
 // =============================================================
-//  つうしんバトル（インターネットごしに 1たい1／2たい2）
+//  つうしんバトル（インターネットごしに 1〜4ひき ずつ）
 // -------------------------------------------------------------
 //  ・ストーリーモードで そだてた 虫を 1ぴき えらんで もっていく
 //    （すきな なかまを もう1ぴき つれていくことも できる）
 //  ・「部屋を つくる」→ あいことば（えいごの ことば）が 出る → もう片方が それを 入れて 参加
 //  ・field の けいさんは 部屋を つくった がわ（ホスト）だけが する
 // =============================================================
+import { countHiki } from '../lib/format'
 import { useEffect, useRef, useState } from 'react'
 import type { CaughtBug, SpecialMoveV2 } from '../types'
 import { mainPhoto } from '../lib/storage'
@@ -22,6 +23,7 @@ import {
   type Role,
   type RoomState,
   type Team,
+  NET_TEAM_MAX,
 } from '../lib/netBattle'
 import { sfx } from '../lib/sound'
 import { moveSummary } from '../lib/moveLibrary'
@@ -92,7 +94,7 @@ export function NetBattlePage({ bugs }: Props) {
   const [save] = useState<StorySave>(() => loadStory())
   const [phase, setPhase] = useState<Phase>('pickBug')
   const [myBug, setMyBug] = useState<CaughtBug | null>(null)
-  const [ally, setAlly] = useState<CaughtBug | null>(null)
+  const [allies, setAllies] = useState<CaughtBug[]>([])
   const [name, setName] = useState<string>(() => loadSavedName())
   const [codeInput, setCodeInput] = useState('')
   const [code, setCode] = useState<string | null>(null)
@@ -112,20 +114,22 @@ export function NetBattlePage({ bugs }: Props) {
   function pickBug(b: CaughtBug) {
     sfx.tap()
     setMyBug(b)
-    setAlly(null)
+    setAllies([])
     setPhase(bugs.length > 1 ? 'askAlly' : 'name')
   }
 
+  // なかまは さいだい 3びき（じぶん＋3＝4ひき）
   function pickAlly(b: CaughtBug) {
     sfx.tap()
-    setAlly(b)
-    setPhase('name')
+    const next = [...allies, b]
+    setAllies(next)
+    if (next.length >= NET_TEAM_MAX - 1 || bugs.length <= next.length + 1) setPhase('name')
   }
 
   function buildTeam(): Team {
     if (!myBug) return []
     const team = [buildSnapshot(myBug, save)]
-    if (ally) team.push(buildSnapshot(ally, save))
+    for (const a of allies) team.push(buildSnapshot(a, save))
     return team
   }
 
@@ -240,7 +244,7 @@ export function NetBattlePage({ bugs }: Props) {
       <div className="story net-battle-menu">
         <h2 className="battle-step-title">② なかまも つれていく？</h2>
         <p className="story-lead">
-          <b>{myBug?.name}</b> だけで いくか、すきな なかまを もう1ぴき つれていくか えらんでね。
+          <b>{myBug?.name}</b> だけで いくか、すきな なかまを つれていくか えらんでね（さいだい 3びき）。
         </p>
         <div className="net-battle-menu-actions">
           <button className="btn btn-big btn-primary" onClick={() => setPhase('pickAlly')}>
@@ -250,7 +254,7 @@ export function NetBattlePage({ bugs }: Props) {
             className="btn btn-big"
             onClick={() => {
               sfx.tap()
-              setAlly(null)
+              setAllies([])
               setPhase('name')
             }}
           >
@@ -267,17 +271,25 @@ export function NetBattlePage({ bugs }: Props) {
   if (phase === 'pickAlly') {
     return (
       <div className="story">
-        <h2 className="battle-step-title">なかまを えらぼう</h2>
+        <h2 className="battle-step-title">
+          なかまを えらぼう（{countHiki(allies.length + 1)}め ／ さいだい {countHiki(NET_TEAM_MAX - 1)}）
+        </h2>
         <p className="story-lead">
-          <b>{myBug?.name}</b> と いっしょに たたかう、すきな なかまを 1ぴき えらんでね。
+          <b>{[myBug?.name, ...allies.map((a) => a.name)].filter(Boolean).join('・')}</b> と いっしょに たたかう なかまを えらんでね。
         </p>
+        {allies.length > 0 && (
+          <button className="btn btn-big btn-primary" onClick={() => { sfx.tap(); setPhase('name') }}>
+            この {countHiki(allies.length + 1)}で いく ▶
+          </button>
+        )}
         <BugPicker
-          bugs={bugs.filter((b) => b.id !== myBug?.id)}
+          key={`ally-${allies.length}`}
+          bugs={bugs.filter((b) => b.id !== myBug?.id && !allies.some((a) => a.id === b.id))}
           onPick={pickAlly}
           renderCard={(b) => bugCard(save, b, setMovesViewBug)}
         />
         {movesViewModal}
-        <button className="btn btn-ghost battle-back" onClick={() => setPhase('askAlly')}>
+        <button className="btn btn-ghost battle-back" onClick={() => { setAllies([]); setPhase('askAlly') }}>
           ← もどる
         </button>
       </div>
@@ -289,7 +301,7 @@ export function NetBattlePage({ bugs }: Props) {
       <div className="story net-battle-menu">
         <h2 className="battle-step-title">③ あなたの なまえ</h2>
         <p className="story-lead">
-          <b>{[myBug?.name, ally?.name].filter(Boolean).join('・')}</b> を つれて いくよ！
+          <b>{[myBug?.name, ...allies.map((a) => a.name)].filter(Boolean).join('・')}</b> を つれて いくよ！
         </p>
         <input
           className="net-battle-input"

@@ -64,8 +64,7 @@ export const LOCK_TREE: { label: string; groups: LockGroup[] }[] = [
       {
         label: 'バトル',
         leaves: [
-          { key: 'battle1', label: '1たい1' },
-          { key: 'battle2', label: '2たい2' },
+          { key: 'battle', label: 'むしバトル（1〜4ひき）' },
           { key: 'net', label: 'つうしんバトル' },
           { key: 'battleOld', label: 'まえのばん' },
         ],
@@ -99,7 +98,12 @@ export function loadLock(): LockConfig {
     if (!raw || typeof raw !== 'object') return { ...DEFAULT_LOCK }
     return {
       enabled: !!raw.enabled,
-      items: Array.isArray(raw.items) ? raw.items.filter((k: unknown) => ALL_LOCK_KEYS.includes(k as string)) : [],
+      // まえの「1たい1」「2たい2」は「むしバトル」に まとめた
+      items: Array.isArray(raw.items)
+        ? [...new Set((raw.items as unknown[]).map((k) => (k === 'battle1' || k === 'battle2' ? 'battle' : k)))].filter(
+            (k): k is string => ALL_LOCK_KEYS.includes(k as string),
+          )
+        : [],
       dailyMinutes: typeof raw.dailyMinutes === 'number' && raw.dailyMinutes > 0 ? raw.dailyMinutes : null,
       weekDays: typeof raw.weekDays === 'number' && raw.weekDays > 0 ? Math.min(7, raw.weekDays) : null,
     }

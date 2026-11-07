@@ -30,6 +30,7 @@ export interface StoryCell {
   level?: number // 敵の レベル（10マップモードで 1より 大きくなる）
   allyBugId?: string // さきの ステージでは 敵が なかまを つれてくる
   allyLevel?: number
+  moreAllies?: { bugId: string; level: number }[] // 3びきめ・4ひきめの てき（さきの ステージ）
   encounterId?: string // であいの おはなし（マップの中で かぶらない）
   encounterMode?: 'catch' // つるせMAPの「むしとりモード」で であった ときだけ 'catch'
   col: number
@@ -225,25 +226,51 @@ export function buildQuestStage(bugs: CaughtBug[], index: number): StoryStage {
     if (at === leaderAt && n > 1) at = at > 0 ? at - 1 : at + 1
     return at
   }
+  // 3びきめ・4ひきめの てき（さきの ステージほど おおい。ボスは さきに ふえる）
+  const extraCount = (i: number) => {
+    const boss = i === QUEST_PER_MAP - 1
+    const odd = i % 2 === 1
+    let k = 0
+    if (index >= 19 || (index >= 15 && odd) || (index >= 11 && boss)) k = 1 // 3びき
+    if (index >= 25 || (index >= 21 && odd) || (index >= 15 && boss)) k = 2 // 4ひき
+    return k
+  }
   const kinds: {
     kind: CellKind
     bugId?: string
     level?: number
     allyBugId?: string
     allyLevel?: number
+    moreAllies?: { bugId: string; level: number }[]
     encounterId?: string
   }[] = [
     { kind: 'start' },
     ...picks.map((p, i) => {
       const leaderAt = n <= QUEST_PER_MAP ? i % n : Math.max(0, Math.min(n - 1, start + i))
       const ally = hasAlly(i) ? sorted[allyAt(i, leaderAt)] : undefined
+      const allyLevel = Math.max(1, p.level - (index >= LATE_FROM ? 0 : 1))
+      // 3びきめ いこうは、リーダー・なかまと かぶらない 虫を となりから えらぶ（虫が すくなければ かぶっても よい）
+      const used = new Set([p.bug.id, ally?.id])
+      const more: { bugId: string; level: number }[] = []
+      const k = ally ? extraCount(i) : 0
+      const base = allyAt(i, leaderAt)
+      for (let d = 1; more.length < k && d < n; d++) {
+        for (const at of [base - d, base + d]) {
+          if (more.length >= k || at < 0 || at >= n || used.has(sorted[at].id)) continue
+          used.add(sorted[at].id)
+          more.push({ bugId: sorted[at].id, level: allyLevel })
+        }
+      }
+      // 虫が すくなくて たりない ときは、おなじ虫が もう1ぴき 出る
+      while (more.length < k && n > 0) more.push({ bugId: sorted[(leaderAt + more.length + 1) % n].id, level: allyLevel })
       return {
         kind: 'battle' as const,
         bugId: p.bug.id,
         level: p.level,
         allyBugId: ally && ally.id !== p.bug.id ? ally.id : undefined,
         // ステージ21〜：なかまも リーダーと おなじ レベル
-        allyLevel: Math.max(1, p.level - (index >= LATE_FROM ? 0 : 1)),
+        allyLevel,
+        moreAllies: more.length > 0 ? more : undefined,
         encounterId: stories[i],
       }
     }),
@@ -263,6 +290,7 @@ export function buildQuestStage(bugs: CaughtBug[], index: number): StoryStage {
       level: k.level,
       allyBugId: k.allyBugId,
       allyLevel: k.allyLevel,
+      moreAllies: k.moreAllies,
       encounterId: k.encounterId,
       col,
       row,
@@ -324,6 +352,7 @@ export interface StorySave {
   party?: Record<string, string[]> // （ふるい形）マップごとの なかま
   cage?: string[] // むしかご：なかまに した虫の ID（ずっと のこる）
   trained?: Record<string, Record<string, TrainSteps>> // 虫のID → わざのID → わざ道場で きたえた かいすう
+  lastCompanionIds?: string[] // 直近 つれていった なかまたち（さいだい3びき）
   lastCompanionId?: string // 直近 バトルに つれていった なかまの ID（つれていく？ がめんの ひだり はしに 出す）
 }
 
@@ -375,6 +404,11 @@ export function loadStory(): StorySave {
         Array.from(new Set(Object.values(d.party ?? {}).flat())),
       trained: d.trained ?? {},
       lastCompanionId: typeof d.lastCompanionId === 'string' ? d.lastCompanionId : undefined,
+      lastCompanionIds: Array.isArray(d.lastCompanionIds)
+        ? d.lastCompanionIds.filter((x: unknown) => typeof x === 'string').slice(0, 3)
+        : typeof d.lastCompanionId === 'string'
+          ? [d.lastCompanionId]
+          : undefined,
     }
   } catch {
     return emptySave()
@@ -656,6 +690,20 @@ export const RECRUIT_CHANCE = 0.25 // たおした あと なかまに なりた
 
 // 大きい あるく マップ（つるせ など）で、1ぴきだけでなく 2ひき いっしょに であう かくりつ
 export const DOUBLE_ENCOUNTER_CHANCE = 0.25
+// おなじく 3びき／4ひき いっしょに であう かくりつ（DOUBLE と べつに）
+export const TRIPLE_ENCOUNTER_CHANCE = 0.08
+export const QUAD_ENCOUNTER_CHANCE = 0.04
+// つれていける なかまの かず（じぶん＋なかま3びき＝4ひき）
+export const MAX_COMPANIONS = 3
+
+// てきの チーム（リーダー・なかま・3びきめ いこう）
+export function foeTeamOf(cell: StoryCell): { bugId: string; level: number }[] {
+  if (!cell.bugId) return []
+  const team = [{ bugId: cell.bugId, level: cell.level ?? 1 }]
+  if (cell.allyBugId) team.push({ bugId: cell.allyBugId, level: cell.allyLevel ?? 1 })
+  for (const m of cell.moreAllies ?? []) team.push(m)
+  return team
+}
 
 // むしかごの なかま（ずっと のこる）
 export function cageOf(save: StorySave): string[] {

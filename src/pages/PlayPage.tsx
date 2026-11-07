@@ -22,7 +22,7 @@ interface Props {
 // 画面（Game）→ チャイルドロックの 項目キー（メニューは null）
 const LOCK_KEY: Partial<Record<string, string>> = {
   quiz: 'quiz', battleQuiz: 'battleQuiz', story: 'story', dojo: 'dojo', dojoAdult: 'dojoAdult',
-  battle1: 'battle1', battle2: 'battle2', battleOld: 'battleOld', net: 'net', race: 'race', raceOld: 'raceOld',
+  battle: 'battle', battleOld: 'battleOld', net: 'net', race: 'race', raceOld: 'raceOld',
 }
 
 // ゲーム → クイズ／ストーリー（ストーリーモード／わざ道場）／バトル／レース。
@@ -37,8 +37,7 @@ type Game =
   | 'dojo'
   | 'dojoAdult'
   | 'battleMenu'
-  | 'battle1'
-  | 'battle2'
+  | 'battle'
   | 'battleOld'
   | 'net'
   | 'race'
@@ -173,24 +172,16 @@ export function PlayPage({ bugs, onGoCapture, onActiveChange, resetSignal }: Pro
 
   // バトルの メニュー
   if (game === 'battleMenu') {
-    const canTwo = bugs.length >= 4
     return frame(
       null,
       'ゲーム',
       header('⚔️ バトル', 'どの バトルを する？'),
       <>
         <div className="game-menu">
-          <button className="game-card battle" onClick={() => go('battle1')}>
+          <button className="game-card battle" onClick={() => go('battle')}>
             <span className="game-emoji vs">🐛 VS 🐛</span>
-            <span className="game-title">1たい1</span>
-            <span className="game-desc">1ぴきずつ たたかう</span>
-          </button>
-          <button className="game-card battle" disabled={!canTwo} onClick={() => go('battle2')}>
-            <span className="game-emoji vs">🐛🐛 VS 🐛🐛</span>
-            <span className="game-title">2たい2</span>
-            <span className="game-desc">
-              {canTwo ? '2ひきずつ チームで たたかう' : '虫が 4ひき あつまったら できるよ'}
-            </span>
+            <span className="game-title">むしバトル</span>
+            <span className="game-desc">1ぴき〜4ひきずつ。かずは じぶんで きめられる</span>
           </button>
           <button className="game-card battle" onClick={() => go('net')}>
             <span className="game-emoji">📡</span>
@@ -206,21 +197,12 @@ export function PlayPage({ bugs, onGoCapture, onActiveChange, resetSignal }: Pro
     )
   }
 
-  if (game === 'battle1') {
+  if (game === 'battle') {
     return frame(
       'battleMenu',
       'バトル',
-      header('⚔️ むしバトル 1たい1', 'わざ3つ・すばやさ・じょうたいいじょう つき！'),
-      <BattlePage2 key="b1" mode={1} bugs={bugs} onGoCapture={onGoCapture} />,
-    )
-  }
-
-  if (game === 'battle2') {
-    return frame(
-      'battleMenu',
-      'バトル',
-      header('⚔️ むしバトル 2たい2', 'わざ3つ・すばやさ・じょうたいいじょう つき！'),
-      <BattlePage2 key="b2" mode={2} bugs={bugs} onGoCapture={onGoCapture} />,
+      header('⚔️ むしバトル', 'さいだい 4たい4！ わざ3つ・すばやさ・じょうたいいじょう つき'),
+      <BattlePage2 bugs={bugs} onGoCapture={onGoCapture} />,
     )
   }
 
@@ -285,7 +267,7 @@ export function PlayPage({ bugs, onGoCapture, onActiveChange, resetSignal }: Pro
         <button className="game-card battle" onClick={() => go('battleMenu')}>
           <span className="game-emoji">⚔️</span>
           <span className="game-title">バトル</span>
-          <span className="game-desc">1たい1／2たい2／つうしんバトル</span>
+          <span className="game-desc">さいだい 4たい4／つうしんバトル</span>
         </button>
         <button className="game-card race" onClick={() => go('race')}>
           <span className="game-emoji">🏁</span>
