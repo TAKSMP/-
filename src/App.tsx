@@ -19,6 +19,8 @@ import { PlayPage } from './pages/PlayPage'
 import { MissionPage } from './pages/MissionPage'
 import { SettingsModal } from './components/SettingsModal'
 import { sfx } from './lib/sound'
+import { PointsButton } from './components/PointsButton'
+import { notifyPointsChanged } from './lib/points'
 import { ChildLockLayer } from './components/ChildLockLayer'
 import { guardLock, lockReasonFor } from './lib/childLock'
 
@@ -128,10 +130,13 @@ export default function App() {
   function handleDataRestored(restored: CaughtBug[]) {
     setBugs(restored)
     setDataVersion((version) => version + 1)
+    notifyPointsChanged()
   }
 
   return (
     <div className={`app design-${designTheme}`}>
+      {/* 虫ポイント（せっていの ひだり）。おすと もっている ポイントが 出る */}
+      {(designTheme !== 'forest' || (tab === 'quiz' && !forestHomeOpen)) && <PointsButton />}
       {(designTheme !== 'forest' || (tab === 'quiz' && !forestHomeOpen)) && (
         <button
           className="settings-fab"
@@ -150,6 +155,7 @@ export default function App() {
         <section className="forest-home" aria-label="ちょうむし ホーム">
           <img src={forestHome} alt="ちょうむし 森のホーム画面" className="forest-home-art" draggable={false} />
           <button className="forest-home-settings" aria-label="せってい" onClick={() => setSettingsOpen(true)}>⚙</button>
+          <PointsButton variant="home" />
           {([
             ['capture', 'しらべる', 'left top'],
             ['zukan', 'ずかん', 'right top'],

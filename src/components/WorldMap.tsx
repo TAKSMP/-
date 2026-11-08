@@ -11,6 +11,8 @@
 //  （固定ボタンでは なく viewer.js がわで はんてい。くわしくは そちらの コメントを）
 //  ちょうちょアメ：ひろうと 100びょう アサギマダラに なって そらを とぶ（たてものも こえられる）。
 //  トンボあめ：ひろうと ギンヤンマ（100びょう・ダッシュが ちょうちょの 5ばい）か ウスバキトンボ（200びょう）に なって とぶ。
+//  もちもの（ちょうむしショップで かう）：🎒 ボタンから チョウチョちゃんあめ・トンボあめを すきな ときに つかう
+//  （ひろった ときと おなじ こうか）。
 //  ひだりうえ…では なく みぎうえに、全体地図の 縮小版（ミニマップ）と いまいる ばしょを 出す。
 //  ちょうちょちゃんビル：たてものが 1つ ひかっていて、さわると onBuildingReach（レベルを 3かい あげられる）。
 //  とんでいる あいだは むしに であわない。じかんぎれで いちばん ちかい 道に おりる。
@@ -27,6 +29,7 @@ import { loadIllustratedMap, type ArtBackground, type ArtManifest } from '../fie
 import '../fields/world/viewer.css'
 import { boySheetUrl, drawBoySprite, loadImage } from '../fields/boySprite'
 import { encounterDistance } from '../lib/encounter'
+import { usePoints, consumeItem, type ItemId } from '../lib/points'
 import {
   FLY_INFO,
   NORMAL_DASH_MULT,
@@ -264,6 +267,9 @@ export function WorldMap({
   // がめんに 出す のこり びょう（1びょうごとに だけ こうしんする）
   const [flySec, setFlySec] = useState(0)
   const [landedNote, setLandedNote] = useState(false)
+  // もちもの（ショップで かった あめ）
+  const wallet = usePoints()
+  const [bagOpen, setBagOpen] = useState(false)
   // 全体地図の 縮小版（ミニマップ）：あるいている あいだ みぎうえに 出す。いまいる ばしょは ref で まいフレーム うごかす
   const [miniMap, setMiniMap] = useState<{ src: string; aspect: number } | null>(null)
   const miniDotRef = useRef<HTMLSpanElement | null>(null)
@@ -288,6 +294,25 @@ export function WorldMap({
   candiesRef.current = candies
   onCandyPickRef.current = onCandyPick
   onBuildingReachRef.current = onBuildingReach
+
+  // そらを とびはじめる（ひろった ちょうちょアメ・トンボあめ、もちものの あめ）。
+  // とんでいる とちゅうでも あたらしい ほうに かわる
+  function startFlight(kind: FlyKind) {
+    flyKindRef.current = kind
+    setFlyKind(kind)
+    flyRemainMs.current = FLY_INFO[kind].sec * 1000
+    engine.current?.setFlying(true)
+    engine.current?.setDashMult(FLY_INFO[kind].dash) // ギンヤンマは ダッシュが 5ばい
+    setFlySec(FLY_INFO[kind].sec)
+    setLandedNote(false)
+  }
+
+  // もちものの あめを つかう（ひろった ときと おなじ こうか）
+  function applyBagItem(id: ItemId) {
+    if (!consumeItem(id)) return
+    setBagOpen(false)
+    startFlight(id === 'dragonflyCandy' ? rollDragonflyKind() : rollFlyKind())
+  }
 
   function toggleOverview() {
     const next = !overview
@@ -526,14 +551,7 @@ export function WorldMap({
                 setCandies(next)
                 if (isButterfly(c) || isDragonfly(c)) {
                   // ちょうちょアメ・トンボあめ：その ばで そらへ（とんでいる とちゅうでも あたらしい ほうに かわる）
-                  const kind = isDragonfly(c) ? rollDragonflyKind() : rollFlyKind()
-                  flyKindRef.current = kind
-                  setFlyKind(kind)
-                  flyRemainMs.current = FLY_INFO[kind].sec * 1000
-                  engine.current?.setFlying(true)
-                  engine.current?.setDashMult(FLY_INFO[kind].dash) // ギンヤンマは ダッシュが 5ばい
-                  setFlySec(FLY_INFO[kind].sec)
-                  setLandedNote(false)
+                  startFlight(isDragonfly(c) ? rollDragonflyKind() : rollFlyKind())
                 } else {
                   onCandyPickRef.current?.(c.id)
                 }
@@ -729,6 +747,39 @@ export function WorldMap({
         </div>
       )}
       {landedNote && !overview && <div className="butterfly-landed">🌿 じめんに おりたよ</div>}
+      {/* もちもの：ショップで かった あめを すきな ときに つかう（とんでいない ときだけ） */}
+      {!overview && !paused && flySec === 0 &&
+        (wallet.items.butterflyCandy > 0 || wallet.items.dragonflyCandy > 0) && (
+          <button
+            type="button"
+            className={'world-bag-btn' + (bagOpen ? ' on' : '')}
+            onClick={() => setBagOpen((v) => !v)}
+          >
+            🎒 もちもの
+          </button>
+        )}
+      {bagOpen && !overview && !paused && flySec === 0 && (
+        <div className="world-bag">
+          <button
+            type="button"
+            disabled={wallet.items.butterflyCandy <= 0}
+            onClick={() => applyBagItem('butterflyCandy')}
+          >
+            <span>🦋</span>
+            <b>チョウチョちゃんあめ</b>
+            <small>×{wallet.items.butterflyCandy}</small>
+          </button>
+          <button
+            type="button"
+            disabled={wallet.items.dragonflyCandy <= 0}
+            onClick={() => applyBagItem('dragonflyCandy')}
+          >
+            <span>🍭</span>
+            <b>トンボあめ</b>
+            <small>×{wallet.items.dragonflyCandy}</small>
+          </button>
+        </div>
+      )}
       {/* OpenStreetMap の 地図データを つかっているので、ひょうじが ひつよう */}
       <a
         className="world-attribution"

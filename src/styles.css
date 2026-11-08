@@ -1584,6 +1584,174 @@ input:focus {
   color: #8a9a7a;
   text-shadow: none;
 }
+/* =========================================================
+   昆虫検定（初級・中級）
+   ========================================================= */
+.game-card.kentei {
+  background: linear-gradient(160deg, #e3f3e6, #b9e0c2);
+}
+.kentei-levels {
+  display: grid;
+  gap: 16px;
+}
+.game-card.kentei-level.beginner {
+  background: linear-gradient(160deg, #e3f3e6, #a8d8b4);
+}
+.game-card.kentei-level.intermediate {
+  background: linear-gradient(160deg, #ddf0f7, #9fd2e6);
+}
+.kentei-level-count {
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #4d6a52;
+  background: rgba(255, 255, 255, 0.6);
+  padding: 3px 12px;
+  border-radius: 999px;
+}
+.kentei-card {
+  text-align: left;
+}
+.kentei-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.kentei-tag {
+  font-size: 12px;
+  font-weight: 800;
+  color: #5d6d52;
+  background: #eef3e8;
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+.kentei-tag.lv.beginner {
+  background: #2f6b45;
+  color: #fff;
+}
+.kentei-tag.lv.intermediate {
+  background: #1f7193;
+  color: #fff;
+}
+.kentei-no {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 800;
+  color: #8a9a7a;
+}
+.kentei-question {
+  font-size: 19px;
+  line-height: 1.6;
+  color: var(--green-deep);
+  margin: 0;
+}
+/* 選択肢は長いカタカナ名があるので 1 列・左寄せ・折り返しあり */
+.kentei-options {
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+.quiz-option.kentei-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  text-align: left;
+  font-size: 16px;
+  line-height: 1.4;
+}
+.kentei-num {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: #a08a3c;
+  color: #fff;
+  font-weight: 900;
+}
+.kentei-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.kentei-mark {
+  flex: none;
+}
+/* こたえた後の自動スクロールで、下のタブバーに「つぎへ」が隠れないように */
+.kentei .quiz-feedback {
+  scroll-margin-bottom: 110px;
+}
+.kentei-explain {
+  text-align: left;
+  font-size: 14px;
+  line-height: 1.75;
+  color: #4f5d45;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-top: 10px !important;
+}
+.kentei-done-level {
+  margin: 6px 0 0;
+  font-weight: 800;
+  color: #8a9a7a;
+}
+.kentei-done-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.kentei-review {
+  margin-top: 16px;
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 18px 16px;
+  box-shadow: var(--shadow);
+}
+.kentei-review h3 {
+  margin: 0 0 10px;
+  color: var(--green-deep);
+}
+.kentei-review ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.kentei-review li {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f3f8ee;
+}
+.kentei-review li.ng {
+  background: #fff2f0;
+}
+.kentei-review-mark {
+  flex: none;
+}
+.kentei-review-q {
+  font-weight: 800;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.kentei-review-a {
+  font-size: 13px;
+  font-weight: 700;
+  color: #3f7a30;
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+.kentei-review-picked {
+  color: #c9584b;
+}
+
 
 /* =========================================================
    モーダル（詳細）
@@ -7364,3 +7532,601 @@ body.race-full .page-head {
 .stage2-side.n3 .bq-slot { max-width: 120px; }
 .stage2-side.n4 .bq-slot { max-width: 96px; }
 .stage2-side.n3 .bq-spd, .stage2-side.n4 .bq-spd { font-size: 9px; padding: 1px 5px; }
+
+/* =========================================================
+   ふりがな（昆虫検定）
+   ========================================================= */
+/* よみが 漢字より ながい ときに、漢字の あいだを ひらかない（まんなかに よせる） */
+.kentei ruby {
+  ruby-align: center;
+}
+.kentei ruby rt {
+  font-size: 0.5em;
+  font-weight: 700;
+  color: #7a8a6a;
+  letter-spacing: 0;
+}
+.kentei .kentei-tag ruby rt,
+.kentei .kentei-no ruby rt {
+  font-size: 0.6em;
+}
+.kentei-question {
+  line-height: 1.9;
+}
+.quiz-option.kentei-option {
+  line-height: 1.7;
+}
+.kentei-explain {
+  line-height: 2 !important;
+}
+.kentei-level-pt {
+  font-size: 12px;
+  font-weight: 800;
+  color: #b07a00;
+}
+.kentei-note {
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #8a9a7a;
+  line-height: 2;
+}
+.kentei-points {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 0 16px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: #fff6d6;
+  border: 3px solid #ffd54a;
+  font-weight: 900;
+  color: #8a6500;
+  line-height: 1.8;
+}
+.kentei-points b {
+  font-size: 24px;
+  color: #d98a00;
+}
+.kentei-points small {
+  font-size: 12px;
+}
+.kentei-points.zero {
+  background: #f1f4ec;
+  border-color: #d5e3c9;
+  color: #8a9a7a;
+}
+
+/* =========================================================
+   虫ポイントの ばいばいルーレット
+   ========================================================= */
+.roulette {
+  margin: 0 auto 18px;
+  max-width: 340px;
+}
+.roulette-lead {
+  font-weight: 800;
+  color: var(--green-deep);
+  line-height: 1.6;
+  margin: 0 0 6px;
+}
+.roulette-wheel-wrap {
+  width: min(78vw, 290px);
+  margin: 0 auto;
+}
+.roulette-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 6px 10px rgba(60, 90, 40, 0.25));
+}
+.roulette-stop {
+  margin-top: 12px;
+  min-width: 180px;
+  font-size: 22px;
+}
+.roulette-wait {
+  margin: 14px 0 6px;
+  font-weight: 900;
+  color: #8a9a7a;
+}
+.roulette-result {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  animation: pop 0.5s ease;
+}
+.roulette-result-mult {
+  font-size: 44px;
+  font-weight: 900;
+  color: #e0662b;
+  text-shadow: 0 3px 0 #fff, 0 4px 8px rgba(200, 80, 20, 0.3);
+}
+.roulette-result.big .roulette-result-mult {
+  color: #ff3b30;
+  font-size: 56px;
+}
+.roulette-result-pts {
+  font-weight: 800;
+  color: #6b7a5a;
+}
+.roulette-result-pts b {
+  font-size: 22px;
+  color: #d98a00;
+}
+.roulette-legend {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #6b7a5a;
+}
+.roulette-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.roulette-legend i {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+.roulette-legend small {
+  color: #9aa88a;
+}
+
+/* =========================================================
+   右上の 虫ポイント（P）
+   ========================================================= */
+.points-coin {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 35% 30%, #fff3a0, #ffc928 60%, #e09a00);
+  border: 2px solid #c98400;
+  color: #7a4a00;
+  font-weight: 900;
+  font-size: 16px;
+  line-height: 1;
+  font-family: inherit;
+}
+.points-fab {
+  position: fixed;
+  top: 10px;
+  right: calc(50% - 280px + 10px + 44px + 8px);
+  z-index: 60;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: none;
+  background: #fff;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+.points-fab.on {
+  box-shadow: 0 0 0 3px #ffd54a, var(--shadow);
+}
+@media (max-width: 580px) {
+  .points-fab {
+    right: calc(12px + 44px + 8px);
+  }
+}
+.points-pop {
+  position: fixed;
+  top: 62px;
+  right: calc(50% - 280px + 10px);
+  z-index: 70;
+  min-width: 210px;
+  background: #fff;
+  border-radius: 18px;
+  border: 3px solid #ffd54a;
+  box-shadow: 0 10px 28px rgba(80, 60, 0, 0.25);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  animation: rise 0.18s ease;
+}
+@media (max-width: 580px) {
+  .points-pop {
+    right: 12px;
+  }
+}
+.points-pop-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: #8a9a7a;
+}
+.points-pop-value {
+  font-size: 34px;
+  font-weight: 900;
+  color: #d98a00;
+  line-height: 1.1;
+}
+.points-pop-value small {
+  font-size: 18px;
+  margin-left: 2px;
+}
+.points-pop-items {
+  font-size: 12px;
+  font-weight: 800;
+  color: #4d6a52;
+  line-height: 1.6;
+}
+.points-pop-hint {
+  font-size: 11px;
+  font-weight: 700;
+  color: #9aa88a;
+}
+body.race-full .points-fab,
+body.race-full .points-pop {
+  display: none !important;
+}
+
+/* =========================================================
+   ゲーム の メニュー：見出しなしで 1がめんに 5つ
+   ========================================================= */
+.play-menu {
+  /* 右上の P・⚙️ と かさならない ぶん だけ あける */
+  padding-top: 48px;
+  --menu-gap: 10px;
+  --tabbar-h: calc(86px + env(safe-area-inset-bottom));
+}
+.play-menu .game-menu {
+  gap: var(--menu-gap);
+}
+.play-menu .game-card {
+  /* (がめんの たかさ − うえの あき − タブバー − したの あき − すきま4つ) ÷ 5 */
+  height: calc((100dvh - 64px - var(--tabbar-h) - 10px - 4 * var(--menu-gap)) / 5);
+  min-height: 88px;
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  grid-template-rows: auto auto;
+  align-content: center;
+  column-gap: 12px;
+  row-gap: 2px;
+  padding: 8px 16px;
+  text-align: left;
+}
+.play-menu .game-emoji {
+  grid-row: 1 / span 2;
+  font-size: 40px;
+  text-align: center;
+}
+.play-menu .game-title {
+  font-size: 20px;
+  align-self: end;
+}
+.play-menu .game-desc {
+  font-size: 12px;
+  line-height: 1.4;
+  align-self: start;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.game-card.shop {
+  background: linear-gradient(160deg, #fff0e0, #ffd39b);
+}
+
+/* =========================================================
+   ちょうむしショップ
+   ========================================================= */
+.shop-wallet {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: linear-gradient(160deg, #fffbe6, #fff0b3);
+  border: 3px solid #ffd54a;
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
+}
+.shop-wallet-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: #8a6500;
+}
+.shop-wallet-pts {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 34px;
+  font-weight: 900;
+  color: #d98a00;
+}
+.shop-wallet-items {
+  font-size: 12px;
+  font-weight: 800;
+  color: #6b7a5a;
+  text-align: center;
+}
+.shop-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.shop-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--card);
+  border-radius: 18px;
+  padding: 12px 12px 12px 14px;
+  box-shadow: var(--shadow);
+}
+.shop-item.scroll.attack {
+  background: linear-gradient(160deg, #fff, #ffe7df);
+}
+.shop-item.scroll.status {
+  background: linear-gradient(160deg, #fff, #ece6ff);
+}
+.shop-item.scroll.heal {
+  background: linear-gradient(160deg, #fff, #e2f6e3);
+}
+.shop-item.scroll.ultimate {
+  background: linear-gradient(160deg, #fffbe6, #ffe08a);
+}
+.shop-item-emoji {
+  flex: none;
+  font-size: 34px;
+  width: 44px;
+  text-align: center;
+}
+.shop-item-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.shop-item-name {
+  font-weight: 900;
+  font-size: 16px;
+  color: var(--ink);
+}
+.shop-item-desc {
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b7a5a;
+  line-height: 1.5;
+}
+.shop-buy {
+  flex: none;
+  min-width: 72px;
+  border: none;
+  border-radius: 14px;
+  padding: 8px 10px;
+  background: var(--green);
+  box-shadow: 0 4px 0 var(--green-deep);
+  color: #fff;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.2;
+}
+.shop-buy b {
+  font-size: 18px;
+}
+.shop-buy small {
+  font-size: 11px;
+  font-weight: 800;
+}
+.shop-buy:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--green-deep);
+}
+.shop-buy.short {
+  background: #cfd8c4;
+  box-shadow: 0 4px 0 #aab79c;
+  color: #6b7a5a;
+}
+.shop-note {
+  margin: 14px 4px 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #8a9a7a;
+  line-height: 1.7;
+  text-align: center;
+}
+.shop-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(100px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 80;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  background: #3f7a30;
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 10px 18px;
+  border-radius: 999px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  animation: rise 0.2s ease;
+}
+.shop-bug-stats {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #8a9a7a;
+}
+.shop-move-row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+.shop-move-row .movedex-row {
+  flex: 1;
+  min-width: 0;
+}
+.shop-move-pick {
+  flex: none;
+  border: none;
+  border-radius: 12px;
+  padding: 0 12px;
+  background: var(--green);
+  color: #fff;
+  font-family: inherit;
+  font-weight: 900;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 3px 0 var(--green-deep);
+}
+.shop-move-pick:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--green-deep);
+}
+.shop-move-spec {
+  margin: 4px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b7a5a;
+}
+.shop-reveal {
+  margin: 0;
+  font-weight: 900;
+  color: #8a6500;
+  animation: pop 0.5s ease;
+}
+
+/* =========================================================
+   つるせMAP の もちもの
+   ========================================================= */
+.world-bag-btn {
+  position: fixed;
+  left: 10px;
+  bottom: max(86px, calc(env(safe-area-inset-bottom) + 86px));
+  z-index: 61;
+  border: 3px solid #ffd54a;
+  border-radius: 999px;
+  background: #fffbe6;
+  color: #7a4a00;
+  font-family: inherit;
+  font-weight: 900;
+  font-size: 14px;
+  padding: 8px 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+.world-bag-btn.on {
+  background: #ffe08a;
+}
+.world-bag {
+  position: fixed;
+  left: 10px;
+  bottom: max(136px, calc(env(safe-area-inset-bottom) + 136px));
+  z-index: 62;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #fff;
+  border-radius: 18px;
+  padding: 10px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.25);
+  animation: rise 0.18s ease;
+}
+.world-bag button {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  border: 2px solid #d5e3c9;
+  border-radius: 14px;
+  background: #f6faf2;
+  font-family: inherit;
+  color: var(--ink);
+  padding: 8px 12px;
+  cursor: pointer;
+  text-align: left;
+}
+.world-bag button span {
+  font-size: 24px;
+}
+.world-bag button b {
+  font-size: 14px;
+}
+.world-bag button small {
+  font-weight: 900;
+  color: #8a6500;
+}
+.world-bag button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.kentei .kentei-tag {
+  line-height: 1.9;
+  padding-top: 3px;
+}
+
+/* 森デザイン：タブバーが ない かわりに うえに「⌂ ホーム」が ある */
+.design-forest .play-menu {
+  --tabbar-h: env(safe-area-inset-bottom);
+  padding-top: 40px;
+}
+.design-forest .play-menu .game-card {
+  height: calc((100dvh - 56px - 48px - var(--tabbar-h) - 10px - 4 * var(--menu-gap)) / 5);
+}
+.design-forest .points-fab {
+  top: 8px;
+  right: calc(12px + 44px + 8px);
+  background: #94552d;
+}
+@media (min-width: 581px) {
+  .design-forest .points-fab {
+    right: calc(50% - 280px + 12px + 44px + 8px);
+  }
+}
+/* 森デザインの ホーム：絵の なかの ⚙ の ひだり */
+.points-fab-home {
+  position: absolute;
+  top: 1.5%;
+  right: 13.5%;
+  width: 10%;
+  height: 5%;
+  border: 2px solid #fff0c7;
+  border-radius: 50%;
+  background: #98572e;
+  box-shadow: 0 2px 5px #553c25;
+  padding: 0;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.points-fab-home .points-coin {
+  width: 72%;
+  height: auto;
+  aspect-ratio: 1;
+  font-size: clamp(12px, 3.6vw, 18px);
+}
+.points-fab-home.on {
+  outline: 3px solid #ffd54a;
+}

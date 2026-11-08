@@ -3,6 +3,8 @@ import { findSpeciesByName, normalizeBugName } from '../data/bugs'
 import { SAVE_KEY as STORY_KEY } from './story'
 import { loadDexSeen, MOVEDEX_KEY } from './moveDex'
 import { loadFieldBugs, FIELDBUGS_KEY, type FieldBugs } from './fieldBugs'
+import { loadPoints, normalizePoints, POINTS_KEY } from './points'
+import { loadDeck, normalizeDeck, KENTEI_DECK_KEY } from './kenteiDeck'
 
 // 図鑑登録後に、各項目をなおすためのパッチ
 export interface BugPatch {
@@ -40,6 +42,8 @@ interface BackupDataV2 {
   story: unknown | null // ストーリーモードの ほぞんデータ（StorySave）をそのまま
   movedex: string[] // 見た／つかった わざの id いちらん
   fieldBugs: FieldBugs // マップごとに 出す むしの せってい
+  points: unknown // 虫ポイント・もちもの（PointsSave）
+  kentei: unknown // 昆虫検定の 出した もんだい
 }
 
 interface BackupFileV2 {
@@ -99,6 +103,7 @@ export function resetMissions(): void {
 // 図鑑・写真・バッジ・ミッションと、「ゲーム」の蓄積データ（ストーリーの
 // レベル・クリア状況・むしかご・わざ／わざ図鑑／マップの出現虫せってい）を、
 // ほかのブラウザへ 持っていくための バックアップファイルを作る。
+// 虫ポイント・もちもの（ショップ）と 昆虫検定の「出した もんだい」も いれる。
 // APIキーと、つるせマップの「いま おちている あめ」の ばしょ（すぐ 作り直せる）は 含めない。
 export function createBackupJson(): string {
   const backup: BackupFileV2 = {
@@ -119,6 +124,8 @@ export function createBackupJson(): string {
       })(),
       movedex: [...loadDexSeen()],
       fieldBugs: loadFieldBugs(),
+      points: loadPoints(),
+      kentei: loadDeck(),
     },
   }
   return JSON.stringify(backup)
@@ -214,6 +221,11 @@ export function restoreBackupJson(text: string): CaughtBug[] {
   const movedex = hasMovedex ? (parsed.data.movedex as unknown[]).filter((x) => typeof x === 'string') : undefined
   const hasFieldBugs = isObject(parsed.data.fieldBugs)
   const fieldBugs = hasFieldBugs ? parsed.data.fieldBugs : undefined
+  // 虫ポイント・もちもの と 昆虫検定の「出した もんだい」（2026-11 から。ふるい バックアップには ない）
+  const hasPoints = isObject(parsed.data.points)
+  const points = hasPoints ? normalizePoints(parsed.data.points) : undefined
+  const hasKentei = isObject(parsed.data.kentei)
+  const kentei = hasKentei ? normalizeDeck(parsed.data.kentei) : undefined
 
   const previous = {
     zukan: localStorage.getItem(STORAGE_KEY),
@@ -222,6 +234,8 @@ export function restoreBackupJson(text: string): CaughtBug[] {
     story: localStorage.getItem(STORY_KEY),
     movedex: localStorage.getItem(MOVEDEX_KEY),
     fieldBugs: localStorage.getItem(FIELDBUGS_KEY),
+    points: localStorage.getItem(POINTS_KEY),
+    kentei: localStorage.getItem(KENTEI_DECK_KEY),
   }
 
   try {
@@ -235,6 +249,8 @@ export function restoreBackupJson(text: string): CaughtBug[] {
     }
     if (hasMovedex) localStorage.setItem(MOVEDEX_KEY, JSON.stringify(movedex))
     if (hasFieldBugs) localStorage.setItem(FIELDBUGS_KEY, JSON.stringify(fieldBugs))
+    if (hasPoints) localStorage.setItem(POINTS_KEY, JSON.stringify(points))
+    if (hasKentei) localStorage.setItem(KENTEI_DECK_KEY, JSON.stringify(kentei))
   } catch (error) {
     try {
       restoreStorageValue(STORAGE_KEY, previous.zukan)
@@ -243,6 +259,8 @@ export function restoreBackupJson(text: string): CaughtBug[] {
       restoreStorageValue(STORY_KEY, previous.story)
       restoreStorageValue(MOVEDEX_KEY, previous.movedex)
       restoreStorageValue(FIELDBUGS_KEY, previous.fieldBugs)
+      restoreStorageValue(POINTS_KEY, previous.points)
+      restoreStorageValue(KENTEI_DECK_KEY, previous.kentei)
     } catch {
       console.warn('復元前のデータに戻せませんでした')
     }

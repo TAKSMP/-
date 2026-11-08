@@ -52,7 +52,14 @@ export const LOCK_TREE: { label: string; groups: LockGroup[] }[] = [
   {
     label: 'ゲーム',
     groups: [
-      { label: 'クイズ', leaves: [{ key: 'quiz', label: 'むしクイズ' }, { key: 'battleQuiz', label: 'バトルクイズ' }] },
+      {
+        label: 'クイズ',
+        leaves: [
+          { key: 'quiz', label: 'むしクイズ' },
+          { key: 'battleQuiz', label: 'バトルクイズ' },
+          { key: 'kentei', label: '昆虫検定' },
+        ],
+      },
       {
         label: 'ストーリー',
         leaves: [
@@ -70,6 +77,7 @@ export const LOCK_TREE: { label: string; groups: LockGroup[] }[] = [
         ],
       },
       { label: 'レース', leaves: [{ key: 'race', label: 'こうえんレース' }, { key: 'raceOld', label: 'まえのばん' }] },
+      { label: 'ショップ', leaves: [{ key: 'shop', label: 'ちょうむしショップ' }] },
     ],
   },
 ]

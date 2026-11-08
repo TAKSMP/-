@@ -2,6 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react'
 import type { CaughtBug } from '../types'
 import { QuizPage } from './QuizPage'
 import { BattleQuizPage } from './BattleQuizPage'
+import { KenteiPage } from './KenteiPage'
+import { ShopPage } from './ShopPage'
 import { BattlePage } from './BattlePage'
 import { BattlePage2 } from './BattlePage2'
 import { StoryPage } from './StoryPage'
@@ -21,7 +23,7 @@ interface Props {
 
 // 画面（Game）→ チャイルドロックの 項目キー（メニューは null）
 const LOCK_KEY: Partial<Record<string, string>> = {
-  quiz: 'quiz', battleQuiz: 'battleQuiz', story: 'story', dojo: 'dojo', dojoAdult: 'dojoAdult',
+  quiz: 'quiz', battleQuiz: 'battleQuiz', kentei: 'kentei', shop: 'shop', story: 'story', dojo: 'dojo', dojoAdult: 'dojoAdult',
   battle: 'battle', battleOld: 'battleOld', net: 'net', race: 'race', raceOld: 'raceOld',
 }
 
@@ -32,6 +34,7 @@ type Game =
   | 'quizMenu'
   | 'quiz'
   | 'battleQuiz'
+  | 'kentei'
   | 'storyMenu'
   | 'story'
   | 'dojo'
@@ -42,6 +45,7 @@ type Game =
   | 'net'
   | 'race'
   | 'raceOld'
+  | 'shop'
 
 // 「ゲーム」ページ。クイズ・ストーリー・バトル・レースを えらべる。
 export function PlayPage({ bugs, onGoCapture, onActiveChange, resetSignal }: Props) {
@@ -97,8 +101,27 @@ export function PlayPage({ bugs, onGoCapture, onActiveChange, resetSignal }: Pro
           <span className="game-title">バトルクイズ</span>
           <span className="game-desc">バトルの ばめんで いちばん いい わざを えらぼう！</span>
         </button>
+        <button className="game-card kentei" onClick={() => go('kentei')}>
+          <span className="game-emoji">📜</span>
+          <span className="game-title">
+            <ruby>昆虫検定<rt>こんちゅうけんてい</rt></ruby>
+          </span>
+          <span className="game-desc">
+            <ruby>初級<rt>しょきゅう</rt></ruby>・<ruby>中級<rt>ちゅうきゅう</rt></ruby>から 10もん！ せいかいで 虫ポイント
+          </span>
+        </button>
       </div>,
     )
+  }
+
+  // 昆虫検定（初級・中級の問題集から、まだ 出ていない もんだいを 10もん）
+  if (game === 'kentei') {
+    return frame('quizMenu', 'クイズ', null, <KenteiPage />)
+  }
+
+  // ちょうむしショップ（虫ポイントで アメ・まきものと こうかん）
+  if (game === 'shop') {
+    return frame(null, 'ゲーム', null, <ShopPage bugs={bugs} onGoCapture={onGoCapture} />)
   }
 
   if (game === 'quiz') {
@@ -247,17 +270,14 @@ export function PlayPage({ bugs, onGoCapture, onActiveChange, resetSignal }: Pro
     )
   }
 
+  // メニュー：見出しは 出さず、その ぶん カードを つめて 1がめんに 5つ 見える ように する
   return (
-    <div className="page play">
-      <header className="page-head">
-        <h1>🎮 ゲーム</h1>
-        <p className="sub">あつめた虫で ゲームしよう！</p>
-      </header>
+    <div className="page play play-menu">
       <div className="game-menu">
         <button className="game-card quiz" onClick={() => go('quizMenu')}>
           <span className="game-emoji">🧠</span>
           <span className="game-title">クイズ</span>
-          <span className="game-desc">むしクイズ／バトルクイズ</span>
+          <span className="game-desc">むしクイズ／バトルクイズ／昆虫検定</span>
         </button>
         <button className="game-card story" onClick={() => go('storyMenu')}>
           <span className="game-emoji">🗺️</span>
@@ -275,6 +295,11 @@ export function PlayPage({ bugs, onGoCapture, onActiveChange, resetSignal }: Pro
           <span className="game-desc">
             こうえんの コースを 6ぴきで きょうそう！ アクセルと わざで 1いを めざせ
           </span>
+        </button>
+        <button className="game-card shop" onClick={() => go('shop')}>
+          <span className="game-emoji">🏪</span>
+          <span className="game-title">ちょうむしショップ</span>
+          <span className="game-desc">虫ポイントで ふしぎなアメや まきものと こうかん</span>
         </button>
       </div>
     </div>

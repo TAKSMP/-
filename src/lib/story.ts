@@ -354,6 +354,9 @@ export interface StorySave {
   trained?: Record<string, Record<string, TrainSteps>> // 虫のID → わざのID → わざ道場で きたえた かいすう
   lastCompanionIds?: string[] // 直近 つれていった なかまたち（さいだい3びき）
   lastCompanionId?: string // 直近 バトルに つれていった なかまの ID（つれていく？ がめんの ひだり はしに 出す）
+  // ショップの「さいきょうの巻物」で おぼえた さいきょうわざ（虫のID → わざのID）。
+  // まきもので おぼえた ぶんは Lv30／40／50 の わくに かかわらず すぐ つかえる
+  scrollUltimates?: Record<string, string[]>
 }
 
 const emptySave = (): StorySave => ({
@@ -409,6 +412,7 @@ export function loadStory(): StorySave {
         : typeof d.lastCompanionId === 'string'
           ? [d.lastCompanionId]
           : undefined,
+      scrollUltimates: d.scrollUltimates ?? {},
     }
   } catch {
     return emptySave()
@@ -539,12 +543,14 @@ export function resetLevel(save: StorySave, bugId: string): StorySave {
   delete ultimates[bugId]
   const trained = { ...(save.trained ?? {}) }
   delete trained[bugId]
-  return { ...save, levels, moves, ultimates, trained }
+  const scrollUltimates = { ...(save.scrollUltimates ?? {}) }
+  delete scrollUltimates[bugId]
+  return { ...save, levels, moves, ultimates, trained, scrollUltimates }
 }
 
 // ぜんぶの虫の レベルを 1に もどす
 export function resetAllLevels(save: StorySave): StorySave {
-  return { ...save, levels: {}, moves: {}, ultimates: {}, trained: {} }
+  return { ...save, levels: {}, moves: {}, ultimates: {}, trained: {}, scrollUltimates: {} }
 }
 
 // -------------------------------------------------------------
@@ -577,10 +583,17 @@ export function allMovesOf(save: StorySave, bug: CaughtBug): SpecialMoveV2[] {
 // いつも さいしんの せってい（つかえる かいすう など）で かえす
 export function ultimatesOf(save: StorySave, bugId: string, level: number): SpecialMoveV2[] {
   const owned = save.ultimates?.[bugId] ?? []
-  // さいきょうわざは しゅるいに かかわらず、レベルで ひらいた わく（Lv30/40/50 で 1/2/3つ）ぶん つかえる
-  const slots = ULTIMATE_LEVELS.filter((u) => u.level <= level).length
+  // さいきょうわざは しゅるいに かかわらず、レベルで ひらいた わく（Lv30/40/50 で 1/2/3つ）ぶん つかえる。
+  // ショップの まきもので おぼえた わざは わくに かかわらず つかえる
+  let slots = ULTIMATE_LEVELS.filter((u) => u.level <= level).length
+  const fromScroll = new Set(save.scrollUltimates?.[bugId] ?? [])
   return owned
-    .slice(0, slots)
+    .filter((m) => {
+      if (fromScroll.has(m.id)) return true
+      if (slots <= 0) return false
+      slots--
+      return true
+    })
     .map((m) => {
       const def = ULTIMATE_MOVES.find((x) => x.id === m.id)
       return def ? { ...def } : m
@@ -814,6 +827,25 @@ export function addUltimate(
   const have = cur.filter((m) => m.id !== move.id || m.id === replaceId)
   const list = i >= 0 ? have.map((m) => (m.id === replaceId ? move : m)) : [...have, move]
   return { ...save, ultimates: { ...(save.ultimates ?? {}), [bugId]: list } }
+}
+
+// ショップの「さいきょうの巻物」で おぼえる（3つまで。いっぱいなら replaceId と とりかえ）。
+// まきもので おぼえた わざは レベルに かかわらず すぐ つかえる
+export function addScrollUltimate(
+  save: StorySave,
+  bugId: string,
+  move: SpecialMoveV2,
+  replaceId?: string,
+): StorySave {
+  const next = addUltimate(save, bugId, move, replaceId)
+  const have = (next.scrollUltimates?.[bugId] ?? []).filter((id) => id !== replaceId)
+  return {
+    ...next,
+    scrollUltimates: {
+      ...(next.scrollUltimates ?? {}),
+      [bugId]: have.includes(move.id) ? have : [...have, move.id],
+    },
+  }
 }
 
 // その虫に にあう、まだ もっていない さいきょうわざを 1つ えらぶ（虫ごとに いつも おなじ）
