@@ -357,6 +357,9 @@ export interface StorySave {
   // ショップの「さいきょうの巻物」で おぼえた さいきょうわざ（虫のID → わざのID）。
   // まきもので おぼえた ぶんは Lv30／40／50 の わくに かかわらず すぐ つかえる
   scrollUltimates?: Record<string, string[]>
+  // ショップの まきもので ふやした ふつうの わざの わく（虫のID → ふえた かず）。
+  // わざの わくは レベルで ふえる（Lv1:1つ・Lv2:2つ・Lv4:3つ）が、まきもので あいている わくに すぐ おぼえられる
+  extraMoveSlots?: Record<string, number>
 }
 
 const emptySave = (): StorySave => ({
@@ -413,6 +416,7 @@ export function loadStory(): StorySave {
           ? [d.lastCompanionId]
           : undefined,
       scrollUltimates: d.scrollUltimates ?? {},
+      extraMoveSlots: d.extraMoveSlots ?? {},
     }
   } catch {
     return emptySave()
@@ -545,12 +549,14 @@ export function resetLevel(save: StorySave, bugId: string): StorySave {
   delete trained[bugId]
   const scrollUltimates = { ...(save.scrollUltimates ?? {}) }
   delete scrollUltimates[bugId]
-  return { ...save, levels, moves, ultimates, trained, scrollUltimates }
+  const extraMoveSlots = { ...(save.extraMoveSlots ?? {}) }
+  delete extraMoveSlots[bugId]
+  return { ...save, levels, moves, ultimates, trained, scrollUltimates, extraMoveSlots }
 }
 
 // ぜんぶの虫の レベルを 1に もどす
 export function resetAllLevels(save: StorySave): StorySave {
-  return { ...save, levels: {}, moves: {}, ultimates: {}, trained: {}, scrollUltimates: {} }
+  return { ...save, levels: {}, moves: {}, ultimates: {}, trained: {}, scrollUltimates: {}, extraMoveSlots: {} }
 }
 
 // -------------------------------------------------------------
@@ -563,6 +569,30 @@ export const MAX_MOVES = 3
 // レベルで つかえる わざの かず（Lv1は 1つ、2レベルごとに ふえる）
 export function moveSlots(level: number): number {
   return Math.min(MAX_MOVES, 1 + Math.floor(level / LEARN_EVERY))
+}
+
+// いま つかえる ふつうの わざの かず（レベルの わく ＋ まきもので ふやした わく。さいだい 3）
+export function moveSlotsOf(save: StorySave, bugId: string, level: number): number {
+  return Math.min(MAX_MOVES, moveSlots(level) + (save.extraMoveSlots?.[bugId] ?? 0))
+}
+
+// まきもので、あいている わくに わざを おぼえる（とりかえ なし）。
+// まだ つかえない わざ（レベルが あがると つかえる もの）は ひとつ うしろへ ずれる
+export function addMoveToEmptySlot(
+  save: StorySave,
+  bug: CaughtBug,
+  level: number,
+  move: SpecialMoveV2,
+): StorySave {
+  const n = moveSlotsOf(save, bug.id, level)
+  if (n >= MAX_MOVES) return save
+  const rest = allMovesOf(save, bug).filter((m) => m.id !== move.id && m.name !== move.name)
+  const list = [...rest.slice(0, n), move, ...rest.slice(n)].slice(0, MAX_MOVES)
+  const next = setMoves(save, bug.id, list)
+  return {
+    ...next,
+    extraMoveSlots: { ...(next.extraMoveSlots ?? {}), [bug.id]: (next.extraMoveSlots?.[bug.id] ?? 0) + 1 },
+  }
 }
 
 // もっている ふつうの わざ ぜんぶ（おぼえなおして いれば そっち）。さいきょうわざは ふくまない。
@@ -611,7 +641,7 @@ export function movesOf(
 
 // きたえる まえの わざ（わざ道場で つかう）
 export function baseMovesOf(save: StorySave, bug: CaughtBug, level: number): SpecialMoveV2[] {
-  return [...allMovesOf(save, bug).slice(0, moveSlots(level)), ...ultimatesOf(save, bug.id, level)]
+  return [...allMovesOf(save, bug).slice(0, moveSlotsOf(save, bug.id, level)), ...ultimatesOf(save, bug.id, level)]
 }
 
 // -------------------------------------------------------------

@@ -6,21 +6,23 @@
 //  ・チョウチョちゃんあめ／トンボあめ … もちものに はいり、つるせMAPで すきな ときに つかう
 //  ・〇〇の巻物 … その しゅるいの わざを リストから えらんで（????も えらべる）すきな虫に おぼえさせる
 // =============================================================
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { CaughtBug, SpecialMoveV2 } from '../types'
 import { mainPhoto } from '../lib/storage'
 import { sfx } from '../lib/sound'
-import { buyItem, spendPoints, usePoints, type ItemId } from '../lib/points'
+import { addPoints, buyItem, spendPoints, usePoints, type ItemId } from '../lib/points'
 import {
   addExp,
   addUltimate,
   addScrollUltimate,
+  addMoveToEmptySlot,
   allMovesOf,
   expToNext,
   levelOf,
   loadStory,
   MAX_LEVEL,
-  moveSlots,
+  MAX_MOVES,
+  moveSlotsOf,
   saveStory,
   setMoves,
   statsWithLevel,
@@ -30,6 +32,7 @@ import {
 import { celebrationsFor, moveLabel, type Celebration } from '../lib/celebrations'
 import { CelebrationModal } from '../components/CelebrationModal'
 import { DEX, loadDexSeen, markMovesSeen, patternLabel, type MoveGroup } from '../lib/moveDex'
+import { findMove } from '../lib/moveLibrary'
 import type { LibraryMove } from '../lib/moveLibrary'
 
 interface ShopItem {
@@ -81,13 +84,38 @@ function learnable(m: LibraryMove): SpecialMoveV2 {
   return { ...m } as SpecialMoveV2
 }
 
+// paid：????を ひらいて もう ポイントを はらった まきもの（えらびなおし・とりけし できない）
 type Flow =
   | null
   | { kind: 'candy' }
   | { kind: 'scrollMove'; item: ShopItem }
-  | { kind: 'scrollBug'; item: ShopItem; move: LibraryMove; mystery: boolean }
-  | { kind: 'scrollSlot'; item: ShopItem; move: LibraryMove; mystery: boolean; bug: CaughtBug }
-  | { kind: 'learned'; bug: CaughtBug; move: SpecialMoveV2; mystery: boolean; replaced?: string }
+  | { kind: 'scrollOpen'; item: ShopItem; move: LibraryMove } // ????を ひらく？
+  | { kind: 'scrollReveal'; item: ShopItem; move: LibraryMove } // ????の しょうたいを はっぴょう
+  | { kind: 'scrollBug'; item: ShopItem; move: LibraryMove; paid: boolean }
+  | { kind: 'scrollSlot'; item: ShopItem; move: LibraryMove; paid: boolean; bug: CaughtBug }
+  | { kind: 'learned'; bug: CaughtBug; move: SpecialMoveV2; replaced?: string; added?: boolean }
+
+// ひらいた（ポイントを はらった）けど まだ 虫に おぼえさせて いない まきもの。
+// とちゅうで ショップを はなれても、つぎに ひらいた ときに つづきから えらべる ように のこす
+const PENDING_KEY = 'chomushi.shop.pending.v1'
+function loadPending(): { item: ShopItem; move: LibraryMove } | null {
+  try {
+    const d = JSON.parse(localStorage.getItem(PENDING_KEY) ?? 'null') as { itemId?: string; moveId?: string } | null
+    const item = SHOP_ITEMS.find((it) => it.id === d?.itemId)
+    const move = d?.moveId ? findMove(d.moveId) : undefined
+    return item && move ? { item, move } : null
+  } catch {
+    return null
+  }
+}
+function savePending(p: { item: ShopItem; move: LibraryMove } | null): void {
+  try {
+    if (p) localStorage.setItem(PENDING_KEY, JSON.stringify({ itemId: p.item.id, moveId: p.move.id }))
+    else localStorage.removeItem(PENDING_KEY)
+  } catch {
+    /* ほぞん できなくても つづける */
+  }
+}
 
 interface Props {
   bugs: CaughtBug[]
@@ -103,6 +131,12 @@ export function ShopPage({ bugs, onGoCapture }: Props) {
   // まきものの わざリストで ひらいている わざ
   const [openMove, setOpenMove] = useState<string | null>(null)
   const seen = useMemo(() => loadDexSeen(), [flow])
+
+  // まえに ひらいた まきものが のこっていれば、はっぴょうの がめんから つづける
+  useEffect(() => {
+    const p = loadPending()
+    if (p) setFlow({ kind: 'scrollReveal', item: p.item, move: p.move })
+  }, [])
 
   function commit(next: StorySave) {
     setSave(next)
@@ -182,28 +216,50 @@ export function ShopPage({ bugs, onGoCapture }: Props) {
   }
 
   // ---- まきもの ----
-  function knows(b: CaughtBug, m: LibraryMove): boolean {
-    if (m.ultimate) return (save.ultimates?.[b.id] ?? []).some((x) => x.id === m.id)
-    return allMovesOf(save, b).some((x) => x.id === m.id || x.name === m.name)
+  // いま つかえる ふつうの わざ（レベルの わく ＋ まきもので ふやした わく）
+  function usableMoves(b: CaughtBug): SpecialMoveV2[] {
+    return allMovesOf(save, b).slice(0, moveSlotsOf(save, b.id, levelOf(save, b.id).level))
   }
 
-  // いま つかえる ふつうの わざ（レベルぶんの わく）
-  function usableMoves(b: CaughtBug): SpecialMoveV2[] {
-    return allMovesOf(save, b).slice(0, moveSlots(levelOf(save, b.id).level))
+  function knows(b: CaughtBug, m: LibraryMove): boolean {
+    if (m.ultimate) return (save.ultimates?.[b.id] ?? []).some((x) => x.id === m.id)
+    return usableMoves(b).some((x) => x.id === m.id || x.name === m.name)
+  }
+
+  // ????を ひらく：ここで ポイントを はらって、なんの わざか はっぴょう する
+  function openMystery(item: ShopItem, move: LibraryMove) {
+    if (!spendPoints(item.price)) {
+      sfx.error()
+      return
+    }
+    savePending({ item, move })
+    markMovesSeen([move.id])
+    sfx.discover()
+    setFlow({ kind: 'scrollReveal', item, move })
+  }
+
+  // ひらいた わざを どの虫も もう おぼえていた ときは ポイントを もどす
+  function refundPending(item: ShopItem) {
+    addPoints(item.price)
+    savePending(null)
+    sfx.tap()
+    setFlow(null)
+    showToast(`${item.price}P を もどしたよ`)
   }
 
   // わざ道場と おなじ きまり：
   //  ・ふつうの わざ … わくが あいて いれば ついか、いっぱいなら えらんだ わざと とりかえ
   //  ・さいきょうわざ … 3つまで。いっぱいなら もっている 3つの うち えらんだ 1つと とりかえ（しゅるいは とわない）
+  //  slot：とりかえる わざの ばんごう（null なら あいている わくに おぼえる）
   function learnScroll(
     item: ShopItem,
     move: LibraryMove,
-    mystery: boolean,
+    paid: boolean,
     bug: CaughtBug,
     slot: number | null,
     replaceUlt?: SpecialMoveV2,
   ) {
-    if (!spendPoints(item.price)) {
+    if (!paid && !spendPoints(item.price)) {
       sfx.error()
       return
     }
@@ -212,25 +268,24 @@ export function ShopPage({ bugs, onGoCapture }: Props) {
     if (nm.ultimate) {
       replaced = replaceUlt?.name
       commit(addScrollUltimate(save, bug.id, nm, replaceUlt?.id))
+    } else if (slot === null) {
+      commit(addMoveToEmptySlot(save, bug, levelOf(save, bug.id).level, nm))
     } else {
       const moves = [...allMovesOf(save, bug)]
-      if (slot === null) {
-        moves.push(nm)
-      } else {
-        replaced = moves[slot]?.name
-        if (slot < moves.length) moves[slot] = nm
-        else moves.push(nm)
-      }
+      replaced = moves[slot]?.name
+      if (slot < moves.length) moves[slot] = nm
+      else moves.push(nm)
       commit(setMoves(save, bug.id, moves))
     }
+    savePending(null)
     markMovesSeen([nm.id])
     sfx.special('attackUp')
-    setFlow({ kind: 'learned', bug, move: nm, mystery, replaced })
+    setFlow({ kind: 'learned', bug, move: nm, replaced, added: !replaced })
   }
 
-  function pickScrollBug(item: ShopItem, move: LibraryMove, mystery: boolean, bug: CaughtBug) {
+  function pickScrollBug(item: ShopItem, move: LibraryMove, paid: boolean, bug: CaughtBug) {
     sfx.tap()
-    setFlow({ kind: 'scrollSlot', item, move, mystery, bug })
+    setFlow({ kind: 'scrollSlot', item, move, paid, bug })
   }
 
   const close = () => {
@@ -348,7 +403,11 @@ export function ShopPage({ bugs, onGoCapture }: Props) {
                         className="shop-move-pick"
                         onClick={() => {
                           sfx.tap()
-                          setFlow({ kind: 'scrollBug', item: flow.item, move: d.move, mystery: !found })
+                          setFlow(
+                            found
+                              ? { kind: 'scrollBug', item: flow.item, move: d.move, paid: false }
+                              : { kind: 'scrollOpen', item: flow.item, move: d.move },
+                          )
                         }}
                       >
                         これ！
@@ -370,31 +429,20 @@ export function ShopPage({ bugs, onGoCapture }: Props) {
         </div>
       )}
 
-      {/* ---- まきもの：どの虫に？ ---- */}
-      {flow?.kind === 'scrollBug' && (
-        <div className="modal-backdrop" onClick={close}>
-          <div className="modal story-cage" onClick={(e) => e.stopPropagation()}>
+      {/* ---- まきもの：????を ひらく？ ---- */}
+      {flow?.kind === 'scrollOpen' && (
+        <div className="modal-backdrop" onClick={() => setFlow({ kind: 'scrollMove', item: flow.item })}>
+          <div className="modal story-learn shop-open" onClick={(e) => e.stopPropagation()}>
+            <div className="story-levelup-emoji">{flow.item.emoji}</div>
             <h3>
-              {flow.item.emoji} 「{flow.mystery ? '????' : flow.move.name}」を
+              {flow.item.name}（{flow.item.price}P）で
               <br />
-              どの虫に おぼえさせる？
+              「????」を ひらく？
             </h3>
-            <BugRows
-              bugs={bugs}
-              save={save}
-              render={(b) =>
-                knows(b, flow.move) ? (
-                  <span className="story-cage-free story-cage-max">もう おぼえてる</span>
-                ) : (
-                  <button
-                    className="story-cage-free story-candy-give"
-                    onClick={() => pickScrollBug(flow.item, flow.move, flow.mystery, b)}
-                  >
-                    この虫に
-                  </button>
-                )
-              }
-            />
+            <p className="story-learn-q">ひらくと なんの わざか わかるよ。そのあと おぼえさせる 虫を えらぼう！</p>
+            <button className="btn btn-big btn-primary" onClick={() => openMystery(flow.item, flow.move)}>
+              ひらく！ ✨
+            </button>
             <button
               className="btn btn-big"
               onClick={() => {
@@ -402,20 +450,113 @@ export function ShopPage({ bugs, onGoCapture }: Props) {
                 setFlow({ kind: 'scrollMove', item: flow.item })
               }}
             >
-              ← わざを えらびなおす
+              やめる
             </button>
           </div>
         </div>
       )}
 
+      {/* ---- まきもの：????の しょうたいを はっぴょう ---- */}
+      {flow?.kind === 'scrollReveal' && (
+        <div className="modal-backdrop">
+          <div className="modal story-learn shop-reveal-modal" onClick={(e) => e.stopPropagation()}>
+            <p className="shop-reveal">????の しょうたいは…</p>
+            <div className="story-levelup-emoji shop-reveal-emoji">{flow.move.emoji ?? '✨'}</div>
+            <h3 className="shop-reveal-name">「{flow.move.name}」！</h3>
+            <div className={'story-learn-new' + (flow.move.ultimate ? ' ultimate' : '')}>
+              <span className="story-learn-emoji">{flow.move.emoji ?? '✨'}</span>
+              <span className="story-learn-name">{flow.move.name}</span>
+              <span className="story-learn-sub">
+                {moveLabel(flow.move)}／{flow.move.uses}かい つかえる
+              </span>
+              <p className="story-learn-desc">{flow.move.desc}</p>
+            </div>
+            <button
+              className="btn btn-big btn-primary"
+              onClick={() => {
+                sfx.tap()
+                setFlow({ kind: 'scrollBug', item: flow.item, move: flow.move, paid: true })
+              }}
+            >
+              どの虫に おぼえさせる？ ▶
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ---- まきもの：どの虫に？ ---- */}
+      {flow?.kind === 'scrollBug' &&
+        (() => {
+          const { item, move, paid } = flow
+          const nobody = bugs.every((b) => knows(b, move))
+          return (
+            // ひらいた まきものは そとを おしても とじない（なくならない ように）
+            <div className="modal-backdrop" onClick={paid ? undefined : close}>
+              <div className="modal story-cage" onClick={(e) => e.stopPropagation()}>
+                <h3>
+                  {item.emoji} 「{move.name}」を
+                  <br />
+                  どの虫に おぼえさせる？
+                </h3>
+                <BugRows
+                  bugs={bugs}
+                  save={save}
+                  render={(b) =>
+                    knows(b, move) ? (
+                      <span className="story-cage-free story-cage-max">もう おぼえてる</span>
+                    ) : (
+                      <button
+                        className="story-cage-free story-candy-give"
+                        onClick={() => pickScrollBug(item, move, paid, b)}
+                      >
+                        この虫に
+                      </button>
+                    )
+                  }
+                />
+                {paid && nobody && (
+                  <>
+                    <p className="story-recruit-sub">どの虫も もう おぼえているよ。</p>
+                    <button className="btn btn-big btn-primary" onClick={() => refundPending(item)}>
+                      {item.price}P を もどす
+                    </button>
+                  </>
+                )}
+                {paid ? (
+                  <button
+                    className="btn btn-big"
+                    onClick={() => {
+                      sfx.tap()
+                      setFlow({ kind: 'scrollReveal', item, move })
+                    }}
+                  >
+                    ← わざを みなおす
+                  </button>
+                ) : (
+                  <button
+                    className="btn btn-big"
+                    onClick={() => {
+                      sfx.tap()
+                      setFlow({ kind: 'scrollMove', item })
+                    }}
+                  >
+                    ← わざを えらびなおす
+                  </button>
+                )}
+              </div>
+            </div>
+          )
+        })()}
+
       {/* ---- まきもの：どの わざと とりかえる？／さいきょうわざの かくにん ---- */}
       {flow?.kind === 'scrollSlot' &&
         (() => {
-          const { item, move, mystery, bug } = flow
-          const name = mystery ? '????' : move.name
+          const { item, move, paid, bug } = flow
+          const name = move.name
+          const cost = paid ? '' : `（${item.price}P）`
           const back = () => {
             sfx.tap()
-            setFlow({ kind: 'scrollBug', item, move, mystery })
+            setFlow({ kind: 'scrollBug', item, move, paid })
           }
           if (move.ultimate) {
             const owned = save.ultimates?.[bug.id] ?? []
@@ -427,7 +568,7 @@ export function ShopPage({ bugs, onGoCapture }: Props) {
                   <h3>
                     {bug.name}に 「{name}」を
                     <br />
-                    おぼえさせる（{item.price}P）
+                    おぼえさせる{cost}
                   </h3>
                   <p className="story-learn-q">
                     {full
@@ -442,7 +583,7 @@ export function ShopPage({ bugs, onGoCapture }: Props) {
                         <button
                           key={m.id}
                           className="story-learn-old"
-                          onClick={() => learnScroll(item, move, mystery, bug, null, m)}
+                          onClick={() => learnScroll(item, move, paid, bug, null, m)}
                         >
                           <span className="story-learn-old-name">
                             👑 {m.emoji ?? '✨'} {m.name}
@@ -456,37 +597,40 @@ export function ShopPage({ bugs, onGoCapture }: Props) {
                   ) : (
                     <button
                       className="btn btn-big btn-primary"
-                      onClick={() => learnScroll(item, move, mystery, bug, null)}
+                      onClick={() => learnScroll(item, move, paid, bug, null)}
                     >
                       おぼえさせる 👑
                     </button>
                   )}
                   <button className="btn btn-big" onClick={back}>
-                    やめる
+                    {paid ? '← 虫を えらびなおす' : 'やめる'}
                   </button>
                 </div>
               </div>
             )
           }
+          // ふつうの わざ：わくは 3つまで。あいて いれば そのまま、いっぱいなら とりかえ
           const current = usableMoves(bug)
-          const lv = levelOf(save, bug.id).level
-          const hasRoom = allMovesOf(save, bug).length < moveSlots(lv)
+          const hasRoom = current.length < MAX_MOVES
           if (hasRoom) {
             return (
               <div className="modal-backdrop" onClick={back}>
                 <div className="modal story-learn" onClick={(e) => e.stopPropagation()}>
                   <div className="story-levelup-emoji">📜</div>
                   <h3>
-                    {bug.name}に 「{name}」を おぼえさせる？（{item.price}P）
+                    {bug.name}に 「{name}」を おぼえさせる？{cost}
                   </h3>
+                  <p className="story-learn-q">
+                    わざの わくが あいているので、いまの わざは そのままで ふえるよ！（{current.length} → {current.length + 1}こ）
+                  </p>
                   <button
                     className="btn btn-big btn-primary"
-                    onClick={() => learnScroll(item, move, mystery, bug, null)}
+                    onClick={() => learnScroll(item, move, paid, bug, null)}
                   >
                     おぼえさせる 📜
                   </button>
                   <button className="btn btn-big" onClick={back}>
-                    やめる
+                    {paid ? '← 虫を えらびなおす' : 'やめる'}
                   </button>
                 </div>
               </div>
@@ -497,15 +641,15 @@ export function ShopPage({ bugs, onGoCapture }: Props) {
               <div className="modal story-learn" onClick={(e) => e.stopPropagation()}>
                 <div className="story-levelup-emoji">📜</div>
                 <h3>
-                  {bug.name}に 「{name}」を おぼえさせる（{item.price}P）
+                  {bug.name}に 「{name}」を おぼえさせる{cost}
                 </h3>
-                <p className="story-learn-q">どの わざと とりかえる？</p>
+                <p className="story-learn-q">わざの わくが いっぱい（3こ）。どの わざと とりかえる？</p>
                 <div className="story-learn-list">
                   {current.map((m, i) => (
                     <button
                       key={m.id + i}
                       className="story-learn-old"
-                      onClick={() => learnScroll(item, move, mystery, bug, i)}
+                      onClick={() => learnScroll(item, move, paid, bug, i)}
                     >
                       <span className="story-learn-old-name">
                         {m.emoji ?? '✨'} {m.name}
@@ -517,7 +661,7 @@ export function ShopPage({ bugs, onGoCapture }: Props) {
                   ))}
                 </div>
                 <button className="btn btn-big" onClick={back}>
-                  やめる
+                  {paid ? '← 虫を えらびなおす' : 'やめる'}
                 </button>
               </div>
             </div>
@@ -529,7 +673,6 @@ export function ShopPage({ bugs, onGoCapture }: Props) {
         <div className="modal-backdrop" onClick={close}>
           <div className="modal story-learn" onClick={(e) => e.stopPropagation()}>
             <div className="story-levelup-emoji">{flow.move.ultimate ? '👑' : '✨'}</div>
-            {flow.mystery && <p className="shop-reveal">????の しょうたいは…</p>}
             <h3>
               {flow.bug.name}は
               <br />
@@ -545,6 +688,9 @@ export function ShopPage({ bugs, onGoCapture }: Props) {
             </div>
             {flow.replaced && (
               <p className="story-learn-q">（「{flow.replaced}」と とりかえたよ）</p>
+            )}
+            {flow.added && !flow.move.ultimate && (
+              <p className="story-learn-q">（わざが 1こ ふえたよ）</p>
             )}
             <button className="btn btn-big btn-primary" onClick={close}>
               やった！ 💪

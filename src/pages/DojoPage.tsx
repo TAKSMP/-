@@ -20,7 +20,7 @@ import {
   baseMovesOf,
   levelOf,
   loadStory,
-  moveSlots,
+  moveSlotsOf,
   saveStory,
   setMoves,
   trainMove,
@@ -367,7 +367,7 @@ export function DojoPage({ bugs, variant = 'kids' }: { bugs: CaughtBug[]; varian
               return
             }
             const cur = allMovesOf(save, bug)
-            if (cur.length < moveSlots(level)) {
+            if (cur.length < moveSlotsOf(save, bug.id, level)) {
               commit(setMoves(save, bug.id, [...cur, mv]))
               learned(mv)
               return
@@ -393,7 +393,7 @@ export function DojoPage({ bugs, variant = 'kids' }: { bugs: CaughtBug[]; varian
     const mv = { ...pendingEntry.move } as SpecialMoveV2
     const cur = mv.ultimate
       ? (save.ultimates?.[bug.id] ?? [])
-      : allMovesOf(save, bug).slice(0, moveSlots(level))
+      : allMovesOf(save, bug).slice(0, moveSlotsOf(save, bug.id, level))
     return wrap(
       <div className="dojo-panel">
         <h2 className="dojo-title">🎉 ごうかく！</h2>

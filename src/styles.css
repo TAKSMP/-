@@ -8108,3 +8108,15 @@ body.race-full .points-pop {
   background: #ffe7d6;
   color: #c2581b;
 }
+
+/* ショップ：????の しょうたい はっぴょう */
+.shop-reveal-modal .shop-reveal-emoji {
+  font-size: 68px;
+  animation: pop 0.6s ease;
+}
+.shop-reveal-name {
+  font-size: 24px;
+  color: #c2581b;
+  margin: 2px 0 10px;
+  animation: pop 0.6s ease;
+}

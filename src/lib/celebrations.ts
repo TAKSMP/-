@@ -13,7 +13,7 @@ import {
   allMovesOf,
   learnLevelCrossed,
   missingUltimates,
-  moveSlots,
+  moveSlotsOf,
   newMoveFor,
   statsWithLevel,
   ultimateMoveFor,
@@ -73,8 +73,9 @@ export function celebrationsFor(
   const learnLv = learnLevelCrossed(res.before.level, res.after.level)
   if (learnLv !== null) {
     const all = allMovesOf(saveAfter, bug)
-    const before = moveSlots(res.before.level)
-    const after = moveSlots(res.after.level)
+    // まきもので ふやした わくも ふくめる（ふやした わざを レベルアップで うわがき しない ため）
+    const before = moveSlotsOf(saveAfter, bug.id, res.before.level)
+    const after = moveSlotsOf(saveAfter, bug.id, res.after.level)
     const nm = newMoveFor(bug, learnLv, all)
     if (nm) {
       out.push({
