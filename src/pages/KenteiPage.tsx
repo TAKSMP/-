@@ -4,7 +4,7 @@ import { Ruby } from '../components/Ruby'
 import { PointRoulette, type RouletteSlot } from '../components/PointRoulette'
 import { sfx } from '../lib/sound'
 import { addPoints } from '../lib/points'
-import { drawQuestions, markShown, remainingCount } from '../lib/kenteiDeck'
+import { drawQuestions, progressOf, saveAnswer } from '../lib/kenteiDeck'
 import {
   KENTEI,
   KENTEI_SECTIONS,
@@ -12,7 +12,8 @@ import {
   type KenteiQuestion,
 } from '../data/kentei'
 
-// 昆虫検定：初級・中級の問題集から、まだ 出していない もんだいを ランダムに 10もん。
+// 昆虫検定：初級・中級の問題集から 10もん。ぜんぶを まんべんなく、まちがえた もんだいほど よく 出す
+// （えらびかたは lib/kenteiDeck.ts）。
 // せいかいすると 虫ポイント（初級 1もん 1P、中級 1もん 3P）。ぜんもん せいかいで ルーレット。
 const QUESTION_COUNT = 10
 
@@ -64,6 +65,9 @@ export function KenteiPage() {
   const [phase, setPhase] = useState<Phase>('select')
   const [level, setLevel] = useState<KenteiLevel>('beginner')
   const [questions, setQuestions] = useState<KenteiQuestion[]>([])
+  // この 回の ばんごう（こたえの きろくに つかう）と、まえに まちがえて もういちど 出す もんだい
+  const [round, setRound] = useState(0)
+  const [review, setReview] = useState<Set<number>>(new Set())
   const [index, setIndex] = useState(0)
   const [picked, setPicked] = useState<number | null>(null)
   const [history, setHistory] = useState<Answered[]>([])
@@ -85,11 +89,6 @@ export function KenteiPage() {
 
   const current = questions[index]
 
-  // がめんに 出した もんだいを「出した」に する（つぎから しばらく 出ない）
-  useEffect(() => {
-    if (phase === 'playing' && current) markShown(level, current.no, KENTEI[level].length)
-  }, [phase, current, level])
-
   const score = history.filter((h) => h.picked === h.question.answer).length
   const isCorrect = current != null && picked === current.answer
   const levelInfo = LEVELS.find((l) => l.id === level)!
@@ -100,7 +99,10 @@ export function KenteiPage() {
   function start(lv: KenteiLevel) {
     sfx.tap()
     setLevel(lv)
-    setQuestions(drawQuestions(lv, KENTEI[lv], QUESTION_COUNT))
+    const d = drawQuestions(lv, KENTEI[lv], QUESTION_COUNT)
+    setQuestions(d.questions)
+    setRound(d.round)
+    setReview(d.review)
     setIndex(0)
     setPicked(null)
     setHistory([])
@@ -120,6 +122,8 @@ export function KenteiPage() {
     if (picked !== null || !current) return
     setPicked(i)
     setHistory((h) => [...h, { question: current, picked: i }])
+    // こたえる たびに きろく（にがてな もんだいを また 出す ため）
+    saveAnswer(level, current.no, i === current.answer, round)
     if (i === current.answer) {
       setStreak((s) => s + 1)
       sfx.discover()
@@ -202,15 +206,10 @@ export function KenteiPage() {
               <span className="game-desc">
                 <Ruby text={lv.desc} />
               </span>
-              <span className="kentei-level-count">
-                まだ {remainingCount(lv.id, KENTEI[lv.id])} ／ {KENTEI[lv.id].length}もん
-              </span>
+              <LevelProgress level={lv.id} />
               <span className="kentei-level-pt">せいかい 1もん {lv.pointsPer}P</span>
             </button>
           ))}
-          <p className="kentei-note">
-            <Ruby text="いちど {出|で}た もんだいは、ぜんぶ {出|で}おわるまで {出|で}ないよ。" />
-          </p>
         </div>
       )}
 
@@ -235,6 +234,7 @@ export function KenteiPage() {
               <span className="kentei-tag">
                 <Ruby text={sectionOf(level, current.no)} />
               </span>
+              {review.has(current.no) && <span className="kentei-tag again">🔁 もういちど</span>}
               <span className="kentei-no">
                 <Ruby text="{問題|もんだい}" />
                 {String(current.no).padStart(3, '0')}
@@ -384,5 +384,17 @@ export function KenteiPage() {
         </>
       )}
     </div>
+  )
+}
+
+// 級えらびの カードに 出す「おぼえた・にがて・まだ」
+function LevelProgress({ level }: { level: KenteiLevel }) {
+  const p = progressOf(level, KENTEI[level])
+  return (
+    <span className="kentei-level-count">
+      <span>⭐ おぼえた {p.mastered}</span>
+      <span>🔁 にがて {p.weak}</span>
+      <span>❓ まだ {p.unseen}</span>
+    </span>
   )
 }

@@ -7564,14 +7564,6 @@ body.race-full .page-head {
   font-weight: 800;
   color: #b07a00;
 }
-.kentei-note {
-  margin: 0;
-  text-align: center;
-  font-size: 12px;
-  font-weight: 700;
-  color: #8a9a7a;
-  line-height: 2;
-}
 .kentei-points {
   display: inline-flex;
   align-items: baseline;
@@ -8103,4 +8095,16 @@ body.race-full .points-pop {
 }
 .points-fab-home.on {
   outline: 3px solid #ffd54a;
+}
+
+/* 昆虫検定：級えらびの「おぼえた・にがて・まだ」と、もういちど の しるし */
+.kentei-level-count {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px 10px;
+}
+.kentei .kentei-tag.again {
+  background: #ffe7d6;
+  color: #c2581b;
 }
