@@ -190,14 +190,6 @@ export function PointRoulette({ basePoints, onResult }: Props) {
           </span>
         </div>
       )}
-      <ul className="roulette-legend">
-        {ROULETTE_SLOTS.map((s) => (
-          <li key={s.label}>
-            <i style={{ background: s.color }} />
-            {s.label} <small>{s.percent}%</small>
-          </li>
-        ))}
-      </ul>
     </div>
   )
 }

@@ -7659,32 +7659,6 @@ body.race-full .page-head {
   font-size: 22px;
   color: #d98a00;
 }
-.roulette-legend {
-  list-style: none;
-  margin: 12px 0 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 4px 10px;
-  font-size: 12px;
-  font-weight: 800;
-  color: #6b7a5a;
-}
-.roulette-legend li {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.roulette-legend i {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-}
-.roulette-legend small {
-  color: #9aa88a;
-}
 
 /* =========================================================
    右上の 虫ポイント（P）

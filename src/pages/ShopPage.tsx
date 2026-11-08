@@ -43,12 +43,12 @@ interface ShopItem {
 }
 
 export const SHOP_ITEMS: ShopItem[] = [
-  { id: 'fushigi', name: 'ふしぎなアメ', emoji: '🍬', price: 10, desc: 'すきな虫の レベルを 1つ あげる' },
+  { id: 'fushigi', name: 'ふしぎなアメ', emoji: '🍬', price: 30, desc: 'すきな虫の レベルを 1つ あげる' },
   {
     id: 'butterfly',
     name: 'チョウチョちゃんあめ',
     emoji: '🦋',
-    price: 2,
+    price: 10,
     desc: 'つるせMAPで つかうと ちょうちょに なって そらを とべる',
     item: 'butterflyCandy',
   },
@@ -56,15 +56,18 @@ export const SHOP_ITEMS: ShopItem[] = [
     id: 'dragonfly',
     name: 'トンボあめ',
     emoji: '🍭',
-    price: 5,
+    price: 30,
     desc: 'つるせMAPで つかうと ギンヤンマか ウスバキトンボに なって とべる',
     item: 'dragonflyCandy',
   },
-  { id: 'scroll-attack', name: 'こうげきの巻物', emoji: '📜', price: 30, desc: 'こうげきワザを 1つ おぼえさせる', scroll: 'attack' },
-  { id: 'scroll-status', name: 'へんかの巻物', emoji: '📜', price: 30, desc: 'へんかワザを 1つ おぼえさせる', scroll: 'status' },
-  { id: 'scroll-heal', name: 'かいふくの巻物', emoji: '📜', price: 30, desc: 'かいふくワザを 1つ おぼえさせる', scroll: 'heal' },
-  { id: 'scroll-ultimate', name: 'さいきょうの巻物', emoji: '👑', price: 100, desc: 'さいきょうワザを 1つ おぼえさせる', scroll: 'ultimate' },
+  { id: 'scroll-attack', name: 'こうげきの巻物', emoji: '📜', price: 100, desc: 'こうげきワザを 1つ おぼえさせる', scroll: 'attack' },
+  { id: 'scroll-status', name: 'へんかの巻物', emoji: '📜', price: 100, desc: 'へんかワザを 1つ おぼえさせる', scroll: 'status' },
+  { id: 'scroll-heal', name: 'かいふくの巻物', emoji: '📜', price: 100, desc: 'かいふくワザを 1つ おぼえさせる', scroll: 'heal' },
+  { id: 'scroll-ultimate', name: 'さいきょうの巻物', emoji: '👑', price: 500, desc: 'さいきょうワザを 1つ おぼえさせる', scroll: 'ultimate' },
 ]
+
+// ふしぎなアメの ねだん（ひょうじと しはらいで おなじ ものを つかう）
+const FUSHIGI_PRICE = SHOP_ITEMS.find((it) => it.id === 'fushigi')!.price
 
 const SCROLL_CLASS: Record<MoveGroup, string> = {
   attack: 'attack',
@@ -139,7 +142,7 @@ export function ShopPage({ bugs, onGoCapture }: Props) {
   function giveCandy(b: CaughtBug) {
     const before = levelOf(save, b.id)
     if (before.level >= MAX_LEVEL) return
-    if (!spendPoints(10)) {
+    if (!spendPoints(FUSHIGI_PRICE)) {
       sfx.error()
       return
     }
@@ -287,7 +290,7 @@ export function ShopPage({ bugs, onGoCapture }: Props) {
         <div className="modal-backdrop" onClick={close}>
           <div className="modal story-cage" onClick={(e) => e.stopPropagation()}>
             <h3>🍬 ふしぎなアメ</h3>
-            <p className="story-recruit-sub">どの虫の レベルを 1つ あげる？（10P）</p>
+            <p className="story-recruit-sub">どの虫の レベルを 1つ あげる？（{FUSHIGI_PRICE}P）</p>
             <BugRows
               bugs={bugs}
               save={save}
