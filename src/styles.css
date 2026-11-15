@@ -8120,3 +8120,28 @@ body.race-full .points-pop {
   margin: 2px 0 10px;
   animation: pop 0.6s ease;
 }
+
+/* =========================================================
+   チョウチョちゃん道場（アルティメットわざ）
+   ========================================================= */
+.game-card.dojo-chouchou-card {
+  background: linear-gradient(150deg, #ffd6f2, #e3d1ff 50%, #c8f0ff);
+  box-shadow: 0 0 0 2px #d77bd6, var(--shadow);
+}
+.dojo-note { font-size: 12px; font-weight: 700; margin: 0 0 10px; color: #8a4fd0; }
+.dojo-move.supreme {
+  background: linear-gradient(135deg, #fff0fb, #efe6ff 55%, #e2f6ff);
+  box-shadow: 0 0 0 2px #d77bd6, var(--shadow);
+}
+.dojo-move.supreme .dojo-move-name { font-weight: 900; }
+/* アルティメットわざの ボタン（バトル） */
+.stage-btn.sp.ult.supreme {
+  background: linear-gradient(135deg, #ff9be0, #c6a2ff 50%, #8fe3ff);
+  color: #3d1360;
+  box-shadow: 0 0 0 2px #b04ccf, 0 0 10px rgba(214, 120, 255, 0.6), var(--shadow);
+}
+.story-learn-new.ultimate.supreme {
+  background: linear-gradient(135deg, #ffe0f6, #eadcff 55%, #d8f4ff);
+  border-color: #b04ccf;
+  box-shadow: 0 0 0 3px rgba(176, 76, 207, 0.3), 0 6px 18px rgba(176, 76, 207, 0.35);
+}

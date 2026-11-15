@@ -70,7 +70,8 @@ export const ULTIMATE_ONLY_PATTERNS: readonly string[] = ['hpToOne', 'revive', '
 export function moveSummary(m: SpecialMoveV2): string {
   if (m.hpToOne) return 'HPを 1に'
   if (m.revive) return 'ふっかつ'
-  if (m.chaos) return 'なにが おこるかな？'
+  if (m.chaos) return m.superChaos ? 'なにが おこるかな？（つよい！）' : 'なにが おこるかな？'
+  if (m.guardBoosts) return 'のうりょく さいだい'
   if (m.copyMove) return 'わざコピー'
   if (m.restoreStats) return 'ダウンを もどす'
   if (m.flattenBoosts) return 'アップを もどす'
@@ -386,8 +387,28 @@ export const ULTIMATE_MOVES: LibraryMove[] = [
   ult({ ultimate: 'heal', id: 'u35', uses: 1, pattern: 'restoreStats', name: 'ぜんかいのいやしのひかり', desc: 'あたたかい ひかりが みかた ぜんいんを つつみ、さがって いた のうりょくを ぜんぶ もとに もどす。', emoji: '🌈', power: 0, target: 'selfSide', restoreStats: ['attack', 'defense', 'speed', 'accuracy', 'evasion'], typeLabel: 'みかた ぜんいんの さがった のうりょくを ぜんぶ もとに', tags: ['ひかる', 'りんぷん', 'チョウ目', 'みつ'] }),
 ]
 
+// -------------------------------------------------------------
+//  アルティメットわざ（チョウチョちゃん道場で おぼえる）
+// -------------------------------------------------------------
+//  ・さいきょうわざよりも つよい。ふつうの わざ・さいきょうわざの わくとは べつわく（SUPREME_MAX 参照）
+//  ・つうしんバトル／つうしんレースでは つかえない
+//  ・ULTIMATE_MOVES とは べつ（ふつうの わざ道場・まきもの・レベルアップには でてこない）
+const sup = (m: UltInput): LibraryMove => mv({ uses: 1, accuracy: null, supreme: true, ...m })
+
+export const SUPREME_MOVES: LibraryMove[] = [
+  sup({ ultimate: 'attack', id: 'x01', uses: 1, pattern: 'spread', name: 'アルティメットチョウチョちゃんひかり', desc: 'チョウチョちゃんの まばゆい ひかりが あいて ぜんいんを つらぬく！ そのうえ じぶんの HPが ぜんかい する。', emoji: '🦋', power: 150, target: 'allFoes', selfHealRatio: 1, typeLabel: 'あいて ぜんいんに ダメージ（いりょく150）＋じぶん ぜんかいふく', tags: ['ひかる', 'りんぷん', 'チョウ目'] }),
+  sup({ ultimate: 'status', id: 'x02', uses: 2, pattern: 'chaos', name: 'ふしちょうのおまじない', desc: 'ふしちょうの ちからが こもった おまじない。ふしぎなおまじないより ぜんぶ つよい なにかが おこる！ レースでも バトルでも つかえる。', emoji: '🔮', power: 0, target: 'self', chaos: true, superChaos: true, typeLabel: 'なにが おこるか わからない（ぜんぶ つよい！）', tags: ['ひかる', 'ふしぎ'] }),
+  sup({ ultimate: 'heal', id: 'x03', uses: 2, pattern: 'healAll', name: 'ぜんかいのみつ', desc: 'まほうの みつを わけあって、じぶんと みかた ぜんいんの HPを ぜんかい に する。', emoji: '🍯', power: 0, target: 'selfSide', healRatio: 1, typeLabel: 'じぶんと みかた ぜんいんの HPを ぜんかいふく', tags: ['みつ', 'はな'] }),
+  sup({ ultimate: 'status', id: 'x04', uses: 1, pattern: 'selfUpMulti', name: 'モノマネのまい', desc: 'チョウチョちゃんの まいを まねして おどる。こうげき・ぼうぎょ・すばやさ・かいひ・めいちゅうが さいだいまで あがる。あがった のうりょくは うばわれず、もとにも もどされない！', emoji: '🪞', power: 0, target: 'self', guardBoosts: true, statChanges: [up('attack', 12), up('defense', 12), up('speed', 12), up('evasion', 12), up('accuracy', 12)], typeLabel: 'のうりょく ぜんぶ さいだい＋うばう・もどす わざが きかない', tags: ['りんぷん', 'チョウ目'] }),
+  sup({ ultimate: 'status', id: 'x05', uses: 2, pattern: 'sleep', name: 'あくむのりんぷん', desc: 'あくむを みせる りんぷんで あいてを ねむらせ、こうげき・ぼうぎょ・すばやさも さげる。', emoji: '🌘', power: 0, target: 'oneFoe', inflict: { status: 'sleep', chance: 1 }, statChanges: [down('attack', -1), down('defense', -1), down('speed', -1)], typeLabel: 'ねむらせる＋こうげき・ぼうぎょ・すばやさ ダウン', tags: ['りんぷん', 'チョウ目'] }),
+]
+
 export function findMove(id: string): LibraryMove | undefined {
-  return MOVE_LIBRARY.find((m) => m.id === id) ?? ULTIMATE_MOVES.find((m) => m.id === id)
+  return (
+    MOVE_LIBRARY.find((m) => m.id === id) ??
+    ULTIMATE_MOVES.find((m) => m.id === id) ??
+    SUPREME_MOVES.find((m) => m.id === id)
+  )
 }
 
 export function movesByPattern(pattern: MovePatternKey): LibraryMove[] {

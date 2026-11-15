@@ -212,7 +212,7 @@ export function NetBattlePage({ bugs }: Props) {
         </button>
         <h3>{movesViewBug.name}の わざ</h3>
         <div className="story-learn-list">
-          {movesOf(save, movesViewBug, levelOf(save, movesViewBug.id).level).map((m, i) => (
+          {movesOf(save, movesViewBug, levelOf(save, movesViewBug.id).level, { net: true }).map((m, i) => (
             <div key={m.id + i} className="story-learn-old story-learn-old-view">
               <span className="story-learn-old-name">
                 {m.emoji ?? '✨'} {m.name}

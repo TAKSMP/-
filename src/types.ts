@@ -133,6 +133,8 @@ export interface SpecialMoveV2 {
   emoji?: string // えんしゅつ用
   // さいきょうひっさつわざ（Lv30/40/50で おぼえる）の しゅるい。ふつうの わざには ない
   ultimate?: 'attack' | 'status' | 'heal'
+  // アルティメットわざ（チョウチョちゃん道場で おぼえる。さいきょうわざより つよい。つうしんでは つかえない）
+  supreme?: boolean
 
   // --- こうげきの かたち ---
   hits?: [number, number] // れんぞく こうげき（さいしょう, さいだい）
@@ -169,6 +171,9 @@ export interface SpecialMoveV2 {
   hpToOne?: boolean // あたると あいての HPが のこり 1に なる（めいちゅうりつは accuracy）
   revive?: { ratio: number; chance: number } // たおれた みかたを HPの ratio ぶんで ふっかつ（chance の かくりつで せいこう）
   chaos?: boolean // なにが おこるか わからない（いろいろな こうかから ランダム）
+  superChaos?: boolean // chaos の つよい ばん（ふしちょうのおまじない：ぜんぶの こうかが つよくなる）
+  selfHealRatio?: number // こうげきの あと じぶんの HPを さいだいHPの わりあいだけ かいふく（じょうたいいじょうも なおる）
+  guardBoosts?: boolean // つかうと、あがった のうりょくを うばわれる／もとに もどされる／いれかえられる わざが きかなくなる
   restoreStats?: StatKey[] // さがった のうりょくランク（こうげき・ぼうぎょ…）を もとに もどす（あがっている ぶんは そのまま）
   flattenBoosts?: boolean // あいての あがった のうりょくランクを ぜんぶ もとに もどす（さがっている ぶんは そのまま）
   copyMove?: boolean // あいての わざを 1つ えらんで、このわざと いれかえて じぶんの わざに する

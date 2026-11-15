@@ -50,7 +50,7 @@ export function makeRacerInit(
   bug: CaughtBug,
   level: number,
   save: StorySave,
-  o: { id: string; color: string; human: boolean; skill?: number; tag?: string },
+  o: { id: string; color: string; human: boolean; skill?: number; tag?: string; net?: boolean },
 ): RacerInit {
   const s = statsWithLevel(bug, level)
   const init: RacerInit = {
@@ -63,15 +63,23 @@ export function makeRacerInit(
     level,
     speedStat: s.speed,
     hpStat: s.hp,
-    moves: movesOf(save, bug, level).map(toRaceMove),
+    moves: movesOf(save, bug, level, { net: o.net }).map(toRaceMove),
   }
   if (o.tag) init.tag = o.tag
   return init
 }
 
 // じぶんの むし（ストーリーの いまの Lv）
-export function myRacerInit(bug: CaughtBug, save: StorySave, id: string, color: string, tag?: string): RacerInit {
-  return makeRacerInit(bug, levelOf(save, bug.id).level, save, { id, color, human: true, tag })
+// net: true の ときは つうしんレース用（アルティメットわざは いれない）
+export function myRacerInit(
+  bug: CaughtBug,
+  save: StorySave,
+  id: string,
+  color: string,
+  tag?: string,
+  net = false,
+): RacerInit {
+  return makeRacerInit(bug, levelOf(save, bug.id).level, save, { id, color, human: true, tag, net })
 }
 
 // CPUの わくを うめる。えらんだ 虫は そのまま、おまかせは まだ でていない 虫から ランダム
@@ -79,7 +87,7 @@ export function cpuRacerInits(
   slots: CpuSlot[],
   bugs: CaughtBug[],
   save: StorySave,
-  o: { baseLv: number; usedBugIds: string[]; firstIndex: number; colors: string[] },
+  o: { baseLv: number; usedBugIds: string[]; firstIndex: number; colors: string[]; net?: boolean },
 ): RacerInit[] {
   const used = new Set(o.usedBugIds)
   for (const s of slots) if (s.mode === 'pick' && s.bugId) used.add(s.bugId)
@@ -95,6 +103,7 @@ export function cpuRacerInits(
         human: false,
         skill: PICK_SKILL,
         tag: 'CPU',
+        net: o.net,
       })
     }
     if (!pool.length) pool = shuffle(bugs) // 虫が たりない ときは おなじ虫も でる
@@ -105,6 +114,7 @@ export function cpuRacerInits(
       human: false,
       skill: cpuSkill(slot.level),
       tag: `CPU${slot.level}`,
+      net: o.net,
     })
   })
 }

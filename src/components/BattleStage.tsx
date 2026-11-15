@@ -254,7 +254,7 @@ export function CopyPicker({
         {foe.moves.map((m, i) => (
           <button
             key={m.id + i}
-            className={'stage-btn sp' + (m.ultimate ? ' ult' : '')}
+            className={'stage-btn sp' + (m.ultimate ? ' ult' : '') + (m.supreme ? ' supreme' : '')}
             disabled={!!m.copyMove}
             onClick={() => onPick(i)}
           >
@@ -262,7 +262,7 @@ export function CopyPicker({
               {m.emoji ?? '✨'} {m.name}
             </span>
             <small>
-              {m.ultimate && '👑 '}
+              {m.supreme ? '🦋 ' : m.ultimate && '👑 '}
               {m.copyMove ? 'まねできないよ' : `${moveSummary(m)}／のこり${m.uses}かい`}
             </small>
           </button>
@@ -654,7 +654,7 @@ export function BattleStage({
                 return (
                   <button
                     key={m.id + i}
-                    className={'stage-btn sp' + (m.ultimate ? ' ult' : '')}
+                    className={'stage-btn sp' + (m.ultimate ? ' ult' : '') + (m.supreme ? ' supreme' : '')}
                     disabled={cur.usesLeft[i] <= 0 || !!blocked}
                     onClick={() => chooseMove(cur, i, m)}
                   >
@@ -662,7 +662,7 @@ export function BattleStage({
                       {m.emoji ?? '✨'} {m.name}
                     </span>
                     <small>
-                      {m.ultimate && '👑 '}
+                      {m.supreme ? '🦋 ' : m.ultimate && '👑 '}
                       {blocked ?? `${moveSummary(m)}／のこり${cur.usesLeft[i]}`}
                     </small>
                   </button>

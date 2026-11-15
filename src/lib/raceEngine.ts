@@ -10,7 +10,7 @@
 //    メッセージと おとは「だれあて か（to）」を つけて だし、がめん側で じぶんの ぶんだけ ひろう
 // =============================================================
 import { curvAt, LANE_LIMIT, wrapS, type Track } from './raceCourse'
-import type { RaceMove } from './raceMoves'
+import { EFFECT_INFO, type RaceEffect, type RaceMove } from './raceMoves'
 
 // ── はやさの きまり ─────────────────────────────
 export const BOOST = 92 // アクセルで ふえる はやさ（みんな おなじ）
@@ -357,121 +357,149 @@ export function useMove(st: RaceState, r: Racer, idx: number) {
     return t ? [t] : []
   }
 
-  switch (m.effect) {
-    case 'dash':
-      dash(2.0 * k, DASH_POW)
-      break
-    case 'superDash':
-      dash(2.6 * k, SUPER_DASH_POW)
-      break
-    case 'turbo':
-      r.turboT = Math.max(r.turboT, 7 * k)
-      emit(st, r, 'dash')
-      break
-    case 'shot':
-      if (ult) for (const o of allAhead(700).slice(0, 3)) shoot('spin', o)
-      else shoot('spin', nextTarget(st, r))
-      break
-    case 'slowShot':
-      if (m.wide) for (const o of allAhead(900)) applyHit(st, o, 'slow', 3 * k, r, m.name)
-      else shoot('slow', nextTarget(st, r))
-      break
-    case 'sleepShot':
-      if (m.wide) for (const o of allAhead(900)) applyHit(st, o, 'sleep', 1.4 * k, r, m.name)
-      else shoot('sleep', nextTarget(st, r))
-      break
-    case 'jam':
-      for (const o of m.wide ? allAhead(1000) : [nextTarget(st, r)].filter((x): x is Racer => !!x))
-        applyHit(st, o, 'jam', 4 * k, r, m.name)
-      break
-    case 'multiShot':
-      for (let i = 0; i < m.count; i++) {
-        st.shots.push({
-          id: st.nextId++,
-          owner: r.id,
-          kind: 'straight',
-          hit: 'spin',
-          s: r.s + 26 + i * 18,
-          lat: Math.max(-LANE_LIMIT, Math.min(LANE_LIMIT, r.lat + (i - (m.count - 1) / 2) * 26)),
-          life: 4,
-          traveled: 0,
-          emoji: m.emoji,
-          name: m.name,
-          ultimate: ult,
-        })
+  // ── こうかを だす（なにが おこるか わからない わざは、ここを ランダムに よぶ）
+  const fire = (m: RaceMove, k: number) => {
+    switch (m.effect) {
+      case 'dash':
+        dash(2.0 * k, DASH_POW)
+        break
+      case 'superDash':
+        dash(2.6 * k, SUPER_DASH_POW)
+        break
+      case 'turbo':
+        r.turboT = Math.max(r.turboT, 7 * k)
+        emit(st, r, 'dash')
+        break
+      case 'shot':
+        if (ult) for (const o of allAhead(700).slice(0, 3)) shoot('spin', o)
+        else shoot('spin', nextTarget(st, r))
+        break
+      case 'slowShot':
+        if (m.wide) for (const o of allAhead(900)) applyHit(st, o, 'slow', 3 * k, r, m.name)
+        else shoot('slow', nextTarget(st, r))
+        break
+      case 'sleepShot':
+        if (m.wide) for (const o of allAhead(900)) applyHit(st, o, 'sleep', 1.4 * k, r, m.name)
+        else shoot('sleep', nextTarget(st, r))
+        break
+      case 'jam':
+        for (const o of m.wide ? allAhead(1000) : [nextTarget(st, r)].filter((x): x is Racer => !!x))
+          applyHit(st, o, 'jam', 4 * k, r, m.name)
+        break
+      case 'multiShot':
+        for (let i = 0; i < m.count; i++) {
+          st.shots.push({
+            id: st.nextId++,
+            owner: r.id,
+            kind: 'straight',
+            hit: 'spin',
+            s: r.s + 26 + i * 18,
+            lat: Math.max(-LANE_LIMIT, Math.min(LANE_LIMIT, r.lat + (i - (m.count - 1) / 2) * 26)),
+            life: 4,
+            traveled: 0,
+            emoji: m.emoji,
+            name: m.name,
+            ultimate: ult,
+          })
+        }
+        emit(st, r, 'shoot')
+        break
+      case 'wave': {
+        const list = allAhead(ult ? 2000 : 900)
+        st.fx.push({ kind: 'ring', racer: r.id, color: '#6fd3ff', t0: st.clock, dur: 0.8 })
+        for (const o of list) applyHit(st, o, 'slow', 2.6 * k, r, m.name)
+        break
       }
-      emit(st, r, 'shoot')
-      break
-    case 'wave': {
-      const list = allAhead(ult ? 2000 : 900)
-      st.fx.push({ kind: 'ring', racer: r.id, color: '#6fd3ff', t0: st.clock, dur: 0.8 })
-      for (const o of list) applyHit(st, o, 'slow', 2.6 * k, r, m.name)
-      break
-    }
-    case 'star':
-      st.stars.push({ owner: r.id, at: st.clock + 1.2, name: m.name, ultimate: ult })
-      say(st, r, '🌠 1いの むしを ねらって いるよ…')
-      break
-    case 'poisonTrap': {
-      const lats = m.wide || ult ? [-30, 0, 30] : [r.lat]
-      for (const lat of lats)
-        st.traps.push({ id: st.nextId++, owner: r.id, s: wrapS(st.track, r.s - 40), lat, born: st.clock, emoji: m.emoji, name: m.name })
-      break
-    }
-    case 'refill':
-      r.stamina = Math.min(r.tank, r.stamina + r.tank * (ult ? 1 : 0.65))
-      popText(st, r, 'げんき もりもり！', '#ffd23f')
-      emit(st, r, 'refill')
-      break
-    case 'endless':
-      r.endlessT = Math.max(r.endlessT, 6 * k)
-      r.stamina = Math.min(r.tank, r.stamina + r.tank * 0.3)
-      popText(st, r, 'たいりょく むげん！', '#ffd23f')
-      emit(st, r, 'refill')
-      break
-    case 'steal': {
-      const t = nextTarget(st, r)
-      if (t && t.shieldT > 0) {
-        applyHit(st, t, 'slow', 0, r, m.name) // バリアが ふせぐ
-      } else if (t) {
-        const got = t.stamina * (ult ? 0.8 : 0.5)
-        t.stamina -= got
-        r.stamina = Math.min(r.tank, r.stamina + got + r.tank * 0.2)
-        popText(st, t, 'すいとられた〜', '#ff9ec4')
-        say(st, t, `🧲 ${r.name}の「${m.name}」で たいりょくを すいとられた！`)
+      case 'star':
+        st.stars.push({ owner: r.id, at: st.clock + 1.2, name: m.name, ultimate: ult })
+        say(st, r, '🌠 1いの むしを ねらって いるよ…')
+        break
+      case 'poisonTrap': {
+        const lats = m.wide || ult ? [-30, 0, 30] : [r.lat]
+        for (const lat of lats)
+          st.traps.push({ id: st.nextId++, owner: r.id, s: wrapS(st.track, r.s - 40), lat, born: st.clock, emoji: m.emoji, name: m.name })
+        break
+      }
+      case 'refill':
+        r.stamina = Math.min(r.tank, r.stamina + r.tank * (ult ? 1 : 0.65))
+        popText(st, r, 'げんき もりもり！', '#ffd23f')
+        emit(st, r, 'refill')
+        break
+      case 'endless':
+        r.endlessT = Math.max(r.endlessT, 6 * k)
+        r.stamina = Math.min(r.tank, r.stamina + r.tank * 0.3)
+        popText(st, r, 'たいりょく むげん！', '#ffd23f')
+        emit(st, r, 'refill')
+        break
+      case 'steal': {
+        const t = nextTarget(st, r)
+        if (t && t.shieldT > 0) {
+          applyHit(st, t, 'slow', 0, r, m.name) // バリアが ふせぐ
+        } else if (t) {
+          const got = t.stamina * (ult ? 0.8 : 0.5)
+          t.stamina -= got
+          r.stamina = Math.min(r.tank, r.stamina + got + r.tank * 0.2)
+          popText(st, t, 'すいとられた〜', '#ff9ec4')
+          say(st, t, `🧲 ${r.name}の「${m.name}」で たいりょくを すいとられた！`)
+          emit(st, t, 'hitMe')
+        }
+        dash(1.2 * k, DASH_POW)
+        break
+      }
+      case 'shield':
+        r.shieldT = Math.max(r.shieldT, 9 * k)
+        r.slowT = 0
+        r.jamT = 0
+        emit(st, r, 'shield')
+        break
+      case 'swap': {
+        const t = st.racers
+          .filter((o) => o !== r && running(o) && o.s > r.s && o.s - r.s < (ult ? 2000 : 800))
+          .sort((a, b) => a.s - b.s)[0]
+        if (!t) {
+          dash(2 * k, DASH_POW)
+          break
+        }
+        if (t.shieldT > 0) {
+          applyHit(st, t, 'slow', 0, r, m.name)
+          break
+        }
+        st.fx.push({ kind: 'swap', racer: r.id, t0: st.clock, dur: 0.7 })
+        st.fx.push({ kind: 'swap', racer: t.id, t0: st.clock, dur: 0.7 })
+        ;[r.s, t.s] = [t.s, r.s]
+        ;[r.lat, t.lat] = [t.lat, r.lat]
+        say(st, t, `🔄 ${r.name}の「${m.name}」で いれかえられた！`)
         emit(st, t, 'hitMe')
-      }
-      dash(1.2 * k, DASH_POW)
-      break
-    }
-    case 'shield':
-      r.shieldT = Math.max(r.shieldT, 9 * k)
-      r.slowT = 0
-      r.jamT = 0
-      emit(st, r, 'shield')
-      break
-    case 'swap': {
-      const t = st.racers
-        .filter((o) => o !== r && running(o) && o.s > r.s && o.s - r.s < (ult ? 2000 : 800))
-        .sort((a, b) => a.s - b.s)[0]
-      if (!t) {
-        dash(2 * k, DASH_POW)
+        say(st, r, `🔄 ${t.name}と いれかわった！`)
         break
       }
-      if (t.shieldT > 0) {
-        applyHit(st, t, 'slow', 0, r, m.name)
-        break
-      }
-      st.fx.push({ kind: 'swap', racer: r.id, t0: st.clock, dur: 0.7 })
-      st.fx.push({ kind: 'swap', racer: t.id, t0: st.clock, dur: 0.7 })
-      ;[r.s, t.s] = [t.s, r.s]
-      ;[r.lat, t.lat] = [t.lat, r.lat]
-      say(st, t, `🔄 ${r.name}の「${m.name}」で いれかえられた！`)
-      emit(st, t, 'hitMe')
-      say(st, r, `🔄 ${t.name}と いれかわった！`)
-      break
     }
   }
+
+  if (m.effect === 'mystery' || m.effect === 'superMystery') {
+    const strong = m.effect === 'superMystery'
+    // ふしちょう（strong）は わるい ことが おきず、こうかが ぜんぶ つよく、2つ いっぺんに おきる
+    const pool: RaceEffect[] = strong
+      ? ['superDash', 'turbo', 'shot', 'wave', 'star', 'sleepShot', 'jam', 'refill', 'endless', 'steal', 'shield', 'swap']
+      : ['dash', 'superDash', 'turbo', 'shot', 'slowShot', 'wave', 'star', 'sleepShot', 'jam', 'refill', 'shield', 'swap']
+    say(st, r, strong ? '🔮 ふしちょうの ちからで なにかが おこる…！' : '🎲 なにが おこるかな…？')
+    if (!strong && Math.random() < 0.12) {
+      popText(st, r, 'なにも おこらなかった…', '#ccc')
+      return
+    }
+    const times = strong ? 2 : 1
+    const picked: RaceEffect[] = []
+    while (picked.length < times) {
+      const e = pool[Math.floor(Math.random() * pool.length)]
+      if (!picked.includes(e)) picked.push(e)
+    }
+    for (const e of picked) {
+      popText(st, r, `${EFFECT_INFO[e].emoji}${EFFECT_INFO[e].label}！`, strong ? '#ff8a3d' : '#ffd23f')
+      fire({ ...m, effect: e, wide: strong || m.wide, count: strong ? 3 : m.count }, strong ? 2 : k)
+    }
+    return
+  }
+  fire(m, k)
 }
 
 // ── CPU：わざを いつ つかうか ─────────────────────────────

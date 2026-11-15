@@ -162,7 +162,7 @@ export function RaceNet({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => voi
   useEffect(() => () => leaveRef.current?.(), [])
 
   function myNetRacer(bug: CaughtBug): NetRacer {
-    const { id: _id, color: _c, human: _h, skill: _s, tag: _t, ...rest } = myRacerInit(bug, save, 'x', RACE_COLORS[0])
+    const { id: _id, color: _c, human: _h, skill: _s, tag: _t, ...rest } = myRacerInit(bug, save, 'x', RACE_COLORS[0], undefined, true)
     return rest
   }
 
@@ -238,6 +238,7 @@ export function RaceNet({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => voi
       usedBugIds: myBug ? [myBug.id] : [],
       firstIndex: humans.length,
       colors,
+      net: true,
     })
     try {
       await startNetRace(code, {
@@ -378,7 +379,7 @@ export function RaceNet({ bugs, onBack }: { bugs: CaughtBug[]; onBack: () => voi
 
       {phase === 'menu' && myBug && (
         <div className="battle-step">
-          <MyRacerCard me={myRacerInit(myBug, save, 'x', RACE_COLORS[0])} compact />
+          <MyRacerCard me={myRacerInit(myBug, save, 'x', RACE_COLORS[0], undefined, true)} compact />
           <p className="race-lead">
             なまえ：<b>{name}</b>{' '}
             <button className="btn btn-ghost race-net-small" onClick={() => setPhase('name')}>

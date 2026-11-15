@@ -8,12 +8,15 @@ import type { CaughtBug, SpecialMoveV2 } from '../types'
 import { BugPicker } from '../components/BugPicker'
 import { DojoQuiz } from '../components/DojoQuiz'
 import { DEX, GROUPS, loadDexSeen, markMovesSeen, type DexEntry, type MoveGroup } from '../lib/moveDex'
-import { moveSummary } from '../lib/moveLibrary'
+import { moveSummary, SUPREME_MOVES } from '../lib/moveLibrary'
 import { mainPhoto } from '../lib/storage'
 import { sfx } from '../lib/sound'
 import {
   DOJO_MIN_LEVEL,
+  SUPREME_MAX,
+  addSupreme,
   addUltimate,
+  supremesOf,
   ULTIMATE_LEVELS,
   allMovesOf,
   applyTraining,
@@ -30,7 +33,7 @@ import {
   type TrainKey,
 } from '../lib/story'
 
-type Mode = 'learn' | 'train'
+type Mode = 'learn' | 'train' | 'chouchou' // chouchou：チョウチョちゃん道場（アルティメットわざ）
 type Step =
   | 'menu'
   | 'pickBug'
@@ -38,11 +41,13 @@ type Step =
   | 'pickAspect' // train：なにを きたえるか
   | 'quiz'
   | 'replace' // learn：どの わざと とりかえるか
+  | 'replaceSupreme' // chouchou：どの アルティメットわざと とりかえるか
   | 'done'
 
 // わざの つよさ → えいごテストの むずかしさ（1〜3）
 export function moveTier(m: SpecialMoveV2): 1 | 2 | 3 {
-  if (m.ultimate || m.hpToOne || m.revive || m.chaos || m.copyMove) return 3
+  // アルティメットわざも さいきょうわざと おなじ むずかしさ
+  if (m.supreme || m.ultimate || m.hpToOne || m.revive || m.chaos || m.copyMove) return 3
   if (m.kind === 'attack') {
     const hits = m.hits ? (m.hits[0] + m.hits[1]) / 2 : 1
     const p = (m.fixedDamage ?? m.power) * hits
@@ -154,6 +159,11 @@ export function DojoPage({ bugs, variant = 'kids' }: { bugs: CaughtBug[]; varian
             <span className="game-title">わざを きたえる</span>
             <span className="game-desc">リスニングテスト（ききとり）で おぼえた わざを つよく</span>
           </button>
+          <button className="game-card dojo-chouchou-card" onClick={() => start('chouchou')}>
+            <span className="game-emoji">🦋</span>
+            <span className="game-title">チョウチョちゃん<ruby>道場<rt>どうじょう</rt></ruby></span>
+            <span className="game-desc">さいきょうわざより つよい「アルティメットわざ」を おぼえる</span>
+          </button>
         </div>
       </div>,
     )
@@ -164,7 +174,9 @@ export function DojoPage({ bugs, variant = 'kids' }: { bugs: CaughtBug[]; varian
     return wrap(
       <div className="dojo-panel">
         {backBtn('menu')}
-        <h2 className="dojo-title">{mode === 'learn' ? '📖 しんわざの しゅうとく' : '🎧 わざを きたえる'}</h2>
+        <h2 className="dojo-title">
+          {mode === 'learn' ? '📖 しんわざの しゅうとく' : mode === 'train' ? '🎧 わざを きたえる' : '🦋 チョウチョちゃん道場'}
+        </h2>
         <p className="dojo-lead">どの虫に する？（レベル{DOJO_MIN_LEVEL}いじょう）</p>
         {eligible.length === 0 ? (
           <p className="dojo-empty">
@@ -192,6 +204,45 @@ export function DojoPage({ bugs, variant = 'kids' }: { bugs: CaughtBug[]; varian
   }
 
   if (!bug) return null
+
+  // ---------------- チョウチョちゃん道場：アルティメットわざえらび ----------------
+  if (step === 'pickMove' && mode === 'chouchou') {
+    const have = new Set(supremesOf(save, bug.id).map((m) => m.id))
+    return wrap(
+      <div className="dojo-panel dojo-chouchou">
+        {backBtn('pickBug')}
+        <h2 className="dojo-title">🦋 どの アルティメットわざを おぼえる？</h2>
+        <p className="dojo-lead">
+          {bug.name}（Lv{level}）。アルティメットわざは <b>さいきょうわざより つよい</b> ひみつの わざ！
+          おぼえられるのは {SUPREME_MAX}つ だけ だよ。テストの むずかしさは さいきょうわざと おなじ {stars(3)}。
+        </p>
+        <p className="dojo-note">📡 つうしんバトル・つうしんレースでは つかえないよ。</p>
+        <div className="dojo-movelist">
+          {SUPREME_MOVES.map((m) => {
+            const owned = have.has(m.id)
+            return (
+              <button
+                key={m.id}
+                className="dojo-move supreme"
+                disabled={owned}
+                onClick={() => {
+                  sfx.tap()
+                  setTarget({ ...m })
+                  setStep('quiz')
+                }}
+              >
+                <span className="dojo-move-emoji">{m.emoji}</span>
+                <span className="dojo-move-name">{m.name}</span>
+                <span className="dojo-move-sub">
+                  {owned ? 'おぼえている' : `${m.typeLabel}／${m.uses}かい`}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </div>,
+    )
+  }
 
   // ---------------- わざえらび ----------------
   if (step === 'pickMove' && mode === 'learn') {
@@ -335,12 +386,22 @@ export function DojoPage({ bugs, variant = 'kids' }: { bugs: CaughtBug[]; varian
     const tier = mode === 'learn' ? moveTier(pendingEntry!.move) : moveTier(target!)
     return wrap(
       <DojoQuiz
-        mode={mode === 'learn' ? 'write' : 'listen'}
+        mode={mode === 'train' ? 'listen' : 'write'}
         tier={tier}
         variant={variant}
-        onExit={() => setStep(mode === 'learn' ? 'pickMove' : 'pickAspect')}
+        onExit={() => setStep(mode === 'train' ? 'pickAspect' : 'pickMove')}
         onClear={() => {
           sfx.tap()
+          if (mode === 'chouchou' && target) {
+            const cur = save.supremes?.[bug.id] ?? []
+            if (cur.length >= SUPREME_MAX) {
+              setStep('replaceSupreme')
+              return
+            }
+            commit(addSupreme(save, bug.id, target.id))
+            learned(target)
+            return
+          }
           if (mode === 'train' && target && aspect) {
             const before = applyTraining(target, save.trained?.[bug.id]?.[target.id])
             const next = trainMove(save, bug.id, target, aspect)
@@ -380,12 +441,54 @@ export function DojoPage({ bugs, variant = 'kids' }: { bugs: CaughtBug[]; varian
   }
 
   function learned(mv: SpecialMoveV2, replaced?: string) {
-    markMovesSeen([mv.id])
+    if (!mv.supreme) markMovesSeen([mv.id])
     setSeen(loadDexSeen())
     setResult(
       `${bug!.name}は 「${mv.name}」を おぼえた！` + (replaced ? `（「${replaced}」は わすれた）` : ''),
     )
     setStep('done')
+  }
+
+  // ---------------- アルティメットわざの とりかえ ----------------
+  if (step === 'replaceSupreme' && target) {
+    const mv = target
+    return wrap(
+      <div className="dojo-panel">
+        <h2 className="dojo-title">🎉 ごうかく！</h2>
+        <div className="story-learn-new ultimate supreme">
+          <span className="story-learn-emoji">{mv.emoji ?? '✨'}</span>
+          <span className="story-learn-name">{mv.name}</span>
+          <span className="story-learn-sub">
+            {moveSummary(mv)}／{mv.uses}かい つかえる
+          </span>
+          <p className="story-learn-desc">{mv.desc}</p>
+        </div>
+        <p className="story-learn-q">アルティメットわざは {SUPREME_MAX}つまで。どの わざと とりかえる？</p>
+        <div className="story-learn-list">
+          {supremesOf(save, bug.id).map((m) => (
+            <button
+              key={m.id}
+              className="story-learn-old"
+              onClick={() => {
+                sfx.tap()
+                commit(addSupreme(save, bug.id, mv.id, m.id))
+                learned(mv, m.name)
+              }}
+            >
+              <span className="story-learn-old-name">
+                🦋 {m.emoji} {m.name}
+              </span>
+              <span className="story-learn-old-sub">
+                {moveSummary(m)}／{m.uses}かい
+              </span>
+            </button>
+          ))}
+        </div>
+        <button className="btn btn-ghost" onClick={toMenu}>
+          やっぱり やめる
+        </button>
+      </div>,
+    )
   }
 
   // ---------------- とりかえ ----------------

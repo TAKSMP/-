@@ -54,7 +54,7 @@ export function buildSnapshot(bug: CaughtBug, save: StorySave): BugSnapshot {
     attack: s.attack,
     defense: s.defense,
     speed: s.speed,
-    moves: movesOf(save, bug, level),
+    moves: movesOf(save, bug, level, { net: true }),
   }
 }
 

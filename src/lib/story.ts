@@ -8,7 +8,7 @@
 // =============================================================
 import type { CaughtBug, SpecialMoveV2 } from '../types'
 import { battleStatsV2, tagsOf, usesFor } from './battleSetup'
-import { MOVE_LIBRARY, ULTIMATE_MOVES } from './moveLibrary'
+import { MOVE_LIBRARY, SUPREME_MOVES, ULTIMATE_MOVES } from './moveLibrary'
 import { assignEncounters } from '../data/encounters'
 import { TONE_COUNT } from '../components/ParkScene'
 
@@ -360,6 +360,8 @@ export interface StorySave {
   // ショップの まきもので ふやした ふつうの わざの わく（虫のID → ふえた かず）。
   // わざの わくは レベルで ふえる（Lv1:1つ・Lv2:2つ・Lv4:3つ）が、まきもので あいている わくに すぐ おぼえられる
   extraMoveSlots?: Record<string, number>
+  // チョウチョちゃん道場で おぼえた アルティメットわざ（虫のID → わざのID。さいだい SUPREME_MAX こ）
+  supremes?: Record<string, string[]>
 }
 
 const emptySave = (): StorySave => ({
@@ -417,6 +419,7 @@ export function loadStory(): StorySave {
           : undefined,
       scrollUltimates: d.scrollUltimates ?? {},
       extraMoveSlots: d.extraMoveSlots ?? {},
+      supremes: d.supremes ?? {},
     }
   } catch {
     return emptySave()
@@ -630,13 +633,36 @@ export function ultimatesOf(save: StorySave, bugId: string, level: number): Spec
     })
 }
 
-// いま つかえる わざ（ふつうの わざ レベルぶん ＋ さいきょうわざ）
+// いま つかえる わざ（ふつうの わざ レベルぶん ＋ さいきょうわざ ＋ アルティメットわざ）
+// net: true の ときは つうしん用。アルティメットわざは つうしんでは つかえないので いれない
 export function movesOf(
   save: StorySave,
   bug: CaughtBug,
   level: number,
+  opts: { net?: boolean } = {},
 ): SpecialMoveV2[] {
-  return baseMovesOf(save, bug, level).map((m) => applyTraining(m, save.trained?.[bug.id]?.[m.id]))
+  const base = baseMovesOf(save, bug, level).map((m) => applyTraining(m, save.trained?.[bug.id]?.[m.id]))
+  return opts.net ? base : [...base, ...supremesOf(save, bug.id)]
+}
+
+// -------------------------------------------------------------
+//  チョウチョちゃん道場：アルティメットわざ
+// -------------------------------------------------------------
+export const SUPREME_MAX = 1 // アルティメットわざの わく（ふつうの わざ・さいきょうわざとは べつ）
+
+export function supremesOf(save: StorySave, bugId: string): SpecialMoveV2[] {
+  return (save.supremes?.[bugId] ?? [])
+    .map((id) => SUPREME_MOVES.find((m) => m.id === id))
+    .filter((m): m is (typeof SUPREME_MOVES)[number] => !!m)
+    .slice(0, SUPREME_MAX)
+    .map((m) => ({ ...m }))
+}
+
+// アルティメットわざを おぼえる。いっぱいなら replaceId と とりかえる
+export function addSupreme(save: StorySave, bugId: string, moveId: string, replaceId?: string): StorySave {
+  const cur = (save.supremes?.[bugId] ?? []).filter((id) => id !== moveId)
+  const list = replaceId ? cur.map((id) => (id === replaceId ? moveId : id)) : [...cur, moveId]
+  return { ...save, supremes: { ...(save.supremes ?? {}), [bugId]: list.slice(0, SUPREME_MAX) } }
 }
 
 // きたえる まえの わざ（わざ道場で つかう）

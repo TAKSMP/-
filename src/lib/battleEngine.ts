@@ -70,6 +70,7 @@ export interface Fighter {
   regen: { ratio: number; turnsLeft: number } | null
   leechedBy: { uid: string; ratio: number; turnsLeft: number } | null
   counterGuard: boolean // はんげきの かまえ
+  boostGuard?: boolean // モノマネのまい：あがった のうりょくを うばわれない・もとに もどされない
   damageTakenThisTurn: number
   actedIndex: number // このターン なんばんめに うごいたか（-1 = まだ）
   fainted: boolean
@@ -208,8 +209,9 @@ export function makeFighter(
   side: Side,
   photo: string,
 ): Fighter {
-  // ふつうの わざ 3つ ＋ さいきょうわざ（べつわく）さいだい3つ
-  const moves = stats.moves.slice(0, 6)
+  // ふつうの わざ 3つ ＋ さいきょうわざ（べつわく）さいだい3つ ＋ アルティメットわざ（べつわく）
+  const supreme = stats.moves.filter((m) => m.supreme).slice(0, 1)
+  const moves = [...stats.moves.filter((m) => !m.supreme).slice(0, 6), ...supreme]
   return {
     uid,
     side,
@@ -232,6 +234,7 @@ export function makeFighter(
     regen: null,
     leechedBy: null,
     counterGuard: false,
+    boostGuard: false,
     damageTakenThisTurn: 0,
     actedIndex: -1,
     fainted: false,
@@ -491,13 +494,15 @@ function reviveFighter(t: Fighter, ratio: number, log: string[]): void {
   t.regen = null
   t.leechedBy = null
   t.counterGuard = false
+  t.boostGuard = false
   log.push(`🌟 ${t.name}が ふっかつした！`)
   log.push(`💚 ${t.name}の HPが ${t.hp} かいふく！`)
 }
 
 // 「ふしぎなおまじない」：なにが おこるか わからない。いい ことも わるい ことも ある。
 const CHAOS_OUTCOMES = 12
-export function chaosEffect(field: Field, actor: Fighter, log: string[], rng: Rng): void {
+export function chaosEffect(field: Field, actor: Fighter, log: string[], rng: Rng, strong = false): void {
+  if (strong) return superChaosEffect(field, actor, log, rng)
   const foes = aliveOf(field, actor.side === 'me' ? 'foe' : 'me')
   const allies = aliveOf(field, actor.side)
   const fallen = field.fighters.find(
@@ -618,6 +623,125 @@ export function chaosEffect(field: Field, actor: Fighter, log: string[], rng: Rn
   }
 }
 
+// 「ふしちょうのおまじない」：ふしぎなおまじないの こうかが ぜんぶ つよくなった ばん。
+// わるい けっか（しっぱい・なにも おきない・じぶんが ねむる）は、つよい いい けっかに かわっている
+function superChaosEffect(field: Field, actor: Fighter, log: string[], rng: Rng): void {
+  const foes = aliveOf(field, actor.side === 'me' ? 'foe' : 'me')
+  const allies = aliveOf(field, actor.side)
+  const fallen = field.fighters.filter((x) => x.side === actor.side && x.uid !== actor.uid && x.fainted)
+  log.push(`🔥 ${actor.name}は ふしちょうの おまじないを となえた…！`)
+  let pick = Math.floor(rng() * CHAOS_OUTCOMES)
+  if (pick === 10 && fallen.length === 0) pick = (pick + 1 + Math.floor(rng() * (CHAOS_OUTCOMES - 1))) % CHAOS_OUTCOMES
+  const healFull = (t: Fighter) => {
+    const before = t.hp
+    t.hp = t.maxHp
+    t.statuses = []
+    log.push(
+      t.hp > before ? `💚 ${t.name}の HPが ${t.hp - before} かいふく！` : `…${t.name}の HPは もう まんタンだ！`,
+    )
+  }
+  switch (pick) {
+    case 0: {
+      log.push('💥💥 どかーん！ ちょう だいばくはつが おきた！')
+      const synth = { ...BASIC_ATTACK, power: 180 } as SpecialMoveV2
+      for (const t of foes) {
+        if (t.fainted) continue
+        const { dmg } = calcDamage(actor, t, synth, { spread: foes.filter((x) => !x.fainted).length, late: false }, rng)
+        const dealt = applyDamage(actor, t, dmg, log)
+        log.push(`${t.name}に ${dealt}の ダメージ！`)
+      }
+      reportFaints(field, log)
+      return
+    }
+    case 1: {
+      log.push('🌈 ふしちょうの ほのおに つつまれた！')
+      healFull(actor)
+      actor.regen = { ratio: 0.15, turnsLeft: 5 }
+      log.push(`🌱 ${actor.name}は まいターン かいふく するように なった！`)
+      return
+    }
+    case 2: {
+      log.push('🌸 まばゆい ひかりが みんなを つつんだ！')
+      for (const t of allies) healFull(t)
+      return
+    }
+    case 3: {
+      log.push('🌙 ふかい ねむりの かぜが ふいた！')
+      for (const t of foes) {
+        inflictStatus(t, 'sleep', log, rng)
+        changeRank(t, 'speed', -2, log)
+      }
+      return
+    }
+    case 4: {
+      log.push('⛈️ だいかみなりが あいてを つらぬいた！')
+      for (const t of foes) {
+        inflictStatus(t, 'paralysis', log, rng)
+        inflictStatus(t, 'poison', log, rng)
+      }
+      return
+    }
+    case 5: {
+      log.push('🔥 ものすごい ちからが みなぎって きた！')
+      changeRank(actor, 'attack', 4, log)
+      changeRank(actor, 'speed', 4, log)
+      return
+    }
+    case 6: {
+      log.push('😱 あいてが こおりついた ように ふるえあがった！')
+      for (const t of foes) {
+        changeRank(t, 'attack', -4, log)
+        changeRank(t, 'defense', -4, log)
+      }
+      return
+    }
+    case 7: {
+      log.push('🍀 ラッキー！ からだじゅうに ちからが あふれる！')
+      for (const k of ['attack', 'defense', 'speed', 'accuracy', 'evasion'] as StatKey[]) changeRank(actor, k, 2, log)
+      return
+    }
+    case 8: {
+      log.push('🌀 くうかんが おおきく ゆがんだ！')
+      for (const t of foes) {
+        const dmg = Math.floor(t.hp / 2)
+        if (dmg <= 0) continue
+        const dealt = applyDamage(actor, t, dmg, log)
+        log.push(`${t.name}に ${dealt}の ダメージ！ HPが はんぶんに なった！`)
+      }
+      reportFaints(field, log)
+      return
+    }
+    case 9: {
+      log.push('🛡️ ふしぎな ひかりの よろいが みかたを まもる！')
+      for (const t of allies) {
+        changeRank(t, 'defense', 2, log)
+        changeRank(t, 'evasion', 1, log)
+      }
+      return
+    }
+    case 10: {
+      log.push('✨✨ だいきせきが おきた！')
+      for (const t of fallen) reviveFighter(t, 1, log)
+      return
+    }
+    default: {
+      const t = foes[Math.floor(rng() * foes.length)]
+      if (!t) {
+        log.push('…しかし あいてが いない！')
+        return
+      }
+      const lost = t.hp - 1
+      log.push('🩸 いのちの ふちまで おいつめる ひかり！')
+      if (lost > 0) {
+        applyDamage(actor, t, lost, log)
+        log.push(`${t.name}に ${lost}の ダメージ！ HPが のこり 1に なった！`)
+      } else {
+        log.push(`…${t.name}の HPは もう のこり 1だ！`)
+      }
+    }
+  }
+}
+
 // 「わざコピー」：あいての わざを 1つ えらんで、このわざと いれかえる
 function copyFoeMove(
   field: Field,
@@ -682,7 +806,7 @@ function executeMove(
 
   // ── なにが おこるか わからない
   if (move.chaos) {
-    chaosEffect(field, actor, log, rng)
+    chaosEffect(field, actor, log, rng, !!move.superChaos)
     return
   }
 
@@ -912,7 +1036,9 @@ function executeMove(
     }
 
     // ── のうりょくを うばう
-    if (move.stealStats && !target.fainted) {
+    if ((move.stealStats || move.flattenBoosts || move.swapStats) && !target.fainted && target.boostGuard && target.side !== actor.side) {
+      log.push(`🪞 ${target.name}の モノマネのまいで わざが はねかえされた！ のうりょくは そのままだ！`)
+    } else if (move.stealStats && !target.fainted) {
       let stolen = 0
       for (const k of Object.keys(target.rank) as StatKey[]) {
         if (target.rank[k] > 0) {
@@ -929,7 +1055,7 @@ function executeMove(
     }
 
     // ── あいての あがった のうりょくを フラットに もどす
-    if (move.flattenBoosts && !target.fainted) {
+    if (move.flattenBoosts && !target.fainted && !(target.boostGuard && target.side !== actor.side)) {
       const fixed: StatKey[] = []
       for (const k of Object.keys(target.rank) as StatKey[]) {
         const base = k === 'evasion' ? BASE_EVASION : 0
@@ -946,7 +1072,7 @@ function executeMove(
     }
 
     // ── のうりょくを いれかえる
-    if (move.swapStats && !target.fainted) {
+    if (move.swapStats && !target.fainted && !(target.boostGuard && target.side !== actor.side)) {
       const tmp = { ...actor.rank }
       actor.rank = { ...target.rank }
       target.rank = tmp
@@ -960,6 +1086,27 @@ function executeMove(
     const before = actor.hp
     actor.hp = Math.min(actor.maxHp, actor.hp + heal)
     log.push(`💚 ${actor.name}は ${actor.hp - before} きゅうしゅうした！`)
+  }
+
+  // ── じぶんを かいふく（アルティメットチョウチョちゃんひかり など）
+  if (move.selfHealRatio && !actor.fainted) {
+    const before = actor.hp
+    actor.hp = Math.min(actor.maxHp, actor.hp + Math.max(1, Math.round(actor.maxHp * move.selfHealRatio)))
+    log.push(
+      actor.hp > before
+        ? `💚 ${actor.name}の HPが ${actor.hp - before} かいふく！`
+        : `…${actor.name}の HPは もう まんタンだ！`,
+    )
+    if (actor.statuses.length > 0) {
+      log.push(`✨ ${actor.name}の ${actor.statuses.map((x) => statusLabel(x.key)).join('・')}が なおった！`)
+      actor.statuses = []
+    }
+  }
+
+  // ── のうりょくを まもる かまえ（モノマネのまい）
+  if (move.guardBoosts && !actor.fainted) {
+    actor.boostGuard = true
+    log.push(`🪞 ${actor.name}の のうりょくは もう うばわれない！ もとにも もどされない！`)
   }
 
   // ── はんどう

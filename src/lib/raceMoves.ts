@@ -25,6 +25,8 @@ export type RaceEffect =
   | 'steal' // まえの むしの たいりょくを すいとる
   | 'shield' // バリアで 1かい ふせぐ
   | 'swap' // まえの むしと いれかわる
+  | 'mystery' // なにが おこるか わからない（ふしぎなおまじない）
+  | 'superMystery' // なにが おこるか わからない・ぜんぶ つよい（ふしちょうのおまじない）
 
 export interface RaceMove {
   id: string
@@ -54,6 +56,8 @@ export const EFFECT_INFO: Record<RaceEffect, { emoji: string; label: string; des
   steal: { emoji: '🧲', label: 'すいとり', desc: 'まえの むしの たいりょくを すいとって ダッシュ', attack: true },
   shield: { emoji: '🛡️', label: 'バリア', desc: 'こうげきを 1かい ふせぐ', attack: false },
   swap: { emoji: '🔄', label: 'いれかわり', desc: 'まえの むしと ばしょが いれかわる', attack: true },
+  mystery: { emoji: '🎲', label: 'なにが おこるかな', desc: 'なにが おこるか わからない！', attack: false },
+  superMystery: { emoji: '🔮', label: 'ふしちょうの ちから', desc: 'すごい ことが 2つ おこる！ なにが おこるかは わからない', attack: false },
 }
 
 // わざ → レースの こうか
@@ -62,6 +66,7 @@ export function raceEffectOf(m: SpecialMoveV2): RaceEffect {
   const selfUps = (m.statChanges ?? []).filter((c) => c.to !== 'foe' && c.stage > 0)
   const foeDowns = (m.statChanges ?? []).filter((c) => c.to === 'foe' && c.stage < 0)
 
+  if (m.chaos) return m.superChaos ? 'superMystery' : 'mystery'
   if (m.swapStats) return 'swap'
   if (m.stealStats || m.leech || m.drainRatio) return 'steal'
   if (m.flattenBoosts) return wide ? 'wave' : 'slowShot'
