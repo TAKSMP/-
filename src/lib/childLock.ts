@@ -66,6 +66,7 @@ export const LOCK_TREE: { label: string; groups: LockGroup[] }[] = [
           { key: 'story', label: 'ストーリーモード' },
           { key: 'dojo', label: 'わざ道場' },
           { key: 'dojoAdult', label: 'わざ道場（おとな）' },
+          { key: 'dojoChouchou', label: 'チョウチョちゃん道場' },
         ],
       },
       {

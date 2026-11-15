@@ -23,7 +23,7 @@ interface Props {
 
 // 画面（Game）→ チャイルドロックの 項目キー（メニューは null）
 const LOCK_KEY: Partial<Record<string, string>> = {
-  quiz: 'quiz', battleQuiz: 'battleQuiz', kentei: 'kentei', shop: 'shop', story: 'story', dojo: 'dojo', dojoAdult: 'dojoAdult',
+  quiz: 'quiz', battleQuiz: 'battleQuiz', kentei: 'kentei', shop: 'shop', story: 'story', dojo: 'dojo', dojoAdult: 'dojoAdult', dojoChouchou: 'dojoChouchou',
   battle: 'battle', battleOld: 'battleOld', net: 'net', race: 'race', raceOld: 'raceOld',
 }
 
@@ -39,6 +39,7 @@ type Game =
   | 'story'
   | 'dojo'
   | 'dojoAdult'
+  | 'dojoChouchou'
   | 'battleMenu'
   | 'battle'
   | 'battleOld'
@@ -159,6 +160,11 @@ export function PlayPage({ bugs, onGoCapture, onActiveChange, resetSignal }: Pro
           <span className="game-title">わざ道場（おとな）</span>
           <span className="game-desc">ハワイ旅行で つかう 英会話の テスト（むずかしい）</span>
         </button>
+        <button className="game-card dojo-chouchou-card" onClick={() => go('dojoChouchou')}>
+          <span className="game-emoji">🦋</span>
+          <span className="game-title">チョウチョちゃん<ruby>道場<rt>どうじょう</rt></ruby></span>
+          <span className="game-desc">さいきょうわざより つよい「アルティメットわざ」を おぼえる</span>
+        </button>
       </div>,
     )
   }
@@ -190,6 +196,16 @@ export function PlayPage({ bugs, onGoCapture, onActiveChange, resetSignal }: Pro
       'ストーリー',
       header('🌺 わざ道場（おとな）', 'ハワイ旅行で つかう 英会話'),
       <DojoPage bugs={bugs} variant="adult" />,
+    )
+  }
+
+  // チョウチョちゃん道場：アルティメットわざを おぼえる
+  if (game === 'dojoChouchou') {
+    return frame(
+      'storyMenu',
+      'ストーリー',
+      header(<>🦋 チョウチョちゃん<ruby>道場<rt>どうじょう</rt></ruby></>, 'さいきょうわざより つよい わざを おぼえよう！'),
+      <DojoPage bugs={bugs} chouchou />,
     )
   }
 

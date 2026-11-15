@@ -75,11 +75,20 @@ function valueText(m: SpecialMoveV2, key: TrainKey): string {
   }
 }
 
-export function DojoPage({ bugs, variant = 'kids' }: { bugs: CaughtBug[]; variant?: 'kids' | 'adult' }) {
+// chouchou: true の ときは「チョウチョちゃん道場」だけを ひらく（ストーリーの メニューから くる）
+export function DojoPage({
+  bugs,
+  variant = 'kids',
+  chouchou = false,
+}: {
+  bugs: CaughtBug[]
+  variant?: 'kids' | 'adult'
+  chouchou?: boolean
+}) {
   const adult = variant === 'adult'
   const [save, setSave] = useState<StorySave>(() => loadStory())
-  const [step, setStep] = useState<Step>('menu')
-  const [mode, setMode] = useState<Mode>('learn')
+  const [step, setStep] = useState<Step>(chouchou ? 'pickBug' : 'menu')
+  const [mode, setMode] = useState<Mode>(chouchou ? 'chouchou' : 'learn')
   const [bug, setBug] = useState<CaughtBug | null>(null)
   const [group, setGroup] = useState<MoveGroup>('attack')
   const [target, setTarget] = useState<SpecialMoveV2 | null>(null) // えらんだ わざ（きたえる：まえの わざ）
@@ -100,7 +109,7 @@ export function DojoPage({ bugs, variant = 'kids' }: { bugs: CaughtBug[]; varian
   }
   function toMenu() {
     sfx.tap()
-    setStep('menu')
+    setStep(chouchou ? 'pickBug' : 'menu')
     setBug(null)
     setTarget(null)
     setPendingEntry(null)
@@ -159,11 +168,6 @@ export function DojoPage({ bugs, variant = 'kids' }: { bugs: CaughtBug[]; varian
             <span className="game-title">わざを きたえる</span>
             <span className="game-desc">リスニングテスト（ききとり）で おぼえた わざを つよく</span>
           </button>
-          <button className="game-card dojo-chouchou-card" onClick={() => start('chouchou')}>
-            <span className="game-emoji">🦋</span>
-            <span className="game-title">チョウチョちゃん<ruby>道場<rt>どうじょう</rt></ruby></span>
-            <span className="game-desc">さいきょうわざより つよい「アルティメットわざ」を おぼえる</span>
-          </button>
         </div>
       </div>,
     )
@@ -173,7 +177,7 @@ export function DojoPage({ bugs, variant = 'kids' }: { bugs: CaughtBug[]; varian
   if (step === 'pickBug') {
     return wrap(
       <div className="dojo-panel">
-        {backBtn('menu')}
+        {!chouchou && backBtn('menu')}
         <h2 className="dojo-title">
           {mode === 'learn' ? '📖 しんわざの しゅうとく' : mode === 'train' ? '🎧 わざを きたえる' : '🦋 チョウチョちゃん道場'}
         </h2>
@@ -556,7 +560,7 @@ export function DojoPage({ bugs, variant = 'kids' }: { bugs: CaughtBug[]; varian
         つづけて やる
       </button>
       <button className="btn btn-ghost" onClick={toMenu}>
-        どうじょうの メニューへ
+        {chouchou ? 'ほかの 虫で やる' : 'どうじょうの メニューへ'}
       </button>
     </div>,
   )
