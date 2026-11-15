@@ -67,6 +67,8 @@ export function raceEffectOf(m: SpecialMoveV2): RaceEffect {
   const foeDowns = (m.statChanges ?? []).filter((c) => c.to === 'foe' && c.stage < 0)
 
   if (m.chaos) return m.superChaos ? 'superMystery' : 'mystery'
+  if (m.deepSleep) return 'sleepShot'
+  if (m.sealMoves) return 'steal'
   if (m.swapStats) return 'swap'
   if (m.stealStats || m.leech || m.drainRatio) return 'steal'
   if (m.flattenBoosts) return wide ? 'wave' : 'slowShot'

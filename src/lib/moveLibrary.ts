@@ -72,6 +72,8 @@ export function moveSummary(m: SpecialMoveV2): string {
   if (m.revive) return 'ふっかつ'
   if (m.chaos) return m.superChaos ? 'なにが おこるかな？（つよい！）' : 'なにが おこるかな？'
   if (m.guardBoosts) return 'のうりょく さいだい'
+  if (m.deepSleep) return 'ずっと ねむらせる'
+  if (m.sealMoves) return 'わざを うばう'
   if (m.copyMove) return 'わざコピー'
   if (m.restoreStats) return 'ダウンを もどす'
   if (m.flattenBoosts) return 'アップを もどす'
@@ -387,6 +389,13 @@ export const ULTIMATE_MOVES: LibraryMove[] = [
   ult({ ultimate: 'heal', id: 'u35', uses: 1, pattern: 'restoreStats', name: 'ぜんかいのいやしのひかり', desc: 'あたたかい ひかりが みかた ぜんいんを つつみ、さがって いた のうりょくを ぜんぶ もとに もどす。', emoji: '🌈', power: 0, target: 'selfSide', restoreStats: ['attack', 'defense', 'speed', 'accuracy', 'evasion'], typeLabel: 'みかた ぜんいんの さがった のうりょくを ぜんぶ もとに', tags: ['ひかる', 'りんぷん', 'チョウ目', 'みつ'] }),
 ]
 
+// せんよう わざ（onlyFor）を この虫が おぼえられるか
+export function canLearnMove(m: { onlyFor?: string[] }, bugName: string): boolean {
+  if (!m.onlyFor) return true
+  const n = bugName.replace(/\s/g, '')
+  return m.onlyFor.some((x) => n.includes(x))
+}
+
 // -------------------------------------------------------------
 //  アルティメットわざ（チョウチョちゃん道場で おぼえる）
 // -------------------------------------------------------------
@@ -401,6 +410,10 @@ export const SUPREME_MOVES: LibraryMove[] = [
   sup({ ultimate: 'heal', id: 'x03', uses: 2, pattern: 'healAll', name: 'ぜんかいのみつ', desc: 'まほうの みつを わけあって、じぶんと みかた ぜんいんの HPを ぜんかい に する。', emoji: '🍯', power: 0, target: 'selfSide', healRatio: 1, typeLabel: 'じぶんと みかた ぜんいんの HPを ぜんかいふく', tags: ['みつ', 'はな'] }),
   sup({ ultimate: 'status', id: 'x04', uses: 1, pattern: 'selfUpMulti', name: 'モノマネのまい', desc: 'チョウチョちゃんの まいを まねして おどる。こうげき・ぼうぎょ・すばやさ・かいひ・めいちゅうが さいだいまで あがる。あがった のうりょくは うばわれず、もとにも もどされない！', emoji: '🪞', power: 0, target: 'self', guardBoosts: true, statChanges: [up('attack', 12), up('defense', 12), up('speed', 12), up('evasion', 12), up('accuracy', 12)], typeLabel: 'のうりょく ぜんぶ さいだい＋うばう・もどす わざが きかない', tags: ['りんぷん', 'チョウ目'] }),
   sup({ ultimate: 'status', id: 'x05', uses: 2, pattern: 'sleep', name: 'あくむのりんぷん', desc: 'あくむを みせる りんぷんで あいてを ねむらせ、こうげき・ぼうぎょ・すばやさも さげる。', emoji: '🌘', power: 0, target: 'oneFoe', inflict: { status: 'sleep', chance: 1 }, statChanges: [down('attack', -1), down('defense', -1), down('speed', -1)], typeLabel: 'ねむらせる＋こうげき・ぼうぎょ・すばやさ ダウン', tags: ['りんぷん', 'チョウ目'] }),
+  sup({ ultimate: 'attack', id: 'x06', uses: 3, pattern: 'multiFixed', name: '５０れんだ', desc: 'めにも とまらない れんだを 3かい くりだして、ぜんぶ きゅうしょに あてる！ あいてが さいきょうわざを もっていたら 2ばい、じょうたいいじょう なら 2ばい、どっちも なら 4ばいの いりょくに なる。', emoji: '👊', power: 30, target: 'oneFoe', hits: [3, 3], critStage: 9, boostIfFoeUltimate: 2, boostIfFoeStatus: 2, typeLabel: 'いりょく30×3かい・ぜんぶ きゅうしょ（さいきょうわざ もち・じょうたいいじょうで 2ばい、りょうほうで 4ばい）', tags: ['チョウ目'] }),
+  sup({ ultimate: 'attack', id: 'x07', uses: 1, pattern: 'bigHit', name: 'うかぜみビーム', desc: 'うかしたての セミだけが うてる、すきとおった ひかりの ビーム。うかゼミ（羽化ゼミ）しか おぼえられない！', emoji: '🌟', power: 1000, target: 'oneFoe', onlyFor: ['うかゼミ', 'うかぜみ', '羽化ゼミ'], typeLabel: 'いりょく1000（うかゼミ せんよう）', tags: ['セミ', 'ひかる'] }),
+  sup({ ultimate: 'status', id: 'x08', uses: 1, pattern: 'sleep', name: 'ポップコーンのねむりごな', desc: 'ポップコーンの においの ねむりごなで、あいて 1ぴきを バトルが おわるまで ねむらせる。なおす わざでも おきない！', emoji: '🍿', power: 0, target: 'oneFoe', deepSleep: true, typeLabel: 'あいて1ぴきを バトルが おわるまで ねむらせる', tags: ['りんぷん'] }),
+  sup({ ultimate: 'status', id: 'x09', uses: 1, pattern: 'steal', name: 'なんでものいげん', desc: 'すさまじい いげんで あいてを ひれふさせる。あいての あがった のうりょくを ぜんぶ うばい、わざも ぜんぶ うばって「こうげき」しか できなくする。', emoji: '👑', power: 0, target: 'oneFoe', stealStats: true, sealMoves: true, typeLabel: 'のうりょくを ぜんぶ うばう＋わざを ぜんぶ うばう', tags: ['チョウ目'] }),
 ]
 
 export function findMove(id: string): LibraryMove | undefined {

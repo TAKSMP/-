@@ -148,6 +148,10 @@ export interface SpecialMoveV2 {
   // --- じょうきょうで つよくなる ---
   boostIfLate?: number // あいてより あとに うごいたら いりょく ×
   boostIfFoeStatus?: number // あいてが じょうたいいじょう なら いりょく ×
+  boostIfFoeUltimate?: number // あいてが さいきょうわざを もっていたら いりょく ×
+  deepSleep?: boolean // あいてを バトルが おわるまで ねむらせる（なおす わざでも おきない）
+  sealMoves?: boolean // あいての わざを ぜんぶ うばう（「こうげき」しか できなくなる）
+  onlyFor?: string[] // この 名前の 虫しか おぼえられない（せんよう わざ）
   boostIfSelfStatus?: number // じぶんが じょうたいいじょう なら いりょく ×
 
   // --- リスクの ある わざ ---

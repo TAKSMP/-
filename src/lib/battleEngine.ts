@@ -49,6 +49,7 @@ export type Side = 'me' | 'foe'
 export interface StatusState {
   key: StatusKey
   turnsLeft: number // ねむり だけ つかう（どく・まひは 0のまま つづく）
+  forever?: boolean // バトルが おわるまで なおらない（ポップコーンのねむりごな）
 }
 
 export interface Fighter {
@@ -71,6 +72,7 @@ export interface Fighter {
   leechedBy: { uid: string; ratio: number; turnsLeft: number } | null
   counterGuard: boolean // はんげきの かまえ
   boostGuard?: boolean // モノマネのまい：あがった のうりょくを うばわれない・もとに もどされない
+  sealed?: boolean // なんでものいげん：わざを うばわれて「こうげき」しか できない
   damageTakenThisTurn: number
   actedIndex: number // このターン なんばんめに うごいたか（-1 = まだ）
   fainted: boolean
@@ -347,6 +349,7 @@ function calcDamage(
 
   if (opts.late && move.boostIfLate) power *= move.boostIfLate
   if (move.boostIfFoeStatus && def.statuses.length > 0) power *= move.boostIfFoeStatus
+  if (move.boostIfFoeUltimate && def.moves.some((m) => m.ultimate && !m.supreme)) power *= move.boostIfFoeUltimate
   if (move.boostIfSelfStatus && att.statuses.length > 0) power *= move.boostIfSelfStatus
 
   const crit = rng() < critChance(move.critStage ?? 0)
@@ -487,7 +490,7 @@ function reviveFighter(t: Fighter, ratio: number, log: string[]): void {
   t.fainted = false
   t.faintReported = false
   t.hp = Math.max(1, Math.min(t.maxHp, Math.round(t.maxHp * ratio)))
-  t.statuses = []
+  t.statuses = t.statuses.filter((x) => x.forever)
   t.rank = emptyRank()
   t.charging = null
   t.recharge = 0
@@ -543,7 +546,7 @@ export function chaosEffect(field: Field, actor: Fighter, log: string[], rng: Rn
         const heal = Math.max(1, Math.round(t.maxHp * 0.5))
         const before = t.hp
         t.hp = Math.min(t.maxHp, t.hp + heal)
-        t.statuses = []
+        t.statuses = t.statuses.filter((x) => x.forever)
         log.push(
           t.hp > before
             ? `💚 ${t.name}の HPが ${t.hp - before} かいふく！`
@@ -635,7 +638,7 @@ function superChaosEffect(field: Field, actor: Fighter, log: string[], rng: Rng)
   const healFull = (t: Fighter) => {
     const before = t.hp
     t.hp = t.maxHp
-    t.statuses = []
+    t.statuses = t.statuses.filter((x) => x.forever)
     log.push(
       t.hp > before ? `💚 ${t.name}の HPが ${t.hp - before} かいふく！` : `…${t.name}の HPは もう まんタンだ！`,
     )
@@ -972,10 +975,10 @@ function executeMove(
 
     // ── じょうたいいじょうを なおす（なんでも・ぜんぶ いっぺんに）
     if (move.cureStatus) {
-      if (target.statuses.length > 0) {
-        const names = target.statuses.map((s) => statusLabel(s.key)).join('・')
+      if (target.statuses.some((s) => !s.forever)) {
+        const names = target.statuses.filter((s) => !s.forever).map((s) => statusLabel(s.key)).join('・')
         log.push(`✨ ${target.name}の ${names}が なおった！`)
-        target.statuses = []
+        target.statuses = target.statuses.filter((x) => x.forever)
       } else {
         log.push(`…${target.name}は げんきだ。`)
       }
@@ -985,7 +988,7 @@ function executeMove(
     if (move.cureStatusKey) {
       if (hasStatus(target, move.cureStatusKey)) {
         log.push(`✨ ${target.name}の ${statusLabel(move.cureStatusKey)}が なおった！`)
-        target.statuses = target.statuses.filter((s) => s.key !== move.cureStatusKey)
+        target.statuses = target.statuses.filter((s) => s.key !== move.cureStatusKey || s.forever)
       } else if (target.statuses.length > 0) {
         const names = target.statuses.map((s) => statusLabel(s.key)).join('・')
         log.push(`…${target.name}の ${names}には きかなかった。`)
@@ -1036,7 +1039,7 @@ function executeMove(
     }
 
     // ── のうりょくを うばう
-    if ((move.stealStats || move.flattenBoosts || move.swapStats) && !target.fainted && target.boostGuard && target.side !== actor.side) {
+    if ((move.stealStats || move.flattenBoosts || move.swapStats || move.sealMoves) && !target.fainted && target.boostGuard && target.side !== actor.side) {
       log.push(`🪞 ${target.name}の モノマネのまいで わざが はねかえされた！ のうりょくは そのままだ！`)
     } else if (move.stealStats && !target.fainted) {
       let stolen = 0
@@ -1052,6 +1055,31 @@ function executeMove(
           ? `🫳 ${actor.name}は ${target.name}の ちからを うばった！`
           : '…しかし うばう ものが なかった！',
       )
+    }
+
+    // ── わざを ぜんぶ うばう（なんでものいげん）
+    if (move.sealMoves && !target.fainted && !(target.boostGuard && target.side !== actor.side)) {
+      if (target.sealed) {
+        log.push(`…${target.name}は もう わざを うばわれている！`)
+      } else {
+        target.sealed = true
+        target.usesLeft = target.usesLeft.map(() => 0)
+        target.charging = null
+        log.push(`👑 ${target.name}は わざを ぜんぶ うばわれた！「こうげき」しか できない！`)
+      }
+    }
+
+    // ── バトルが おわるまで ねむらせる（ポップコーンのねむりごな）
+    if (move.deepSleep && !target.fainted) {
+      const cur = statusOf(target, 'sleep')
+      if (cur?.forever) {
+        log.push(`…${target.name}は もう ぐっすり ねむっている。`)
+      } else {
+        target.statuses = target.statuses.filter((x) => x.key !== 'sleep')
+        target.statuses.push({ key: 'sleep', turnsLeft: 0, forever: true })
+        target.charging = null
+        log.push(`🍿 ${target.name}は ポップコーンの ねむりごなで ねむってしまった！ バトルが おわるまで おきない！`)
+      }
     }
 
     // ── あいての あがった のうりょくを フラットに もどす
@@ -1099,7 +1127,7 @@ function executeMove(
     )
     if (actor.statuses.length > 0) {
       log.push(`✨ ${actor.name}の ${actor.statuses.map((x) => statusLabel(x.key)).join('・')}が なおった！`)
-      actor.statuses = []
+      actor.statuses = actor.statuses.filter((x) => x.forever)
     }
   }
 
@@ -1216,7 +1244,7 @@ export function resolveTurn(
     // ねむり
     const sleeping = statusOf(actor, 'sleep')
     if (sleeping) {
-      if (sleeping.turnsLeft > 0) {
+      if (sleeping.forever || sleeping.turnsLeft > 0) {
         sleeping.turnsLeft--
         log.push(`💤 ${actor.name}は ぐっすり ねむっている…`)
         continue
@@ -1241,6 +1269,18 @@ export function resolveTurn(
       )
       executeMove(f, actor, { ...charged.move, chargeTurns: 0 }, charged.targetUid, late, log, rng)
       checkOver(f)
+      continue
+    }
+
+    // わざを うばわれていたら「こうげき」に なる（なんでものいげん）
+    if (e.moveIndex >= 0 && actor.sealed) {
+      log.push(`🔒 ${actor.name}は わざを うばわれている！`)
+      log.push(`${actor.name}の こうげき！`)
+      const foe = aliveOf(f, actor.side === 'me' ? 'foe' : 'me')
+      const tgt = foe.find((x) => x.uid === e.targetUid) ?? foe[0]
+      if (tgt) executeMove(f, actor, BASIC_ATTACK, tgt.uid, false, log, rng)
+      checkOver(f)
+      if (f.over) break
       continue
     }
 

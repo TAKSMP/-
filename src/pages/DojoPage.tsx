@@ -8,7 +8,7 @@ import type { CaughtBug, SpecialMoveV2 } from '../types'
 import { BugPicker } from '../components/BugPicker'
 import { DojoQuiz } from '../components/DojoQuiz'
 import { DEX, GROUPS, loadDexSeen, markMovesSeen, type DexEntry, type MoveGroup } from '../lib/moveDex'
-import { moveSummary, SUPREME_MOVES } from '../lib/moveLibrary'
+import { canLearnMove, moveSummary, SUPREME_MOVES } from '../lib/moveLibrary'
 import { mainPhoto } from '../lib/storage'
 import { sfx } from '../lib/sound'
 import {
@@ -224,11 +224,12 @@ export function DojoPage({
         <div className="dojo-movelist">
           {SUPREME_MOVES.map((m) => {
             const owned = have.has(m.id)
+            const allowed = canLearnMove(m, bug.name)
             return (
               <button
                 key={m.id}
                 className="dojo-move supreme"
-                disabled={owned}
+                disabled={owned || !allowed}
                 onClick={() => {
                   sfx.tap()
                   setTarget({ ...m })
@@ -238,7 +239,11 @@ export function DojoPage({
                 <span className="dojo-move-emoji">{m.emoji}</span>
                 <span className="dojo-move-name">{m.name}</span>
                 <span className="dojo-move-sub">
-                  {owned ? 'おぼえている' : `${m.typeLabel}／${m.uses}かい`}
+                  {owned
+                    ? 'おぼえている'
+                    : !allowed
+                      ? `${m.onlyFor?.[0] ?? ''} だけが おぼえられる わざ`
+                      : `${m.typeLabel}／${m.uses}かい`}
                 </span>
               </button>
             )
