@@ -674,6 +674,7 @@ export function baseMovesOf(save: StorySave, bug: CaughtBug, level: number): Spe
 //  わざ道場：わざを きたえる
 // -------------------------------------------------------------
 export const DOJO_MIN_LEVEL = 50
+export const SUPREME_MIN_LEVEL = 70 // チョウチョちゃん道場（アルティメットわざ）に はいれる レベル
 
 export type TrainKey = 'power' | 'uses' | 'accuracy' | 'heal' | 'revive'
 export type TrainSteps = Partial<Record<TrainKey, number>>

@@ -13,6 +13,7 @@ import { mainPhoto } from '../lib/storage'
 import { sfx } from '../lib/sound'
 import {
   DOJO_MIN_LEVEL,
+  SUPREME_MIN_LEVEL,
   SUPREME_MAX,
   addSupreme,
   addUltimate,
@@ -86,6 +87,7 @@ export function DojoPage({
   chouchou?: boolean
 }) {
   const adult = variant === 'adult'
+  const minLv = chouchou ? SUPREME_MIN_LEVEL : DOJO_MIN_LEVEL // アルティメットわざは レベル70いじょう
   const [save, setSave] = useState<StorySave>(() => loadStory())
   const [step, setStep] = useState<Step>(chouchou ? 'pickBug' : 'menu')
   const [mode, setMode] = useState<Mode>(chouchou ? 'chouchou' : 'learn')
@@ -98,7 +100,7 @@ export function DojoPage({
   const [seen, setSeen] = useState<Set<string>>(() => loadDexSeen())
 
   const eligible = useMemo(
-    () => bugs.filter((b) => levelOf(save, b.id).level >= DOJO_MIN_LEVEL),
+    () => bugs.filter((b) => levelOf(save, b.id).level >= minLv),
     [bugs, save],
   )
   const level = bug ? levelOf(save, bug.id).level : 1
@@ -181,10 +183,10 @@ export function DojoPage({
         <h2 className="dojo-title">
           {mode === 'learn' ? '📖 しんわざの しゅうとく' : mode === 'train' ? '🎧 わざを きたえる' : '🦋 チョウチョちゃん道場'}
         </h2>
-        <p className="dojo-lead">どの虫に する？（レベル{DOJO_MIN_LEVEL}いじょう）</p>
+        <p className="dojo-lead">どの虫に する？（レベル{minLv}いじょう）</p>
         {eligible.length === 0 ? (
           <p className="dojo-empty">
-            まだ レベル{DOJO_MIN_LEVEL}いじょうの 虫が いないよ。ストーリーで そだててから きてね！
+            まだ レベル{minLv}いじょうの 虫が いないよ。ストーリーで そだててから きてね！
           </p>
         ) : (
           <BugPicker
@@ -224,7 +226,7 @@ export function DojoPage({
         <div className="dojo-movelist">
           {SUPREME_MOVES.map((m) => {
             const owned = have.has(m.id)
-            const allowed = canLearnMove(m, bug.name)
+            const allowed = canLearnMove(m, bug)
             return (
               <button
                 key={m.id}
@@ -242,7 +244,7 @@ export function DojoPage({
                   {owned
                     ? 'おぼえている'
                     : !allowed
-                      ? `${m.onlyFor?.[0] ?? ''} だけが おぼえられる わざ`
+                      ? `${m.onlyOrder ?? m.onlyFor?.[0] ?? ''} だけが おぼえられる わざ`
                       : `${m.typeLabel}／${m.uses}かい`}
                 </span>
               </button>
