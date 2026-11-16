@@ -211,9 +211,9 @@ export async function createRoom(name: string, team: Team): Promise<string> {
   const state: RoomState = {
     createdAt: Date.now(),
     status: 'waiting',
-    host: { uid: user.uid, name, team, build: BUILD_ID },
+    host: { uid: user.uid, name, team: sanitize(team), build: BUILD_ID },
   }
-  await set(roomRef(code), state)
+  await set(roomRef(code), sanitize(state))
   onDisconnect(roomRef(code)).remove()
   return code
 }
@@ -227,7 +227,8 @@ export async function joinRoom(code: string, name: string, team: Team): Promise<
   if ((state as { kind?: string }).kind === 'race')
     throw new Error('それは レースの へやです。「レース」の「つうしんで あそぶ」から はいってね。')
   if (state.guest) throw new Error('その 部屋には もう 2人 そろっています。')
-  const guest: RoomSide = { uid: user.uid, name, team, build: BUILD_ID }
+  // Firebase は undefined を もつ値を おくれないので、かならず きれいに してから おくる
+  const guest: RoomSide = { uid: user.uid, name, team: sanitize(team), build: BUILD_ID }
   // さいしょの field は 乱数を つかわない ので、ここで つくって そのまま 書きこんで OK
   const initialField = toLiteField(buildInitialField(state.host.team, team))
   await update(roomRef(code), { guest, status: 'battling', field: initialField })

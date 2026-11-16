@@ -108,8 +108,14 @@ function mv(m: MvInput): LibraryMove {
 
 const up = (stat: StatKey, stage: number) =>
   ({ to: 'self', stat, stage }) as const
+// chance は つかう ときだけ いれる（undefined の キーが あると、つうしんバトルで Firebase に おくれない）
 const down = (stat: StatKey, stage: number, chance?: number) =>
-  ({ to: 'foe', stat, stage, chance }) as const
+  (chance === undefined ? { to: 'foe', stat, stage } : { to: 'foe', stat, stage, chance }) as {
+    readonly to: 'foe'
+    readonly stat: StatKey
+    readonly stage: number
+    readonly chance?: number
+  }
 
 // -------------------------------------------------------------
 //  ライブラリ本体（40パターン × 虫らしい わざ名）
