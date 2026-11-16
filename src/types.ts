@@ -152,6 +152,7 @@ export interface SpecialMoveV2 {
   deepSleep?: boolean // あいてを バトルが おわるまで ねむらせる（なおす わざでも おきない）
   sealMoves?: boolean // あいての わざを ぜんぶ うばう（「こうげき」しか できなくなる）
   onlyFor?: string[] // この 名前の 虫しか おぼえられない（せんよう わざ）
+  onlyOrder?: string // この 目（ハチ目 など）の 虫しか おぼえられない
   boostIfSelfStatus?: number // じぶんが じょうたいいじょう なら いりょく ×
 
   // --- リスクの ある わざ ---
