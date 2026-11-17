@@ -127,6 +127,11 @@ export default function App() {
     setBugs(updateBug(bugId, patch))
   }
 
+  // ともだちから 虫を もらった（図鑑は もう ほぞんずみ。がめんだけ あたらしく する）
+  function handleGiftReceived(next: CaughtBug[]) {
+    setBugs(next)
+  }
+
   function handleDataRestored(restored: CaughtBug[]) {
     setBugs(restored)
     setDataVersion((version) => version + 1)
@@ -188,6 +193,7 @@ export default function App() {
             onSetMain={handleSetMain}
             onUpdate={handleUpdate}
             pastPlaces={collectPlaces(bugs)}
+            onGiftReceived={handleGiftReceived}
             onGoCapture={() => goTab('capture')}
             onGoSearch={designTheme === 'forest' ? () => goTab('search') : undefined}
           />

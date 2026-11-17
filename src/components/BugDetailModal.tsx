@@ -27,6 +27,7 @@ import { StarRating } from './StarRating'
 import { sfx } from '../lib/sound'
 import { ImageCropper } from './ImageCropper'
 import { compressImage } from '../lib/image'
+import { GiftModal, type GiftMode } from './GiftModal'
 
 interface Props {
   bug: CaughtBug | null
@@ -35,6 +36,8 @@ interface Props {
   onSetMain?: (bugId: string, captureId: string) => void
   onUpdate?: (bugId: string, patch: BugPatch) => void
   pastPlaces?: string[]
+  // ともだちから 虫を もらったとき（図鑑を あたらしく する）
+  onGiftReceived?: (bugs: CaughtBug[], received: CaughtBug) => void
 }
 
 function formatDate(ms: number): string {
@@ -62,8 +65,10 @@ export function BugDetailModal({
   onSetMain,
   onUpdate,
   pastPlaces = [],
+  onGiftReceived,
 }: Props) {
   const [editing, setEditing] = useState(false)
+  const [giftMode, setGiftMode] = useState<GiftMode | null>(null)
   // へんしゅう中の各項目
   const [name, setName] = useState('')
   const [order, setOrder] = useState('')
@@ -510,6 +515,7 @@ export function BugDetailModal({
             <div className="modal-stars">
               <StarRating value={bug.rarity} size={26} />
             </div>
+            {bug.giftFrom && <p className="gift-from">🎁 {bug.giftFrom}さんから もらった 虫</p>}
 
             <dl className="modal-fields">
               <div>
@@ -668,6 +674,45 @@ export function BugDetailModal({
               </div>
             </div>
 
+            {/* ともだちと やりとり（おくる／もらう／こうかん） */}
+            {onGiftReceived && (
+              <div className="gift-menu">
+                <div className="gift-menu-title">🤝 ともだちと やりとり</div>
+                <div className="gift-menu-btns">
+                  <button
+                    className="gift-menu-btn send"
+                    onClick={() => {
+                      sfx.tap()
+                      setGiftMode('send')
+                    }}
+                  >
+                    <span className="gift-menu-emoji">🎁</span>
+                    おくる
+                  </button>
+                  <button
+                    className="gift-menu-btn receive"
+                    onClick={() => {
+                      sfx.tap()
+                      setGiftMode('receive')
+                    }}
+                  >
+                    <span className="gift-menu-emoji">📬</span>
+                    もらう
+                  </button>
+                  <button
+                    className="gift-menu-btn trade"
+                    onClick={() => {
+                      sfx.tap()
+                      setGiftMode('trade')
+                    }}
+                  >
+                    <span className="gift-menu-emoji">🔄</span>
+                    こうかん
+                  </button>
+                </div>
+              </div>
+            )}
+
             {onDelete && (
               <button
                 className="btn btn-danger"
@@ -693,6 +738,15 @@ export function BugDetailModal({
           <option value="はなばたけ" />
         </datalist>
       </div>
+
+      {giftMode && onGiftReceived && (
+        <GiftModal
+          mode={giftMode}
+          bug={bug}
+          onClose={() => setGiftMode(null)}
+          onReceived={onGiftReceived}
+        />
+      )}
 
       {/* しゃしんの きりとり */}
       {cropId && onUpdate && (

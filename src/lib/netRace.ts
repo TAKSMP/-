@@ -82,6 +82,7 @@ export async function joinRaceRoom(code: string, name: string, racer: NetRacer):
   const snap = await get(roomRef(code))
   if (!snap.exists()) throw new Error('その あいことばの へやが 見つかりません。つづりを たしかめてね。')
   const room = snap.val() as { kind?: string; status?: string; players?: Record<string, RacePlayer> }
+  if (room.kind === 'gift' || room.kind === 'trade') throw new Error('それは 虫を おくる へやです。図鑑の「ともだちと やりとり」から はいってね。')
   if (room.kind !== 'race') throw new Error('それは つうしんバトルの へやです。「つうしんバトル」から はいってね。')
   if (room.status !== 'waiting') throw new Error('その へやは もう レース ちゅうです。おわるまで まってね。')
   const players = room.players ?? {}

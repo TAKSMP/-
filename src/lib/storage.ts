@@ -396,6 +396,42 @@ export function recordCapture(input: CaptureInput): {
   return { bugs, merged: false, bugId: bug.id }
 }
 
+// ともだちから もらった 虫を 図鑑に いれる。
+// おなじ 名前の 虫が いても まぜずに、べつの 虫として ふやす（レベル・わざは あたらしい IDで さいしょから）
+export function addGiftBug(
+  g: {
+    speciesId?: string
+    name: string
+    order: string
+    rarity: number
+    habitat: string
+    fact?: string
+    battle?: CaughtBug['battle']
+    photo: string
+  },
+  from: string,
+): { bugs: CaughtBug[]; bug: CaughtBug } {
+  const list = loadZukan()
+  const cap = { id: uid('cap'), photo: g.photo, caughtAt: Date.now() }
+  const bug: CaughtBug = {
+    id: uid('bug'),
+    speciesId: g.speciesId,
+    name: g.name,
+    order: g.order,
+    rarity: Number(g.rarity) || 1,
+    habitat: g.habitat || 'ふめい',
+    fact: g.fact,
+    battle: g.battle,
+    captures: [cap],
+    mainCaptureId: cap.id,
+    corrected: false,
+    giftFrom: from || 'ともだち',
+  }
+  const bugs = [bug, ...list]
+  saveZukan(bugs)
+  return { bugs, bug }
+}
+
 // 図鑑登録後に、虫の各項目をなおす。
 export function updateBug(bugId: string, patch: BugPatch): CaughtBug[] {
   const bugs = loadZukan().map((b) => {

@@ -14,6 +14,7 @@ interface Props {
   onSetMain: (bugId: string, captureId: string) => void
   onUpdate: (bugId: string, patch: BugPatch) => void
   pastPlaces: string[]
+  onGiftReceived: (bugs: CaughtBug[], received: CaughtBug) => void
   onGoCapture: () => void
   // 森のデザインのときだけ わたされる：「けんさく」がめんへ いく
   onGoSearch?: () => void
@@ -28,6 +29,7 @@ export function ZukanPage({
   onSetMain,
   onUpdate,
   pastPlaces,
+  onGiftReceived,
   onGoCapture,
   onGoSearch,
 }: Props) {
@@ -117,6 +119,7 @@ export function ZukanPage({
           onSetMain={onSetMain}
           onUpdate={onUpdate}
           pastPlaces={pastPlaces}
+          onGiftReceived={onGiftReceived}
         />
       </div>
     )

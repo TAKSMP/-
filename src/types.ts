@@ -69,6 +69,7 @@ export interface CaughtBug {
   mainCaptureId: string // メイン画像につかう撮影のID
   corrected: boolean // ユーザーが訂正したことがあるか
   battle?: BattleStats // バトル用ステータス（未設定なら レア度から自動生成）
+  giftFrom?: string // ともだちから もらった 虫なら、おくってくれた ひとの なまえ
 }
 
 // 保存するときの入力（1回ぶんの撮影＋判定内容）

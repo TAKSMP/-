@@ -224,7 +224,10 @@ export async function joinRoom(code: string, name: string, team: Team): Promise<
   const snap = await get(roomRef(code))
   if (!snap.exists()) throw new Error('その あいことばの 部屋が 見つかりません。つづりを たしかめてね。')
   const state = snap.val() as RoomState
-  if ((state as { kind?: string }).kind === 'race')
+  const kind = (state as { kind?: string }).kind
+  if (kind === 'gift' || kind === 'trade')
+    throw new Error('それは 虫を おくる へやです。図鑑の「ともだちと やりとり」から はいってね。')
+  if (kind === 'race')
     throw new Error('それは レースの へやです。「レース」の「つうしんで あそぶ」から はいってね。')
   if (state.guest) throw new Error('その 部屋には もう 2人 そろっています。')
   // Firebase は undefined を もつ値を おくれないので、かならず きれいに してから おくる
