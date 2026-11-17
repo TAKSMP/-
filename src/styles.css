@@ -8280,3 +8280,19 @@ body.race-full .points-pop {
 .gift-card.trade { background: linear-gradient(150deg, #e4f6dc, #f5fbf1); }
 .gift-pick { display: flex; flex-direction: column; gap: 10px; }
 .gift-pick .gift-lead { text-align: center; }
+
+/* 森の デザイン：うえの「ホーム」と、その よこの「もどる」 */
+.design-forest .forest-topbar { display: flex; align-items: center; gap: 8px; position: relative; z-index: 5; }
+.design-forest .forest-topbar .forest-return-home { margin: 8px 0 0 12px; }
+.forest-topbar-slot { display: contents; }
+.forest-topbar-back {
+  margin: 8px 0 0; border: 2px solid #7e4d24; border-radius: 20px; background: #fff5dc; color: #654021;
+  padding: 8px 15px; font: inherit; font-weight: 900; cursor: pointer; touch-action: manipulation;
+}
+.forest-topbar-back:active { background: #f3e2b8; }
+/* ページの なかに ひょうじする「おくる／もらう／こうかん」 */
+.gift-inline {
+  text-align: center; background: #fffdf5; border-radius: 22px; padding: 16px 16px 18px;
+  box-shadow: 0 6px 18px rgba(60, 40, 20, 0.15);
+}
+.design-forest .forest-topbar .forest-return-home, .forest-topbar-back { font-size: 14px; line-height: 1.2; padding: 8px 15px; }

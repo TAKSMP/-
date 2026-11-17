@@ -64,6 +64,13 @@ const TABS: { id: Tab; label: string; emoji: string }[] = [
 export default function App() {
   const [tab, setTab] = useState<Tab>('capture')
   const [forestHomeOpen, setForestHomeOpen] = useState(true)
+  // ホームに もどるたびに ふえる。各ページの key に いれて、つぎに ひらくときは さいしょから にする
+  const [homeVisits, setHomeVisits] = useState(0)
+  function goHome() {
+    setForestHomeOpen(true)
+    setHomeVisits((n) => n + 1)
+    setGameKey(null)
+  }
   const [designTheme, setDesignTheme] = useState<DesignTheme>(() => {
     try { return localStorage.getItem('chomushi-design-theme') === 'forest' ? 'forest' : 'classic' }
     catch { return 'classic' }
@@ -89,7 +96,7 @@ export default function App() {
     setPlayReset((n) => n + 1)
     setGameKey(null)
     if (tab !== 'quiz' && lockReasonFor(tab)) {
-      if (designTheme === 'forest') setForestHomeOpen(true)
+      if (designTheme === 'forest') goHome()
       else setTab('quiz')
     }
   }
@@ -179,21 +186,25 @@ export default function App() {
         </section>
       )}
       {designTheme === 'forest' && !forestHomeOpen && (
-        <button className="forest-return-home" onClick={() => setForestHomeOpen(true)} aria-label="ホームにもどる">⌂ ホーム</button>
+        <div className="forest-topbar">
+          <button className="forest-return-home" onClick={() => { sfx.nav(); goHome() }} aria-label="ホームにもどる">⌂ ホーム</button>
+          {/* ページごとの「もどる」ボタンを ここに だす（GiftPage など） */}
+          <div id="forest-topbar-slot" className="forest-topbar-slot" />
+        </div>
       )}
       <main className="app-main" style={{display: designTheme === 'forest' && forestHomeOpen ? 'none' : undefined}}>
         {/* 「しらべる」はタブを切りかえても入力が消えないよう、
             アンマウントせずに 非表示にするだけにする（登録するまでデータ保持）。 */}
         <div style={{ display: tab === 'capture' ? 'contents' : 'none' }}>
           <CapturePage
-            key={`capture-${dataVersion}`}
+            key={`capture-${dataVersion}-${homeVisits}`}
             onSaved={handleSaved}
             pastPlaces={collectPlaces(bugs)}
           />
         </div>
         {tab === 'zukan' && (
           <ZukanPage
-            key={`zukan-${dataVersion}`}
+            key={`zukan-${dataVersion}-${homeVisits}`}
             bugs={bugs}
             onDelete={handleDelete}
             onSetMain={handleSetMain}
@@ -205,7 +216,7 @@ export default function App() {
         )}
         {tab === 'search' && (
           <SearchPage
-            key={`search-${dataVersion}`}
+            key={`search-${dataVersion}-${homeVisits}`}
             bugs={bugs}
             onDelete={handleDelete}
             onSetMain={handleSetMain}
@@ -215,7 +226,7 @@ export default function App() {
         )}
         {tab === 'quiz' && (
           <PlayPage
-            key={`play-${dataVersion}`}
+            key={`play-${dataVersion}-${homeVisits}`}
             bugs={bugs}
             onGoCapture={() => goTab('capture')}
             onActiveChange={setGameKey}
@@ -224,7 +235,7 @@ export default function App() {
         )}
         {tab === 'gift' && (
           <GiftPage
-            key={`gift-${dataVersion}`}
+            key={`gift-${dataVersion}-${homeVisits}`}
             bugs={bugs}
             onReceived={handleGiftReceived}
             onGoCapture={() => goTab('capture')}
@@ -232,7 +243,7 @@ export default function App() {
         )}
         {tab === 'mission' && (
           <MissionPage
-            key={`mission-${dataVersion}`}
+            key={`mission-${dataVersion}-${homeVisits}`}
             bugs={bugs}
             onGoCapture={() => goTab('capture')}
           />

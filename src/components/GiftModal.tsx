@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import type { CaughtBug } from '../types'
 import {
   closeGiftRoom,
@@ -25,6 +25,14 @@ interface Props {
   bug?: CaughtBug // おくる 虫（send・trade）。receive では いらない
   onClose: () => void
   onReceived: (bugs: CaughtBug[], received: CaughtBug) => void
+  // true … ウインドウでは なく ページの なかに ひょうじする（「ともだちに おくる」ページ）
+  inline?: boolean
+  onExit?: () => void // inline の とき、さいしょの がめんで「もどる」を おした
+}
+
+// うえの「もどる」ボタンから よぶ。ひとつ まえの だんかいに もどれたら true
+export interface GiftModalHandle {
+  back: () => boolean
 }
 
 // つうしんバトルと おなじ なまえを つかう
@@ -53,7 +61,10 @@ const TITLE: Record<GiftMode, string> = {
   trade: '🔄 ともだちと こうかん',
 }
 
-export function GiftModal({ mode, bug, onClose, onReceived }: Props) {
+export const GiftModal = forwardRef<GiftModalHandle, Props>(function GiftModal(
+  { mode, bug, onClose, onReceived, inline = false, onExit },
+  handle,
+) {
   const [step, setStep] = useState<Step>('intro')
   const [name, setName] = useState(loadName)
   const [codeInput, setCodeInput] = useState('')
@@ -169,6 +180,27 @@ export function GiftModal({ mode, bug, onClose, onReceived }: Props) {
     }
   }, [step])
 
+  // ひとつ まえへ（アニメーション中は なにも しない）
+  useImperativeHandle(handle, () => ({
+    back() {
+      if (step === 'anim') return true
+      if (step === 'join') {
+        sfx.tap()
+        setError('')
+        setStep('intro')
+        return true
+      }
+      if (step === 'waiting') {
+        sfx.tap()
+        if (code) void closeGiftRoom(code)
+        setCode(null)
+        setStep('intro')
+        return true
+      }
+      return false // intro・done は ページの ほうで もどる
+    },
+  }))
+
   const nameField = (
     <label className="gift-name">
       <span>あなたの なまえ</span>
@@ -251,6 +283,11 @@ export function GiftModal({ mode, bug, onClose, onReceived }: Props) {
               </button>
             </>
           )}
+          {inline && onExit && (
+            <button className="btn btn-ghost" onClick={onExit}>
+              ← もどる
+            </button>
+          )}
         </div>
       </>
     )
@@ -332,6 +369,15 @@ export function GiftModal({ mode, bug, onClose, onReceived }: Props) {
     )
   }
 
+  if (inline) {
+    return (
+      <div className="gift-inline">
+        <h2 className="gift-title">{TITLE[mode]}</h2>
+        {body}
+      </div>
+    )
+  }
+
   return (
     <div className="modal-backdrop gift-backdrop" onClick={step === 'anim' ? undefined : onClose}>
       <div className="modal gift-modal" onClick={(e) => e.stopPropagation()}>
@@ -345,7 +391,7 @@ export function GiftModal({ mode, bug, onClose, onReceived }: Props) {
       </div>
     </div>
   )
-}
+})
 
 // おくる／もらう／こうかん の アニメーション（やく 2.9びょう）
 function GiftAnim({ kind, mine, theirs }: { kind: AnimKind; mine: string; theirs: string }) {

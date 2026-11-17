@@ -4,11 +4,13 @@
 //  おくる … 虫を えらぶ → あいことばを ともだちに つたえる
 //  もらう … ともだちの あいことばを いれる
 //  こうかん … 虫を えらぶ → へやを つくる／あいことばで はいる
+//  「もどる」は したに くわえて、うえ（森の デザインでは ホームの よこ）にも だす
 // =============================================================
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { CaughtBug } from '../types'
 import { BugPicker } from '../components/BugPicker'
-import { GiftModal, type GiftMode } from '../components/GiftModal'
+import { GiftModal, type GiftMode, type GiftModalHandle } from '../components/GiftModal'
 import { mainPhoto } from '../lib/storage'
 import { sfx } from '../lib/sound'
 
@@ -18,33 +20,63 @@ interface Props {
   onGoCapture: () => void
 }
 
+type Step = 'menu' | 'pick' | 'flow'
+
 export function GiftPage({ bugs, onReceived, onGoCapture }: Props) {
-  // pick … おくる・こうかん で 虫を えらんでいる ところ
-  const [mode, setMode] = useState<GiftMode | null>(null)
-  const [picking, setPicking] = useState(false)
+  const [step, setStep] = useState<Step>('menu')
+  const [mode, setMode] = useState<GiftMode>('send')
   const [bug, setBug] = useState<CaughtBug | null>(null)
+  const flowRef = useRef<GiftModalHandle>(null)
+
+  // 森の デザインの「ホーム」の よこの 場所（もとの デザインでは null → ページの うえに だす）
+  const [slot, setSlot] = useState<HTMLElement | null>(null)
+  useEffect(() => {
+    setSlot(document.getElementById('forest-topbar-slot'))
+  }, [])
 
   function start(m: GiftMode) {
     sfx.tap()
     setMode(m)
     setBug(null)
-    setPicking(m !== 'receive')
+    setStep(m === 'receive' ? 'flow' : 'pick')
   }
 
-  function close() {
-    setMode(null)
+  function toMenu() {
+    setStep('menu')
     setBug(null)
-    setPicking(false)
   }
+
+  // ひとつ まえの がめんへ
+  function back() {
+    if (step === 'flow' && flowRef.current?.back()) return
+    sfx.tap()
+    if (step === 'flow' && mode !== 'receive') {
+      setBug(null)
+      setStep('pick')
+    } else {
+      toMenu()
+    }
+  }
+
+  const topBack =
+    step === 'menu' ? null : (
+      <button className={slot ? 'forest-topbar-back' : 'btn btn-ghost play-back'} onClick={back}>
+        ← もどる
+      </button>
+    )
 
   return (
     <div className="page gift-page">
-      <header className="page-head">
-        <h1>🎁 ともだちに おくる</h1>
-        <p className="sub">あいことばで ともだちと 虫を おくりあおう</p>
-      </header>
+      {topBack && (slot ? createPortal(topBack, slot) : topBack)}
 
-      {!picking && (
+      {step !== 'flow' && (
+        <header className="page-head">
+          <h1>🎁 ともだちに おくる</h1>
+          <p className="sub">あいことばで ともだちと 虫を おくりあおう</p>
+        </header>
+      )}
+
+      {step === 'menu' && (
         <div className="game-menu gift-page-menu">
           <button className="game-card gift-card send" onClick={() => start('send')}>
             <span className="game-emoji">🎁</span>
@@ -69,9 +101,9 @@ export function GiftPage({ bugs, onReceived, onGoCapture }: Props) {
         </div>
       )}
 
-      {picking && (
+      {step === 'pick' && (
         <div className="gift-pick">
-          <p className="gift-lead">{mode === 'trade' ? 'こうかん する 虫を えらんでね' : 'おくる 虫を えらんでね'}</p>
+          <p className="gift-lead">{mode === 'trade' ? '🔄 こうかん する 虫を えらんでね' : '🎁 おくる 虫を えらんでね'}</p>
           {bugs.length === 0 ? (
             <>
               <p className="dojo-empty">まだ 図鑑に 虫が いないよ。</p>
@@ -85,6 +117,7 @@ export function GiftPage({ bugs, onReceived, onGoCapture }: Props) {
               onPick={(b) => {
                 sfx.tap()
                 setBug(b)
+                setStep('flow')
               }}
               renderCard={(b) => (
                 <div className="story-bug">
@@ -95,17 +128,24 @@ export function GiftPage({ bugs, onReceived, onGoCapture }: Props) {
               )}
             />
           )}
-          <button className="btn btn-ghost" onClick={close}>
+          <button className="btn btn-ghost" onClick={back}>
             ← もどる
           </button>
         </div>
       )}
 
-      {mode === 'receive' && (
-        <GiftModal mode="receive" onClose={close} onReceived={onReceived} />
-      )}
-      {mode && mode !== 'receive' && bug && (
-        <GiftModal mode={mode} bug={bug} onClose={close} onReceived={onReceived} />
+      {step === 'flow' && (mode === 'receive' || bug) && (
+        <>
+          <GiftModal
+            ref={flowRef}
+            inline
+            mode={mode}
+            bug={bug ?? undefined}
+            onClose={toMenu}
+            onExit={back}
+            onReceived={onReceived}
+          />
+        </>
       )}
     </div>
   )
