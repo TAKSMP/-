@@ -226,7 +226,7 @@ export async function joinRoom(code: string, name: string, team: Team): Promise<
   const state = snap.val() as RoomState
   const kind = (state as { kind?: string }).kind
   if (kind === 'gift' || kind === 'trade')
-    throw new Error('それは 虫を おくる へやです。図鑑の「ともだちと やりとり」から はいってね。')
+    throw new Error('それは 虫を おくる へやです。「ともだちに おくる」から はいってね。')
   if (kind === 'race')
     throw new Error('それは レースの へやです。「レース」の「つうしんで あそぶ」から はいってね。')
   if (state.guest) throw new Error('その 部屋には もう 2人 そろっています。')

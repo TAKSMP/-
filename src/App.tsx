@@ -13,6 +13,7 @@ import type { BugPatch } from './lib/storage'
 import { saveZukan } from './lib/storage'
 import { compressImage, dataUrlBytes } from './lib/image'
 import { CapturePage } from './pages/CapturePage'
+import { GiftPage } from './pages/GiftPage'
 import { ZukanPage } from './pages/ZukanPage'
 import { SearchPage } from './pages/SearchPage'
 import { PlayPage } from './pages/PlayPage'
@@ -49,7 +50,7 @@ async function recompressBugs(bugs: CaughtBug[]): Promise<CaughtBug[] | null> {
 
 type DesignTheme = 'classic' | 'forest'
 
-type Tab = 'capture' | 'zukan' | 'search' | 'quiz' | 'mission'
+type Tab = 'capture' | 'zukan' | 'search' | 'quiz' | 'mission' | 'gift'
 
 const TABS: { id: Tab; label: string; emoji: string }[] = [
   { id: 'capture', label: 'しらべる', emoji: '🔎' },
@@ -57,6 +58,7 @@ const TABS: { id: Tab; label: string; emoji: string }[] = [
   { id: 'mission', label: 'ミッション', emoji: '🎯' },
   { id: 'search', label: 'けんさく', emoji: '🔍' },
   { id: 'quiz', label: 'ゲーム', emoji: '🎮' },
+  { id: 'gift', label: 'おくる', emoji: '🎁' },
 ]
 
 export default function App() {
@@ -170,6 +172,10 @@ export default function App() {
             <button key={id} className={`forest-home-hit ${position.replace(' ', '-')}`}
               aria-label={`${label}をひらく`} title={label} onClick={() => { if (goTab(id)) { sfx.nav(); setForestHomeOpen(false) } }} />
           ))}
+          {/* ともだちに おくる（絵には ない ので ボタンを かさねる） */}
+          <button className="forest-home-gift" onClick={() => { if (goTab('gift')) { sfx.nav(); setForestHomeOpen(false) } }}>
+            <span className="forest-home-gift-emoji">🎁</span>ともだちに おくる
+          </button>
         </section>
       )}
       {designTheme === 'forest' && !forestHomeOpen && (
@@ -193,7 +199,6 @@ export default function App() {
             onSetMain={handleSetMain}
             onUpdate={handleUpdate}
             pastPlaces={collectPlaces(bugs)}
-            onGiftReceived={handleGiftReceived}
             onGoCapture={() => goTab('capture')}
             onGoSearch={designTheme === 'forest' ? () => goTab('search') : undefined}
           />
@@ -215,6 +220,14 @@ export default function App() {
             onGoCapture={() => goTab('capture')}
             onActiveChange={setGameKey}
             resetSignal={playReset}
+          />
+        )}
+        {tab === 'gift' && (
+          <GiftPage
+            key={`gift-${dataVersion}`}
+            bugs={bugs}
+            onReceived={handleGiftReceived}
+            onGoCapture={() => goTab('capture')}
           />
         )}
         {tab === 'mission' && (

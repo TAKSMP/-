@@ -45,6 +45,7 @@ export const LOCK_TREE: { label: string; groups: LockGroup[] }[] = [
           { key: 'zukan', label: 'ずかん' },
           { key: 'mission', label: 'ミッション' },
           { key: 'search', label: 'けんさく' },
+          { key: 'gift', label: 'ともだちに おくる' },
         ],
       },
     ],

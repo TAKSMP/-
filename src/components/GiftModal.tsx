@@ -22,7 +22,7 @@ export type GiftMode = 'send' | 'receive' | 'trade'
 
 interface Props {
   mode: GiftMode
-  bug: CaughtBug // いま ひらいている 虫（send・trade で おくる 虫）
+  bug?: CaughtBug // おくる 虫（send・trade）。receive では いらない
   onClose: () => void
   onReceived: (bugs: CaughtBug[], received: CaughtBug) => void
 }
@@ -63,7 +63,7 @@ export function GiftModal({ mode, bug, onClose, onReceived }: Props) {
   const [anim, setAnim] = useState<AnimKind>('send')
   const [friend, setFriend] = useState('')
   const [got, setGot] = useState<GiftBug | null>(null)
-  const myPhoto = mainPhoto(bug)
+  const myPhoto = bug ? mainPhoto(bug) : ''
   const finished = useRef(false)
   const onReceivedRef = useRef(onReceived)
   onReceivedRef.current = onReceived
@@ -109,7 +109,7 @@ export function GiftModal({ mode, bug, onClose, onReceived }: Props) {
   }
 
   async function doCreate() {
-    if (needName()) return
+    if (needName() || !bug) return
     sfx.tap()
     setBusy(true)
     setError('')
@@ -138,7 +138,7 @@ export function GiftModal({ mode, bug, onClose, onReceived }: Props) {
     setError('')
     try {
       const res =
-        mode === 'trade' ? await joinTrade(c, name.trim(), bug) : await receiveGift(c, name.trim())
+        mode === 'trade' && bug ? await joinTrade(c, name.trim(), bug) : await receiveGift(c, name.trim())
       finished.current = true
       const r = addGiftBug(res.bug, res.from)
       setGot(res.bug)
@@ -194,7 +194,7 @@ export function GiftModal({ mode, bug, onClose, onReceived }: Props) {
   if (step === 'intro') {
     body = (
       <>
-        {mode !== 'receive' && bugChip(myPhoto, bug.name)}
+        {bug && bugChip(myPhoto, bug.name)}
         <p className="gift-lead">
           {mode === 'send' && (
             <>
@@ -257,7 +257,7 @@ export function GiftModal({ mode, bug, onClose, onReceived }: Props) {
   } else if (step === 'join') {
     body = (
       <>
-        {bugChip(myPhoto, bug.name)}
+        {bug && bugChip(myPhoto, bug.name)}
         <p className="gift-lead">ともだちの がめんに 出ている あいことばを いれてね。</p>
         <RoomWordInput value={codeInput} onChange={setCodeInput} />
         {error && <p className="story-notice">{error}</p>}
@@ -274,14 +274,14 @@ export function GiftModal({ mode, bug, onClose, onReceived }: Props) {
   } else if (step === 'waiting' && code) {
     body = (
       <>
-        {bugChip(myPhoto, bug.name)}
+        {bug && bugChip(myPhoto, bug.name)}
         <p className="gift-lead">ともだちを まっているよ…</p>
         <RoomWordCard
           code={code}
           note={
             mode === 'trade'
-              ? 'ともだちは じぶんの 虫の「こうかん」→「あいことばで はいる」から、この ことばを いれてね。'
-              : 'ともだちは 図鑑の どれかの 虫の「もらう」から、この ことばを いれてね。'
+              ? 'ともだちは「ともだちに おくる」→「こうかん」で 虫を えらんで、「あいことばで はいる」から この ことばを いれてね。'
+              : 'ともだちは「ともだちに おくる」→「もらう」から、この ことばを いれてね。'
           }
         />
         <div className="gift-wait-dots" aria-hidden>
@@ -310,7 +310,7 @@ export function GiftModal({ mode, bug, onClose, onReceived }: Props) {
         <Confetti show={anim !== 'send'} />
         {anim === 'send' && (
           <>
-            {bugChip(myPhoto, bug.name)}
+            {bug && bugChip(myPhoto, bug.name)}
             <p className="gift-result">🎉 {friend}さんに とどいたよ！</p>
           </>
         )}

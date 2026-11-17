@@ -8153,25 +8153,6 @@ body.race-full .points-pop {
   display: inline-block; margin: 2px auto 6px; padding: 3px 12px; border-radius: 999px;
   background: #fff1d6; color: #9a5b00; font-size: 13px; font-weight: 800;
 }
-.gift-menu {
-  margin: 14px 0 10px; padding: 12px; border-radius: 16px;
-  background: linear-gradient(135deg, #fff4fb, #eef6ff); box-shadow: inset 0 0 0 2px #f1d8ef;
-}
-.gift-menu-title { font-weight: 900; font-size: 15px; margin-bottom: 8px; text-align: center; }
-.gift-menu-btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.gift-menu-btn {
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
-  padding: 10px 4px; border: none; border-radius: 14px; background: #fff;
-  font: inherit; font-weight: 900; font-size: 14px; color: #3b2d55; cursor: pointer;
-  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.08), 0 0 0 2px #e6dcf5;
-  transition: transform 0.1s;
-}
-.gift-menu-btn:active { transform: translateY(2px) scale(0.97); }
-.gift-menu-btn.send { box-shadow: 0 3px 0 rgba(0, 0, 0, 0.08), 0 0 0 2px #ffc2dc; }
-.gift-menu-btn.receive { box-shadow: 0 3px 0 rgba(0, 0, 0, 0.08), 0 0 0 2px #b9dcff; }
-.gift-menu-btn.trade { box-shadow: 0 3px 0 rgba(0, 0, 0, 0.08), 0 0 0 2px #c9ecb8; }
-.gift-menu-emoji { font-size: 28px; line-height: 1.1; }
-
 .gift-backdrop { z-index: 1200; }
 .gift-modal { text-align: center; overflow: hidden; }
 .gift-title { margin: 4px 0 10px; font-size: 20px; }
@@ -8279,3 +8260,23 @@ body.race-full .points-pop {
 @media (prefers-reduced-motion: reduce) {
   .gift-anim * { animation-duration: 0.01s !important; animation-delay: 0s !important; }
 }
+
+/* トップ（森の ホーム）の「ともだちに おくる」ボタン（絵の 4つの ボタンと おなじ 木の いろ） */
+.forest-home-gift {
+  position: absolute; left: 9.3%; width: 81.8%; top: 79.2%; height: 6.6%;
+  display: flex; align-items: center; justify-content: center; gap: 0.4em;
+  border: 3px solid #f6e3b4; border-radius: 16px; padding: 0;
+  background: linear-gradient(180deg, #b0703f 0%, #8d5329 55%, #74421f 100%);
+  color: #fff; font: inherit; font-weight: 900; font-size: clamp(16px, 5.4vw, 24px);
+  letter-spacing: 0.04em; text-shadow: 0 2px 0 #4c2a12, 0 0 6px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 4px 0 #4c2a12, 0 6px 14px rgba(40, 25, 10, 0.45), inset 0 2px 0 rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+}
+.forest-home-gift:active { transform: translateY(3px); box-shadow: 0 1px 0 #4c2a12, 0 3px 8px rgba(40, 25, 10, 0.4); }
+.forest-home-gift-emoji { font-size: 1.25em; text-shadow: none; }
+.gift-page-menu .gift-note { text-align: center; }
+.gift-card.send { background: linear-gradient(150deg, #ffe3ee, #fff4f8); }
+.gift-card.receive { background: linear-gradient(150deg, #e2f0ff, #f4f9ff); }
+.gift-card.trade { background: linear-gradient(150deg, #e4f6dc, #f5fbf1); }
+.gift-pick { display: flex; flex-direction: column; gap: 10px; }
+.gift-pick .gift-lead { text-align: center; }
