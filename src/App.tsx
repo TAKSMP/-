@@ -64,7 +64,7 @@ const TABS: { id: Tab; label: string; emoji: string }[] = [
 export default function App() {
   const [tab, setTab] = useState<Tab>('capture')
   const [forestHomeOpen, setForestHomeOpen] = useState(true)
-  // ホームに もどるたびに ふえる。各ページの key に いれて、つぎに ひらくときは さいしょから にする
+  // ホームに もどるたびに ふえる。各ページの key に いれて、つぎに ひらくときは さいしょから にする（「しらべる」は 登録するまで のこすので いれない）
   const [homeVisits, setHomeVisits] = useState(0)
   function goHome() {
     setForestHomeOpen(true)
@@ -197,7 +197,7 @@ export default function App() {
             アンマウントせずに 非表示にするだけにする（登録するまでデータ保持）。 */}
         <div style={{ display: tab === 'capture' ? 'contents' : 'none' }}>
           <CapturePage
-            key={`capture-${dataVersion}-${homeVisits}`}
+            key={`capture-${dataVersion}`}
             onSaved={handleSaved}
             pastPlaces={collectPlaces(bugs)}
           />
