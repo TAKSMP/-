@@ -118,12 +118,74 @@ function FighterCard({
   )
 }
 
+// サイコロの め（3×3 の どこに 点を おくか）
+const PIPS: Record<number, number[]> = {
+  1: [4],
+  2: [0, 8],
+  3: [0, 4, 8],
+  4: [0, 2, 6, 8],
+  5: [0, 2, 4, 6, 8],
+  6: [0, 2, 3, 5, 6, 8],
+}
+function DieFace({ n }: { n: number }) {
+  return (
+    <span className={`cb-die-face f${n}`}>
+      {Array.from({ length: 9 }, (_, i) => (
+        <i key={i} className={PIPS[n].includes(i) ? 'on' : ''} />
+      ))}
+    </span>
+  )
+}
+
+// サイコロが ころがる ポップアップ（さいごに result で とまる）
+function DiceRoll({ result, text, onClose }: { result: number; text: string; onClose: () => void }) {
+  const [face, setFace] = useState(() => 1 + Math.floor(Math.random() * 6))
+  const [done, setDone] = useState(false)
+  useEffect(() => {
+    let t = 0
+    let wait = 60
+    let timer = 0
+    const tick = () => {
+      t += wait
+      if (t >= 1500) {
+        setFace(result)
+        setDone(true)
+        sfx.special(result >= 4 ? 'attackUp' : 'default')
+        return
+      }
+      setFace((f) => {
+        let n = 1 + Math.floor(Math.random() * 6)
+        if (n === f) n = (n % 6) + 1
+        return n
+      })
+      sfx.tap()
+      wait = Math.min(260, wait * 1.18) // だんだん ゆっくり
+      timer = window.setTimeout(tick, wait)
+    }
+    timer = window.setTimeout(tick, wait)
+    return () => window.clearTimeout(timer)
+  }, [result])
+  return (
+    <div className="cb-dice-pop" onClick={() => done && onClose()}>
+      <div className="cb-dice-box" onClick={(e) => (e.stopPropagation(), done && onClose())}>
+        <p className="cb-dice-title">{done ? `🎲 ${result} が でた！` : 'サイコロを ふるよ…'}</p>
+        <div className={`cb-dice${done ? ' done' : ' rolling'}`}>
+          <DieFace n={face} />
+        </div>
+        <p className={`cb-dice-text${done ? ' show' : ''}`}>{done ? text : '　'}</p>
+        {done && <span className="cb-next">タップで とじる ▶</span>}
+      </div>
+    </div>
+  )
+}
+
 export function CardBattleStage({ state, me, photos, myName, foeName, onCommand, onAdvance, onQuit, onAgain }: Props) {
   const foe = other(me)
   const log = state.log
   const lastId = log.length ? log[log.length - 1].id : 0
   // shown：もう 見せた できごとの いちばん あたらしい id
   const [shown, setShown] = useState(() => (log.length ? log[0].id : 0))
+  const firstIdInit = useRef(log.length ? log[0].id : 0)
   const wantNext = useRef(false)
   const [pending, setPending] = useState<{ move: number; m: CardMove | null } | null>(null)
   const cmdRef = useRef<HTMLDivElement>(null)
@@ -143,6 +205,9 @@ export function CardBattleStage({ state, me, photos, myName, foeName, onCommand,
   const shownId = Math.max(shown, firstId)
   const ev = log.find((e) => e.id === shownId) ?? log[log.length - 1]
   const caughtUp = shownId >= lastId
+  // サイコロの できごとを はじめて 見せる ときは ポップアップで ころがす
+  const [rolled, setRolled] = useState<number>(0)
+  const rolling = !!ev?.d && ev.id > rolled && ev.id === shownId && shownId > firstIdInit.current
 
   useEffect(() => {
     if (!ev) return
@@ -180,6 +245,7 @@ export function CardBattleStage({ state, me, photos, myName, foeName, onCommand,
   }, [myChoice, resultShown, pending])
 
   function next() {
+    if (rolling) return
     if (!caughtUp) {
       sfx.tap()
       const nx = log.find((e) => e.id > shownId)
@@ -278,6 +344,14 @@ export function CardBattleStage({ state, me, photos, myName, foeName, onCommand,
 
   return (
     <div className="cg-stage">
+      {rolling && ev?.d && (
+        <DiceRoll
+          key={ev.id}
+          result={ev.d}
+          text={renderText(state, ev.t.replace(/^🎲\d /, ''), me)}
+          onClose={() => setRolled(ev.id)}
+        />
+      )}
       {bench(foe)}
       {row(foe)}
 
@@ -300,7 +374,8 @@ export function CardBattleStage({ state, me, photos, myName, foeName, onCommand,
             {renderText(state, e.t.replace(/^🎲\d /, ''), me)}
           </p>
         ))}
-        {ev && (
+        {ev && rolling && <p className="now">🎲 サイコロを ふるよ…</p>}
+        {ev && !rolling && (
           <p key={ev.id} className={`now fx-${ev.fx ?? 'info'}`}>
             {ev.d ? <span className="cg-die">{ev.d}</span> : null}
             {renderText(state, ev.t.replace(/^🎲\d /, ''), me)}

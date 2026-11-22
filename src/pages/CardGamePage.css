@@ -1239,3 +1239,121 @@
     opacity: 0;
   }
 }
+
+/* ---------- サイコロ ---------- */
+.cb-dice-pop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  background: rgba(30, 40, 25, 0.45);
+  animation: cb-fade 0.2s;
+}
+.cb-dice-box {
+  position: relative;
+  width: min(86vw, 330px);
+  background: #fffdf3;
+  border: 4px solid #ffb020;
+  border-radius: 22px;
+  padding: 16px 16px 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  animation: cb-popin 0.3s cubic-bezier(0.3, 1.6, 0.6, 1);
+}
+.cb-dice-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 900;
+  color: #b0570f;
+}
+.cb-dice {
+  width: 110px;
+  height: 110px;
+  display: grid;
+  place-items: center;
+}
+.cb-dice.rolling {
+  animation: cb-tumble 0.35s linear infinite;
+}
+.cb-dice.done {
+  animation: cb-land 0.5s cubic-bezier(0.3, 1.8, 0.5, 1);
+}
+.cb-die-face {
+  width: 100px;
+  height: 100px;
+  border-radius: 20px;
+  background: linear-gradient(145deg, #ffffff, #f0ead8);
+  border: 3px solid #2f3a24;
+  box-shadow: 0 6px 0 #c9c1a6, inset 0 -4px 0 rgba(0, 0, 0, 0.06);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  padding: 12px;
+  gap: 4px;
+}
+.cb-die-face i {
+  border-radius: 50%;
+  margin: 3px;
+}
+.cb-die-face i.on {
+  background: #2f3a24;
+}
+.cb-die-face.f1 i.on {
+  background: #e2513b;
+  margin: -2px;
+}
+.cb-dice.done .cb-die-face {
+  border-color: #ffb020;
+  box-shadow: 0 6px 0 #c9c1a6, 0 0 0 6px #ffe680;
+}
+.cb-dice-text {
+  margin: 0;
+  min-height: 1.5em;
+  font-size: 17px;
+  font-weight: 900;
+  text-align: center;
+  line-height: 1.5;
+}
+.cb-dice-text.show {
+  animation: cb-in 0.3s;
+}
+@keyframes cb-tumble {
+  0% {
+    transform: rotate(0) translateY(0) scale(1);
+  }
+  25% {
+    transform: rotate(90deg) translateY(-14px) scale(0.92);
+  }
+  50% {
+    transform: rotate(180deg) translateY(0) scale(1);
+  }
+  75% {
+    transform: rotate(270deg) translateY(-10px) scale(0.95);
+  }
+  100% {
+    transform: rotate(360deg) translateY(0) scale(1);
+  }
+}
+@keyframes cb-land {
+  0% {
+    transform: scale(1.5) rotate(-20deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+@keyframes cb-popin {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+}
+@keyframes cb-fade {
+  from {
+    opacity: 0;
+  }
+}
