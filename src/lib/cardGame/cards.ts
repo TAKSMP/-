@@ -388,13 +388,13 @@ export function convertMove(m: SpecialMoveV2, attack: number, hp: number, tier: 
     if (m.counterRatio) {
       cm.counter = m.counterRatio
       cm.priority = Math.min(cm.priority, -5)
-      parts.push(`さいごに うごく。この ラウンドで うけた ダメージを ${m.counterRatio}ばいで かえす`)
+      parts.push(`この ラウンドで うけた ダメージを ${m.counterRatio}ばいで かえす`)
       if (!cm.big) cm.big = '↩️'
     }
     if (m.counterGuard) {
       cm.guard = Math.min(DMG_CAP, r5(eng(60, attack) * FD * mul, 10))
       cm.priority = Math.max(cm.priority, 4)
-      parts.push(`かまえる：この ラウンドで こうげき されたら ${cm.guard}ダメージ かえす`)
+      parts.push(`かまえる：つぎの ばんまでに こうげき されたら ${cm.guard}ダメージ かえす`)
       if (!cm.big) cm.big = '🛡️'
     }
     if (m.sealMoves) {
@@ -444,7 +444,7 @@ export function convertMove(m: SpecialMoveV2, attack: number, hp: number, tier: 
       parts.push(missText(miss, kind === 'attack' ? 'はずれ' : 'しっぱい'))
     }
   }
-  if (cm.priority > 0 && !cm.guard) parts.unshift('⚡さきに うごく')
+  if (cm.priority > 0 && !cm.guard) parts.push('⚡つぎの ラウンド さいしょに うごく')
   if (!cm.big) cm.big = '✨'
   cm.text = parts.filter(Boolean).join('。') + '。'
   cm.uses = m.ultimate ? 1 : usesOf(m, cm, raw, hp, mul)

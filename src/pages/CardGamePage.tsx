@@ -23,14 +23,14 @@ import {
   type Card,
   type Tier,
 } from '../lib/cardGame/cards'
-import { createGame, resolveRound, type CCommand, type CState } from '../lib/cardGame/engine'
+import { actorNeedsChoice, createGame, currentActor, stepTurn, type CCommand, type CState } from '../lib/cardGame/engine'
 import { cpuCommands, cpuDeck, CPU_LEVELS, type CpuLevel } from '../lib/cardGame/cpu'
 import {
   createCardRoom,
   joinCardRoom,
   leaveCardRoom,
-  resolveIfReady,
-  sendCommands,
+  hostAdvance,
+  sendCommand,
   watchCardRoom,
   type CardRole,
   type CardRoom,
@@ -153,6 +153,7 @@ export function CardGamePage({ bugs, onGoCapture }: Props) {
   const [cpuLevel, setCpuLevel] = useState<CpuLevel>('easy')
   const [game, setGame] = useState<CState | null>(null)
   const [cpuPhotos, setCpuPhotos] = useState<Record<string, string>>({})
+  const [gameNo, setGameNo] = useState(0)
 
   function startCpu(level: CpuLevel) {
     const foe = cpuDeck(bugs, save, level, deck.map((c) => c.bugId))
@@ -162,12 +163,22 @@ export function CardGamePage({ bugs, onGoCapture }: Props) {
     setCpuLevel(level)
     setCpuPhotos(ph)
     setGame(createGame(deck, foe))
+    setGameNo((n) => n + 1)
     sfx.battleStart()
     setPhase('cpu')
   }
-  function cpuTurn(cmds: CCommand[]) {
-    if (!game) return
-    setGame(resolveRound(game, [...cmds, ...cpuCommands(game, 'b', cpuLevel)]))
+  function cpuCommand(cmd: CCommand) {
+    setGame((g) => (g ? stepTurn(g, cmd) : g))
+  }
+  // あいての 虫・じぶんで えらばない 虫を 1て すすめる
+  function cpuAdvance() {
+    setGame((g) => {
+      if (!g) return g
+      const f = currentActor(g)
+      if (!f) return stepTurn(g)
+      if (f.side === 'b' && actorNeedsChoice(g)) return stepTurn(g, cpuCommands(g, 'b', cpuLevel).find((c) => c.uid === f.uid))
+      return actorNeedsChoice(g) ? g : stepTurn(g)
+    })
   }
 
   // ---------- つうしん ----------
@@ -179,7 +190,6 @@ export function CardGamePage({ bugs, onGoCapture }: Props) {
   const [busy, setBusy] = useState(false)
   const [gone, setGone] = useState(false)
   const unsub = useRef<(() => void) | null>(null)
-  const resolvedRound = useRef(0)
 
   useEffect(() => () => unsub.current?.(), [])
 
@@ -189,7 +199,6 @@ export function CardGamePage({ bugs, onGoCapture }: Props) {
 
   function watch(c: string, r: CardRole) {
     unsub.current?.()
-    resolvedRound.current = 0
     setGone(false)
     unsub.current = watchCardRoom(c, (rm) => {
       if (!rm || (r === 'host' && rm.status === 'battling' && !rm.guest)) {
@@ -198,9 +207,7 @@ export function CardGamePage({ bugs, onGoCapture }: Props) {
       }
       setRoom(rm)
       if (rm.status === 'battling') setPhase('net')
-      if (r === 'host' && rm.state && !rm.state.over && resolvedRound.current !== rm.state.round) {
-        if (resolveIfReady(c, rm)) resolvedRound.current = rm.state.round
-      }
+      if (r === 'host') hostAdvance(c, rm)
     })
   }
 
@@ -308,12 +315,14 @@ export function CardGamePage({ bugs, onGoCapture }: Props) {
   if (phase === 'cpu' && game) {
     return (
       <CardBattleStage
+        key={gameNo}
         state={game}
         me="a"
         photos={cpuPhotos}
         myName="じぶん"
         foeName={`コンピューター（${CPU_LEVELS.find((l) => l.key === cpuLevel)?.label}）`}
-        onCommands={cpuTurn}
+        onCommand={cpuCommand}
+        onAdvance={cpuAdvance}
         onQuit={() => {
           setGame(null)
           setPhase('menu')
@@ -330,18 +339,17 @@ export function CardGamePage({ bugs, onGoCapture }: Props) {
     room.guest?.photos.forEach((p, i) => (ph[`b${i}`] = p))
     const mine = role === 'host' ? room.host : room.guest
     const theirs = role === 'host' ? room.guest : room.host
-    const sent = room.cmds?.[role]?.r === room.state.round
     return (
       <>
         {gone && !room.state.over && <p className="cg-notice">あいてが いなくなりました…</p>}
         <CardBattleStage
+          key={room.createdAt}
           state={room.state}
           me={me}
           photos={ph}
           myName={mine?.name ?? 'じぶん'}
           foeName={theirs?.name ?? 'あいて'}
-          waiting={sent}
-          onCommands={(cmds) => code && sendCommands(code, role, room.state!.round, cmds)}
+          onCommand={(cmd) => code && sendCommand(code, role, room.state!.seq, cmd)}
           onQuit={leaveNet}
         />
       </>

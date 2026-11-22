@@ -54,6 +54,7 @@ export interface Snap {
 export type Fx = 'hit' | 'heal' | 'status' | 'faint' | 'miss' | 'buff' | 'debuff' | 'info' | 'enter' | 'big'
 
 export interface CEvent {
+  id: number // 1から じゅんばん
   t: string // ぶん（@a0@ は あとで なまえに かえる）
   d?: number // サイコロの め
   a?: string // うごいた 虫
@@ -71,7 +72,14 @@ export interface CState {
   delayed: { from: string; side: SideId; target: string; dmg: number; at: number; name: string }[]
   over: boolean
   winner: SideId | 'draw' | null
-  events: CEvent[]
+  log: CEvent[] // さいきんの できごと（さいご 60こ）
+  evSeq: number
+  queue: string[] // この ラウンドで まだ うごいていない 虫（すばやい じゅん）
+  acted: string[]
+  dmgTaken: Record<string, { n: number; by: string }>
+  guards: Record<string, number> // かまえ（つぎの じぶんの ばんまで）
+  firstNext: string[] // つぎの ラウンド いちばん さきに うごく
+  seq: number // 1て すすむ たびに ふえる
   seed: number
 }
 
@@ -127,10 +135,21 @@ export function createGame(deckA: Card[], deckB: Card[], seed = Date.now() & 0x7
     delayed: [],
     over: false,
     winner: null,
-    events: [],
+    log: [],
+    evSeq: 0,
+    queue: [],
+    acted: [],
+    dmgTaken: {},
+    guards: {},
+    firstNext: [],
+    seq: 1,
     seed,
   }
-  st.events = [mkEvent(st, { t: 'バトル スタート！', fx: 'big' })]
+  const rng = makeRng(seed)
+  const ctx = new Ctx(st, rng)
+  ctx.ev({ t: 'バトル スタート！', fx: 'big' })
+  ctx.beginRound()
+  st.seed = rng.seed
   return st
 }
 
@@ -151,7 +170,14 @@ export function hydrate(raw: CState): CState {
     delayed: s.delayed ?? [],
     over: !!s.over,
     winner: s.winner ?? null,
-    events: (s.events ?? []).map((e) => ({ ...e, act: { a: e.act?.a ?? [], b: e.act?.b ?? [] }, snap: e.snap ?? [] })),
+    log: (s.log ?? []).map((e) => ({ ...e, act: { a: e.act?.a ?? [], b: e.act?.b ?? [] }, snap: e.snap ?? [] })),
+    evSeq: s.evSeq ?? 0,
+    queue: s.queue ?? [],
+    acted: s.acted ?? [],
+    dmgTaken: s.dmgTaken ?? {},
+    guards: s.guards ?? {},
+    firstNext: s.firstNext ?? [],
+    seq: s.seq ?? 0,
     seed: s.seed ?? 1,
   }
 }
@@ -210,8 +236,9 @@ export function snapOf(f: CF): Snap {
   return s
 }
 
-function mkEvent(st: CState, e: Omit<CEvent, 'act' | 'snap'>): CEvent {
-  const ev: CEvent = { ...e, act: { a: [...st.active.a], b: [...st.active.b] }, snap: st.fighters.map(snapOf) }
+function mkEvent(st: CState, e: Omit<CEvent, 'act' | 'snap' | 'id'>): CEvent {
+  st.evSeq += 1
+  const ev: CEvent = { ...e, id: st.evSeq, act: { a: [...st.active.a], b: [...st.active.b] }, snap: st.fighters.map(snapOf) }
   for (const k of Object.keys(ev) as (keyof CEvent)[]) if (ev[k] === undefined) delete ev[k]
   return ev
 }
@@ -220,14 +247,50 @@ const N = (f: CF) => `@${f.uid}@`
 const dieFace = (n: number) => `🎲${n}`
 
 // -------------------------------------------------------------
-//  1ラウンド すすめる
+//  1ぴきずつ うごく
 // -------------------------------------------------------------
-export function resolveRound(input: CState, commands: CCommand[]): CState {
+// いま うごく 虫（すばやい じゅん）
+export function currentActor(st: CState): CF | null {
+  if (st.over) return null
+  for (const u of st.queue) {
+    const f = fighter(st, u)
+    if (alive(f) && st.active[f.side].includes(u)) return f
+  }
+  return null
+}
+// いまの 虫は わざを えらぶか（ためている・やすみ の ときは えらばない）
+export function actorNeedsChoice(st: CState): boolean {
+  const f = currentActor(st)
+  return !!f && !f.charging && !(f.resting && f.resting > 0)
+}
+
+// いまの 虫を 1かい うごかす（cmd は えらんだ わざ。えらばない ときは なし）
+export function stepTurn(input: CState, cmd?: CCommand): CState {
   const st: CState = JSON.parse(JSON.stringify(input))
-  st.events = []
+  if (st.over) return input
   const rng = makeRng(st.seed)
   const ctx = new Ctx(st, rng)
-  ctx.run(commands)
+  // うごけない 虫を とばす
+  while (st.queue.length) {
+    const f = fighter(st, st.queue[0])
+    if (alive(f) && st.active[f.side].includes(f.uid)) break
+    st.queue.shift()
+  }
+  const uid = st.queue.shift()
+  if (uid) {
+    const f = fighter(st, uid)
+    delete st.guards[uid] // かまえは つぎの じぶんの ばんまで
+    ctx.act(ctx.makeAction(f, cmd?.uid === uid ? cmd : undefined))
+    st.acted.push(uid)
+    ctx.checkOver()
+  }
+  // のこりが いなければ ラウンドの おわり
+  if (!st.over && !currentActor(st)) {
+    ctx.endOfRound()
+    if (!st.over) ctx.beginRound()
+  }
+  st.log = st.log.slice(-40)
+  st.seq += 1
   st.seed = rng.seed
   return st
 }
@@ -246,17 +309,14 @@ interface Action {
 class Ctx {
   st: CState
   rng: Rng
-  acted = new Set<string>()
-  dmgTaken = new Map<string, { n: number; by: string }>()
-  guards = new Map<string, number>()
 
   constructor(st: CState, rng: Rng) {
     this.st = st
     this.rng = rng
   }
 
-  ev(e: Omit<CEvent, 'act' | 'snap'>) {
-    this.st.events.push(mkEvent(this.st, e))
+  ev(e: Omit<CEvent, 'act' | 'snap' | 'id'>) {
+    this.st.log.push(mkEvent(this.st, e))
   }
   dice(): number {
     return 1 + Math.floor(this.rng.next() * 6)
@@ -268,40 +328,32 @@ class Ctx {
     return alive(f) && this.st.active[f.side].includes(f.uid)
   }
 
-  run(commands: CCommand[]) {
+  // ラウンドの はじめ：すばやい じゅんに ならべる
+  beginRound() {
     const st = this.st
-    st.events.push(mkEvent(st, { t: `ラウンド ${st.round}`, fx: 'big' }))
-    const actions: Action[] = []
-    for (const side of ['a', 'b'] as SideId[]) {
-      for (const f of activeOf(st, side)) {
-        if (f.resting && f.resting > 0) {
-          actions.push({ f, moveIdx: -2, move: null, release: false, pri: 9, spd: 99, tie: 0 })
-          continue
-        }
-        if (f.charging) {
-          const m = moveOf(f, f.charging.move)
-          actions.push({ f, moveIdx: f.charging.move, move: m, target: f.charging.target, release: true, pri: 0, spd: effSpeed(f), tie: this.rng.next() })
-          continue
-        }
-        const cmd = commands.find((c) => c.uid === f.uid)
-        let idx = cmd?.move ?? -1
-        if (idx >= 0 && (f.usesLeft[idx] ?? 0) <= 0) idx = -1
-        const m = moveOf(f, idx)
-        actions.push({ f, moveIdx: idx, move: m, target: cmd?.target, release: false, pri: m?.priority ?? 0, spd: effSpeed(f), tie: this.rng.next() })
-      }
-    }
-    actions.sort((x, y) => y.pri - x.pri || y.spd - x.spd || y.tie - x.tie)
-    // かまえ（counterGuard）は うごく まえから かまえている
-    for (const a of actions) if (a.move?.guard && !a.release) this.guards.set(a.f.uid, a.move.guard)
+    const list = (['a', 'b'] as SideId[]).flatMap((side) => activeOf(st, side))
+    const tie = new Map(list.map((f) => [f.uid, this.rng.next()]))
+    list.sort(
+      (x, y) =>
+        Number(st.firstNext.includes(y.uid)) - Number(st.firstNext.includes(x.uid)) ||
+        effSpeed(y) - effSpeed(x) ||
+        tie.get(y.uid)! - tie.get(x.uid)!,
+    )
+    st.queue = list.map((f) => f.uid)
+    st.firstNext = []
+    st.acted = []
+    st.dmgTaken = {}
+    this.ev({ t: `ラウンド ${st.round}`, fx: 'big' })
+  }
 
-    for (const a of actions) {
-      if (st.over) break
-      if (!this.isActive(a.f)) continue
-      this.act(a)
-      this.acted.add(a.f.uid)
-      this.checkOver()
+  makeAction(f: CF, cmd?: CCommand): Action {
+    if (f.resting && f.resting > 0) return { f, moveIdx: -2, move: null, release: false, pri: 0, spd: 0, tie: 0 }
+    if (f.charging) {
+      return { f, moveIdx: f.charging.move, move: moveOf(f, f.charging.move), target: f.charging.target, release: true, pri: 0, spd: 0, tie: 0 }
     }
-    if (!st.over) this.endOfRound()
+    let idx = cmd?.move ?? -1
+    if (idx >= 0 && (f.usesLeft[idx] ?? 0) <= 0) idx = -1
+    return { f, moveIdx: idx, move: moveOf(f, idx), target: cmd?.target, release: false, pri: 0, spd: 0, tie: 0 }
   }
 
   act(a: Action) {
@@ -366,6 +418,10 @@ class Ctx {
       f.hidden = false
     }
     this.ev({ t: `${N(f)}の ${move.emoji}${move.name}！`, a: f.uid, fx: move.ultimate ? 'big' : 'info' })
+    if (!a.release && move.priority > 0 && !move.guard && !this.st.firstNext.includes(f.uid)) {
+      this.st.firstNext.push(f.uid)
+      this.ev({ t: `⚡ ${N(f)}は つぎの ラウンド いちばん さきに うごく！`, a: f.uid, fx: 'buff' })
+    }
     if (move.copy) {
       const foes = activeOf(this.st, other(f.side))
       const pool = foes.flatMap((x) => x.card.moves.filter((m) => !m.copy && !m.charge))
@@ -449,9 +505,12 @@ class Ctx {
       this.ev({ t: `${N(f)}の 🔻💔🐢が なくなった！`, a: f.uid, fx: 'buff' })
     }
     if (m.revive) this.revive(f, m.revive.ratio, m.revive.need)
-    if (m.guard) this.ev({ t: `${N(f)}は かまえている！ こうげき されたら ${m.guard}ダメージ かえす`, a: f.uid, fx: 'buff' })
+    if (m.guard) {
+      this.st.guards[f.uid] = m.guard
+      this.ev({ t: `${N(f)}は かまえた！ つぎの ばんまでに こうげき されたら ${m.guard}ダメージ かえす`, a: f.uid, fx: 'buff' })
+    }
     if (m.counter) {
-      const got = this.dmgTaken.get(f.uid)
+      const got = this.st.dmgTaken[f.uid]
       const src = got ? fighter(this.st, got.by) : undefined
       if (!got || !this.isActive(src!)) {
         this.ev({ t: 'でも なにも おこらなかった…', fx: 'miss' })
@@ -540,7 +599,7 @@ class Ctx {
         let v = m.dmg ?? 0
         if (m.plusFoeStatus && t.status.length) v += m.plusFoeStatus
         if (m.plusSelfStatus && f.status.length) v += m.plusSelfStatus
-        if (m.plusLate && this.acted.has(t.uid)) v += m.plusLate
+        if (m.plusLate && this.st.acted.includes(t.uid)) v += m.plusLate
         if (m.plusFoeUlt && t.card.moves.some((x) => x.ultimate)) v += m.plusFoeUlt
         v = Math.max(5, v + 5 * f.chips.attack - 5 * t.chips.defense)
         if (crit) v += r5(v / 2, 0)
@@ -549,7 +608,7 @@ class Ctx {
       if (hits > 1 && sum > 0) this.ev({ t: `${N(t)}に ごうけい ${sum}ダメージ！`, g: [t.uid], n: sum, fx: 'hit' })
       total += sum
       // かまえ（はんげき）
-      const g = this.guards.get(t.uid)
+      const g = this.st.guards[t.uid]
       if (g && alive(t) && alive(f) && t.side !== f.side && sum > 0) this.damage(f, g, t, `${N(t)}の はんげき！`)
     }
     if (m.drain && total > 0 && alive(f)) this.heal(f, r5(total * m.drain))
@@ -576,8 +635,8 @@ class Ctx {
     if (!alive(t)) return 0
     const n = Math.min(t.hp, v)
     t.hp -= n
-    const prev = this.dmgTaken.get(t.uid)
-    this.dmgTaken.set(t.uid, { n: (prev?.n ?? 0) + n, by: by.uid })
+    const prev = this.st.dmgTaken[t.uid]
+    this.st.dmgTaken[t.uid] = { n: (prev?.n ?? 0) + n, by: by.uid }
     void quiet
     this.ev({ t: `${label ? label + ' ' : ''}${N(t)}に ${v}ダメージ！`, a: by.uid, g: [t.uid], n: v, fx: 'hit' })
     if (t.hp <= 0) this.faint(t)

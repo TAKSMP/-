@@ -12,7 +12,7 @@ import { db, ensureSignedIn } from '../firebase'
 import { pickFreeRoomCode, ROOM_STALE_MS } from '../roomWords'
 import { BUILD_ID } from '../netBattle'
 import type { Card } from './cards'
-import { createGame, hydrate, resolveRound, type CCommand, type CState } from './engine'
+import { actorNeedsChoice, createGame, currentActor, hydrate, stepTurn, type CCommand, type CState } from './engine'
 
 export type CardRole = 'host' | 'guest'
 
@@ -25,8 +25,8 @@ export interface CardSide {
 }
 
 export interface CardCmds {
-  r: number // どの ラウンドの めいれいか
-  list?: CCommand[]
+  r: number // どの 1て（state.seq）の めいれいか
+  cmd?: CCommand
 }
 
 export interface CardRoom {
@@ -95,20 +95,26 @@ export function watchCardRoom(code: string, cb: (room: CardRoom | null) => void)
   return onValue(roomRef(code), (snap) => cb(snap.exists() ? normalizeRoom(snap.val() as CardRoom) : null))
 }
 
-export async function sendCommands(code: string, role: CardRole, round: number, list: CCommand[]): Promise<void> {
-  await update(child(roomRef(code), 'cmds'), sanitize({ [role]: { r: round, list } })).catch((e) =>
+export async function sendCommand(code: string, role: CardRole, seq: number, cmd: CCommand): Promise<void> {
+  await update(child(roomRef(code), 'cmds'), sanitize({ [role]: { r: seq, cmd } })).catch((e) =>
     console.warn('カードゲーム：わざを おくれませんでした', e),
   )
 }
 
-// ホストだけ：りょうほうの わざが そろったら 1ラウンド すすめて 書きこむ
-export function resolveIfReady(code: string, room: CardRoom): boolean {
+// ホストだけ：いまの 虫の わざが とどいたら（えらばない 虫は すぐ）1て すすめて 書きこむ
+export function hostAdvance(code: string, room: CardRoom): boolean {
   const st = room.state
-  const h = room.cmds?.host
-  const g = room.cmds?.guest
-  if (!st || st.over || !h || !g || h.r !== st.round || g.r !== st.round) return false
-  const next = resolveRound(st, [...(h.list ?? []), ...(g.list ?? [])])
-  update(roomRef(code), sanitize({ state: next, cmds: null })).catch((e) => console.warn('カードゲーム：書きこみに しっぱい', e))
+  if (!st || st.over) return false
+  const f = currentActor(st)
+  if (!f) return false
+  let next: CState
+  if (!actorNeedsChoice(st)) next = stepTurn(st)
+  else {
+    const c = room.cmds?.[f.side === 'a' ? 'host' : 'guest']
+    if (!c || c.r !== st.seq || !c.cmd || c.cmd.uid !== f.uid) return false
+    next = stepTurn(st, c.cmd)
+  }
+  update(roomRef(code), sanitize({ state: next })).catch((e) => console.warn('カードゲーム：書きこみに しっぱい', e))
   return true
 }
 

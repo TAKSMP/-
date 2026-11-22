@@ -1,17 +1,18 @@
 // =============================================================
-//  ちょうむしカードゲーム：たたかいの がめん（CPU・つうしん きょうつう）
+//  ちょうむしカードバトル：たたかいの がめん（CPU・つうしん きょうつう）
 // -------------------------------------------------------------
-//  ・うえが あいて、したが じぶん。まえの 2ひきは おおきく、ひかえは まるい しゃしん
-//  ・ラウンドの けっかは 1ぎょうずつ ながして見せる（タップで はやおくり）
-//  ・わざえらび：虫ごとに わざ（または こうげき）→ ねらう あいてを タップ
+//  ・場の 虫は 紙と おなじ カードで ならべる（ながおしで 大きく）
+//  ・すばやい じゅんに 1ぴきずつ ばんが くる。じぶんの 虫の ばんに わざを えらぶ
+//  ・まんなかの メッセージは タップするたびに 1つずつ すすむ
 // =============================================================
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { Card, CardMove } from '../lib/cardGame/cards'
+import type { CardMove } from '../lib/cardGame/cards'
 import {
   activeOf,
+  actorNeedsChoice,
   alive,
+  currentActor,
   fighter,
-  needsCommand,
   other,
   renderText,
   targetKind,
@@ -23,8 +24,8 @@ import {
   type Snap,
 } from '../lib/cardGame/engine'
 import { sfx } from '../lib/sound'
-import { MoveBox, TierBadge, UsesDots } from './CardView'
-import { PaperCard } from './PaperCard'
+import { MoveBox } from './CardView'
+import { CardZoom, PaperCard, usePress } from './PaperCard'
 
 interface Props {
   state: CState
@@ -32,13 +33,11 @@ interface Props {
   photos: Record<string, string> // uid → しゃしん
   myName: string
   foeName: string
-  waiting?: boolean // つうしん：あいてを まっている
-  onCommands: (cmds: CCommand[]) => void
+  onCommand: (cmd: CCommand) => void
+  onAdvance?: () => void // CPU：あいて・じどうの 虫を 1て すすめる
   onQuit: () => void
   onAgain?: () => void
 }
-
-const STEP_MS: Record<string, number> = { big: 1100, hit: 950, faint: 1200, heal: 900, status: 950, enter: 900 }
 
 function chipIcons(c?: [number, number, number]): string {
   if (!c) return ''
@@ -47,110 +46,104 @@ function chipIcons(c?: [number, number, number]): string {
   return c.map((n, i) => (n > 0 ? up[i].repeat(n) : n < 0 ? down[i].repeat(-n) : '')).join('')
 }
 
-function Panel({
+function FighterCard({
   f,
   snap,
   photo,
   ev,
+  width,
+  turn,
   pickable,
   onPick,
-  onInfo,
-  current,
 }: {
   f: CF
   snap: Snap
   photo?: string
   ev?: CEvent
-  pickable?: boolean
-  onPick?: () => void
-  onInfo?: () => void
-  current?: boolean
+  width: number
+  turn: boolean
+  pickable: boolean
+  onPick: () => void
 }) {
+  const [zoom, setZoom] = useState(false)
+  const press = usePress(
+    () => setZoom(true),
+    () => (pickable ? onPick() : setZoom(true)),
+  )
   const rate = Math.max(0, snap.h / f.card.hp)
   const isActor = ev?.a === f.uid
   const isTarget = ev?.g?.includes(f.uid)
   const fx = isTarget ? ev?.fx : undefined
   return (
-    <button
-      type="button"
+    <div
       className={
-        'cg-panel' +
+        'cb-fighter' +
         (snap.f ? ' out' : '') +
         (isActor ? ' actor' : '') +
+        (turn ? ' turn' : '') +
         (fx ? ` fx-${fx}` : '') +
         (pickable ? ' pick' : '') +
-        (current ? ' cur' : '') +
         (snap.x?.includes('🙈') ? ' hidden' : '')
       }
-      onClick={() => (pickable ? onPick?.() : onInfo?.())}
+      style={{ width }}
     >
-      <span className="cg-panel-photo">
-        {photo ? <img src={photo} alt="" /> : '🐛'}
-        {isTarget && ev?.n ? <span className={`cg-pop ${ev.fx === 'heal' ? 'heal' : ''}`}>{ev.fx === 'heal' ? '+' : '-'}{ev.n}</span> : null}
-        {pickable && <span className="cg-panel-aim">🎯</span>}
-      </span>
-      <span className="cg-panel-info">
-        <span className="cg-panel-name">
-          <TierBadge tier={f.card.tier} />
-          {f.card.name}
+      <div className="pc-press" {...press}>
+        <PaperCard card={f.card} photo={photo} width={width} usesLeft={f.usesLeft}>
+          {isTarget && ev?.n ? (
+            <span key={ev.id} className={`cb-pop ${ev.fx === 'heal' ? 'heal' : ''}`}>
+              {ev.fx === 'heal' ? '+' : '-'}
+              {ev.n}
+            </span>
+          ) : null}
+          {pickable && <span className="cb-aim">🎯</span>}
+          {snap.f ? <span className="cb-ko">たおれた</span> : null}
+        </PaperCard>
+      </div>
+      <div className="cb-hp">
+        <span className="cb-hp-bar">
+          <i style={{ width: `${rate * 100}%` }} className={rate <= 0.25 ? 'low' : rate <= 0.5 ? 'mid' : ''} />
         </span>
-        <span className="cg-hp">
-          <span className="cg-hp-bar">
-            <i style={{ width: `${rate * 100}%` }} className={rate <= 0.25 ? 'low' : rate <= 0.5 ? 'mid' : ''} />
-          </span>
-          <b>
-            {snap.h}
-            <small>/{f.card.hp}</small>
-          </b>
-        </span>
-        <span className="cg-panel-chips">
-          {snap.s}
-          {chipIcons(snap.c)}
-          {snap.x}
-        </span>
-      </span>
-    </button>
+        <b>
+          {snap.h}
+          <small>/{f.card.hp}</small>
+        </b>
+      </div>
+      <div className="cb-chips">
+        {snap.s}
+        {chipIcons(snap.c)}
+        {snap.x}
+      </div>
+      {zoom && <CardZoom card={f.card} photo={photo} usesLeft={f.usesLeft} onClose={() => setZoom(false)} />}
+    </div>
   )
 }
 
-export function CardBattleStage({ state, me, photos, myName, foeName, waiting, onCommands, onQuit, onAgain }: Props) {
+export function CardBattleStage({ state, me, photos, myName, foeName, onCommand, onAdvance, onQuit, onAgain }: Props) {
   const foe = other(me)
-  const events = state.events
-  const [shown, setShown] = useState(0)
-  const [playing, setPlaying] = useState(true)
-  const lastState = useRef<CState | null>(null)
-  const [info, setInfo] = useState<CF | null>(null)
-  const [cmds, setCmds] = useState<CCommand[]>([])
+  const log = state.log
+  const lastId = log.length ? log[log.length - 1].id : 0
+  // shown：もう 見せた できごとの いちばん あたらしい id
+  const [shown, setShown] = useState(() => (log.length ? log[0].id : 0))
+  const wantNext = useRef(false)
   const [pending, setPending] = useState<{ move: number; m: CardMove | null } | null>(null)
-  const logRef = useRef<HTMLDivElement>(null)
+  const cmdRef = useRef<HTMLDivElement>(null)
 
-  // あたらしい じょうたいが きたら はじめから ながす
+  // じぶんで すすめて あたらしい できごとが きたら、すぐ 1つめを 見せる
   useEffect(() => {
-    if (lastState.current === state) return
-    lastState.current = state
-    setShown(0)
-    setPlaying(events.length > 1)
-    setCmds([])
-    setPending(null)
-  }, [state, events.length])
-
-  useEffect(() => {
-    if (!playing) return
-    if (shown >= events.length - 1) {
-      setPlaying(false)
-      if (state.over) {
-        if (state.winner === me) sfx.win()
-        else if (state.winner !== 'draw') sfx.lose()
-      }
-      return
+    if (wantNext.current && lastId > shown) {
+      wantNext.current = false
+      const nx = log.find((e) => e.id > shown)
+      if (nx) setShown(nx.id)
     }
-    const ev = events[shown]
-    const t = setTimeout(() => setShown((s) => s + 1), STEP_MS[ev?.fx ?? ''] ?? 800)
-    return () => clearTimeout(t)
-  }, [playing, shown, events, state.over, state.winner, me])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastId])
 
-  // こうかおん
-  const ev = events[Math.min(shown, events.length - 1)]
+  // ずっと まえの できごと（つうしんで おくれた ぶん）は とばす
+  const firstId = log.length ? log[0].id : 0
+  const shownId = Math.max(shown, firstId)
+  const ev = log.find((e) => e.id === shownId) ?? log[log.length - 1]
+  const caughtUp = shownId >= lastId
+
   useEffect(() => {
     if (!ev) return
     if (ev.fx === 'hit') (ev.n ?? 0) >= 35 ? sfx.special('powerStrike') : sfx.hit()
@@ -158,17 +151,8 @@ export function CardBattleStage({ state, me, photos, myName, foeName, waiting, o
     else if (ev.fx === 'buff') sfx.special('attackUp')
     else if (ev.fx === 'miss') sfx.dodge()
     else if (ev.fx === 'faint') sfx.special('powerStrike')
-    else if (ev.fx === 'big' && shown > 0) sfx.special('default')
-  }, [ev, shown])
-
-  const cmdRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!playing) cmdRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-  }, [playing, cmds.length, pending])
-
-  useEffect(() => {
-    logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: 'smooth' })
-  }, [shown])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ev?.id])
 
   const snapMap = useMemo(() => {
     const m = new Map<string, Snap>()
@@ -177,73 +161,84 @@ export function CardBattleStage({ state, me, photos, myName, foeName, waiting, o
   }, [ev])
   const act = ev?.act ?? state.active
 
-  const needs = useMemo(() => activeOf(state, me).filter((f) => needsCommand(state, f)), [state, me])
-  const choosing = !playing && !state.over && !waiting && needs.length > 0 && cmds.length < needs.length
-  const cur = choosing ? needs[cmds.length] : null
+  const actor = caughtUp ? currentActor(state) : null
+  const myChoice = !!actor && actor.side === me && actorNeedsChoice(state) && !state.over
+  const resultShown = caughtUp && state.over
 
-  function finish(next: CCommand[]) {
-    setCmds(next)
+  useEffect(() => {
+    if (state.over && caughtUp) {
+      if (state.winner === me) sfx.win()
+      else if (state.winner !== 'draw') sfx.lose()
+    }
+  }, [state.over, caughtUp, state.winner, me])
+
+  useEffect(() => {
     setPending(null)
-    if (next.length >= needs.length) onCommands(next)
+  }, [state.seq])
+  useEffect(() => {
+    if ((myChoice && !pending) || resultShown) cmdRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [myChoice, resultShown, pending])
+
+  function next() {
+    if (!caughtUp) {
+      sfx.tap()
+      const nx = log.find((e) => e.id > shownId)
+      if (nx) setShown(nx.id)
+      return
+    }
+    if (state.over || myChoice) return
+    if (onAdvance) {
+      sfx.tap()
+      wantNext.current = true
+      onAdvance()
+    }
   }
 
-  function chooseMove(idx: number, m: CardMove | null) {
-    if (!cur) return
+  function choose(idx: number, m: CardMove | null) {
+    if (!actor) return
     sfx.tap()
     const tk = targetKind(m)
     const foes = activeOf(state, foe).filter((x) => !x.hidden)
     const mine = activeOf(state, me)
-    if (tk === 'foe' && foes.length > 1) return setPending({ move: idx, m })
-    if (tk === 'ally' && mine.length > 1) return setPending({ move: idx, m })
-    const target = tk === 'foe' ? (foes[0] ?? activeOf(state, foe)[0])?.uid : tk === 'ally' ? cur.uid : undefined
-    finish([...cmds, { uid: cur.uid, move: idx, target }])
+    if ((tk === 'foe' && foes.length > 1) || (tk === 'ally' && mine.length > 1)) {
+      setPending({ move: idx, m })
+      // ねらう カードが 見える ように
+      setTimeout(() => document.querySelector(tk === 'foe' ? '.cb-row.foe' : '.cb-row.mine')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50)
+      return
+    }
+    const target = tk === 'foe' ? (foes[0] ?? activeOf(state, foe)[0])?.uid : tk === 'ally' ? actor.uid : undefined
+    wantNext.current = true
+    onCommand({ uid: actor.uid, move: idx, target })
   }
-
   function pickTarget(t: CF) {
-    if (!cur || !pending) return
+    if (!actor || !pending) return
     sfx.tap()
-    finish([...cmds, { uid: cur.uid, move: pending.move, target: t.uid }])
+    wantNext.current = true
+    onCommand({ uid: actor.uid, move: pending.move, target: t.uid })
+    setPending(null)
   }
 
-  // ひかえ・たおれた虫（まるい しゃしん）
-  function bench(side: SideId) {
-    const list = state.fighters.filter((f) => f.side === side && !act[side].includes(f.uid))
-    return (
-      <div className={`cg-bench ${side === me ? 'mine' : 'foe'}`}>
-        <span className="cg-bench-label">{side === me ? 'ひかえ' : 'あいての ひかえ'}</span>
-        {list.map((f) => {
-          const s = snapMap.get(f.uid)
-          return (
-            <button key={f.uid} type="button" className={'cg-bench-dot' + (s?.f ? ' out' : '')} onClick={() => setInfo(f)}>
-              {photos[f.uid] ? <img src={photos[f.uid]} alt="" /> : '🐛'}
-              {s?.f ? <i>✖</i> : null}
-            </button>
-          )
-        })}
-        {list.length === 0 && <span className="cg-bench-none">なし</span>}
-      </div>
-    )
-  }
+  const W = Math.floor((Math.min(560, window.innerWidth) - 32 - 10) / 2)
 
   function row(side: SideId) {
     const pickSide = pending ? (targetKind(pending.m) === 'ally' ? me : foe) : null
     return (
-      <div className={`cg-row ${side === me ? 'mine' : 'foe'}`}>
+      <div className={`cb-row ${side === me ? 'mine' : 'foe'}`}>
         {act[side].map((uid) => {
           const f = fighter(state, uid)
           const s = snapMap.get(uid) ?? { u: uid, h: f.hp }
           const pickable = pickSide === side && alive(f) && !(side === foe && f.hidden) && state.active[side].includes(uid)
           return (
-            <Panel
+            <FighterCard
               key={uid}
               f={f}
               snap={s}
               photo={photos[uid]}
-              ev={playing ? ev : undefined}
+              ev={ev}
+              width={W}
+              turn={actor?.uid === uid}
               pickable={!!pickable}
               onPick={() => pickTarget(f)}
-              onInfo={() => setInfo(f)}
-              current={cur?.uid === uid}
             />
           )
         })}
@@ -251,54 +246,92 @@ export function CardBattleStage({ state, me, photos, myName, foeName, waiting, o
     )
   }
 
-  const shownEvents = events.slice(0, shown + 1)
+  function bench(side: SideId) {
+    const list = state.fighters.filter((f) => f.side === side && !act[side].includes(f.uid))
+    return (
+      <div className={`cg-bench ${side === me ? 'mine' : 'foe'}`}>
+        <span className="cg-bench-label">{side === me ? `👤 ${myName} の ひかえ` : `🆚 ${foeName} の ひかえ`}</span>
+        {list.map((f) => {
+          const s = snapMap.get(f.uid)
+          return (
+            <span key={f.uid} className={'cg-bench-dot' + (s?.f ? ' out' : '')}>
+              {photos[f.uid] ? <img src={photos[f.uid]} alt="" /> : '🐛'}
+              {s?.f ? <i>✖</i> : null}
+            </span>
+          )
+        })}
+        {list.length === 0 && <span className="cg-bench-none">なし</span>}
+      </div>
+    )
+  }
+
+  // この ラウンドの のこりの じゅんばん
+  const order =
+    caughtUp && !state.over
+      ? state.queue.filter((u) => {
+          const f = fighter(state, u)
+          return alive(f) && state.active[f.side].includes(u)
+        })
+      : []
+  const prev = log.filter((e) => e.id < shownId).slice(-2)
+  const canTap = !caughtUp || (!state.over && !myChoice && !!onAdvance)
 
   return (
     <div className="cg-stage">
-      <div className="cg-names">
-        <span>🆚 {foeName}</span>
-        <span className="cg-round">ラウンド {Math.max(1, state.round - (playing ? 1 : 0))}</span>
-      </div>
       {bench(foe)}
       {row(foe)}
 
-      <div className="cg-log" ref={logRef} onClick={() => playing && setShown(events.length - 1)}>
-        {shownEvents.map((e, i) => (
-          <p key={i} className={`fx-${e.fx ?? 'info'}${i === shownEvents.length - 1 ? ' now' : ''}`}>
-            {e.d ? <span className="cg-die">{e.d}</span> : null}
+      <div className={`cb-msg${canTap ? ' tap' : ''}`} onClick={next}>
+        <div className="cb-msg-top">
+          <span className="cg-round">ラウンド {state.round}</span>
+          {order.length > 0 && (
+            <span className="cb-order">
+              じゅんばん
+              {order.map((u) => (
+                <span key={u} className={`cb-order-dot ${fighter(state, u).side === me ? 'mine' : 'foe'}${u === actor?.uid ? ' now' : ''}`}>
+                  {photos[u] ? <img src={photos[u]} alt="" /> : '🐛'}
+                </span>
+              ))}
+            </span>
+          )}
+        </div>
+        {prev.map((e) => (
+          <p key={e.id} className="old">
             {renderText(state, e.t.replace(/^🎲\d /, ''), me)}
           </p>
         ))}
-        {playing && <span className="cg-skip">タップで はやおくり ▶▶</span>}
+        {ev && (
+          <p key={ev.id} className={`now fx-${ev.fx ?? 'info'}`}>
+            {ev.d ? <span className="cg-die">{ev.d}</span> : null}
+            {renderText(state, ev.t.replace(/^🎲\d /, ''), me)}
+          </p>
+        )}
+        {canTap ? (
+          <span className="cb-next">タップで つぎへ ▶</span>
+        ) : !state.over && !myChoice && actor ? (
+          <span className="cb-wait">{actor.side === me ? 'じゅんびちゅう…' : 'あいてが えらんでいるよ… ⏳'}</span>
+        ) : null}
       </div>
 
       {row(me)}
       {bench(me)}
-      <div className="cg-names mine">
-        <span>👤 {myName}</span>
-      </div>
 
-      {choosing && cur && !pending && (
+      {myChoice && actor && !pending && (
         <div className="cg-command" ref={cmdRef}>
           <p className="cg-command-title">
-            <b>{cur.card.name}</b> の わざを えらんでね
-            {needs.length > 1 && (
-              <small>
-                （{cmds.length + 1}/{needs.length}）
-              </small>
-            )}
+            <b>{actor.card.name}</b> の ばん！ わざを えらんでね
           </p>
           <div className="cg-command-list">
-            {cur.card.moves.map((m, i) => {
-              const left = cur.usesLeft[i] ?? 0
-              const off = left <= 0 || (cur.sealed ?? 0) > 0
+            {actor.card.moves.map((m, i) => {
+              const left = actor.usesLeft[i] ?? 0
+              const off = left <= 0 || (actor.sealed ?? 0) > 0
               return (
-                <button key={i} type="button" className="cg-cmd" disabled={off} onClick={() => chooseMove(i, m)}>
+                <button key={i} type="button" className="cg-cmd" disabled={off} onClick={() => choose(i, m)}>
                   <MoveBox m={m} left={left} compact />
                 </button>
               )
             })}
-            <button type="button" className="cg-cmd basic" onClick={() => chooseMove(-1, null)}>
+            <button type="button" className="cg-cmd basic" onClick={() => choose(-1, null)}>
               <div className="cg-move k-attack">
                 <span className="cg-move-ic">
                   <b>⚔️</b>
@@ -308,38 +341,35 @@ export function CardBattleStage({ state, me, photos, myName, foeName, waiting, o
                     <b className="cg-move-name">こうげき</b>
                     <span className="cg-dots inf">∞</span>
                   </span>
-                  <span className="cg-move-text">あいて1ぴきに {cur.card.basic}ダメージ。なんかいでも つかえる。</span>
+                  <span className="cg-move-text">あいて1ぴきに {actor.card.basic}ダメージ。なんかいでも つかえる。</span>
                 </span>
-                <span className="cg-move-big">{cur.card.basic}</span>
+                <span className="cg-move-big">{actor.card.basic}</span>
               </div>
             </button>
           </div>
-          {cmds.length > 0 && (
-            <button type="button" className="btn btn-ghost cg-undo" onClick={() => setCmds(cmds.slice(0, -1))}>
-              ← まえの 虫を えらびなおす
-            </button>
-          )}
         </div>
       )}
-      {pending && (
+      {myChoice && pending && (
         <div className="cg-command target" ref={cmdRef}>
           <p className="cg-command-title">
-            {pending.m ? `${pending.m.emoji}${pending.m.name}` : '⚔️こうげき'}：{targetKind(pending.m) === 'ally' ? 'だれに つかう？' : 'どの あいてを ねらう？'} 🎯を タップ
+            {pending.m ? `${pending.m.emoji}${pending.m.name}` : '⚔️こうげき'}：
+            {targetKind(pending.m) === 'ally' ? 'だれに つかう？' : 'どの あいてを ねらう？'} 🎯の カードを タップ
           </p>
           <button type="button" className="btn btn-ghost" onClick={() => setPending(null)}>
             ← わざを えらびなおす
           </button>
         </div>
       )}
-      {!playing && !state.over && (waiting || (needs.length > 0 && cmds.length >= needs.length)) && (
-        <div className="cg-command wait">
-          <p>あいての わざを まっています… ⏳</p>
-        </div>
-      )}
-      {!playing && state.over && (
+      {resultShown && (
         <div ref={cmdRef} className={`cg-result ${state.winner === me ? 'win' : state.winner === 'draw' ? 'draw' : 'lose'}`}>
           <b>{state.winner === me ? '🏆 かち！' : state.winner === 'draw' ? '🤝 ひきわけ' : '😢 まけ…'}</b>
-          <span>{state.winner === me ? 'あいての 虫を ぜんぶ たおした！' : state.winner === 'draw' ? 'おなじ ときに ぜんいん たおれた' : 'つぎは デッキを かえて みよう'}</span>
+          <span>
+            {state.winner === me
+              ? 'あいての 虫を ぜんぶ たおした！'
+              : state.winner === 'draw'
+                ? 'おなじ ときに ぜんいん たおれた'
+                : 'つぎは デッキを かえて みよう'}
+          </span>
           <div className="cg-result-btns">
             {onAgain && (
               <button className="btn btn-big btn-primary" onClick={onAgain}>
@@ -352,25 +382,12 @@ export function CardBattleStage({ state, me, photos, myName, foeName, waiting, o
           </div>
         </div>
       )}
+      <p className="cb-help">カードを ながおし すると 大きく 見られるよ</p>
       {!state.over && (
         <button type="button" className="btn btn-ghost cg-quit" onClick={onQuit}>
           🏳️ バトルを やめる
         </button>
       )}
-
-      {info && (
-        <div className="modal-backdrop" onClick={() => setInfo(null)}>
-          <div className="cg-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setInfo(null)} aria-label="とじる">
-              ✕
-            </button>
-            <PaperCard card={info.card as Card} photo={photos[info.uid]} usesLeft={info.usesLeft} width={Math.min(window.innerWidth - 48, 360)} />
-            <p className="cg-modal-note">● は のこりの かいすう。うすい ● は つかった ぶん。</p>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
-
-export { UsesDots }

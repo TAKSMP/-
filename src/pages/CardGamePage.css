@@ -1004,3 +1004,238 @@
   border-radius: 8px;
   padding: 2px 6px;
 }
+
+/* ---------- たたかい（紙の カード） ---------- */
+.cb-row {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+.cb-fighter {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  transition: transform 0.2s, opacity 0.2s;
+}
+.cb-fighter.out {
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+.cb-fighter.hidden .pc-photo img {
+  opacity: 0.2;
+}
+.cb-fighter.turn .pc-card {
+  box-shadow: 0 0 0 2.2mm #4aa8e0, 0 1mm 3mm rgba(0, 0, 0, 0.3);
+}
+.cb-fighter.actor {
+  transform: translateY(-4px);
+}
+.cb-fighter.actor .pc-card {
+  box-shadow: 0 0 0 2.2mm #ffb020, 0 1mm 3mm rgba(0, 0, 0, 0.3);
+}
+.cb-fighter.pick .pc-card {
+  box-shadow: 0 0 0 2.4mm #ff5a3d, 0 1mm 3mm rgba(0, 0, 0, 0.3);
+  animation: cg-pulse 0.8s infinite;
+}
+.cb-fighter.fx-hit .pc-wrap,
+.cb-fighter.fx-faint .pc-wrap {
+  animation: cg-shake 0.35s;
+}
+.cb-fighter.fx-heal .pc-card {
+  box-shadow: 0 0 0 2.4mm #7fdc8f;
+}
+.cb-fighter.fx-status .pc-card,
+.cb-fighter.fx-debuff .pc-card {
+  box-shadow: 0 0 0 2.4mm #c69cf0;
+}
+.cb-fighter.fx-buff .pc-card {
+  box-shadow: 0 0 0 2.4mm #ffd23f;
+}
+.cb-pop {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  transform: translateX(-50%);
+  z-index: 3;
+  font-size: 34px;
+  font-weight: 900;
+  color: #e2513b;
+  text-shadow: 0 0 4px #fff, 0 0 4px #fff, 0 2px 0 #fff;
+  animation: cg-pop 0.9s forwards;
+  pointer-events: none;
+}
+.cb-pop.heal {
+  color: #2f9a4a;
+}
+.cb-aim {
+  position: absolute;
+  left: 50%;
+  top: 35%;
+  transform: translateX(-50%);
+  z-index: 3;
+  font-size: 40px;
+  pointer-events: none;
+}
+.cb-ko {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  transform: translateX(-50%) rotate(-12deg);
+  z-index: 3;
+  font-size: 22px;
+  font-weight: 900;
+  color: #fff;
+  background: #c0533f;
+  border-radius: 10px;
+  padding: 2px 10px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.cb-hp {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.cb-hp-bar {
+  flex: 1;
+  height: 10px;
+  border-radius: 5px;
+  background: #e3ddc8;
+  overflow: hidden;
+}
+.cb-hp-bar i {
+  display: block;
+  height: 100%;
+  background: #4cc35d;
+  transition: width 0.4s;
+}
+.cb-hp-bar i.mid {
+  background: #f2b632;
+}
+.cb-hp-bar i.low {
+  background: #e2513b;
+}
+.cb-hp b {
+  font-size: 15px;
+  white-space: nowrap;
+}
+.cb-hp small {
+  font-size: 10px;
+  color: #888;
+}
+.cb-chips {
+  font-size: 13px;
+  min-height: 17px;
+  line-height: 1.3;
+  word-break: break-all;
+  text-align: center;
+}
+.cb-msg {
+  position: relative;
+  background: #fffdf3;
+  border: 3px solid #e6dfc4;
+  border-radius: 14px;
+  padding: 6px 10px 22px;
+  min-height: 112px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.cb-msg.tap {
+  border-color: #ffb020;
+  cursor: pointer;
+}
+.cb-msg-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cb-msg p {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  line-height: 1.45;
+}
+.cb-msg p.old {
+  font-size: 12px;
+  opacity: 0.5;
+}
+.cb-msg p.now {
+  font-size: 17px;
+  font-weight: 900;
+  animation: cb-in 0.25s;
+}
+.cb-msg p.now.fx-big {
+  justify-content: center;
+  color: #b0570f;
+  font-size: 20px;
+}
+.cb-next {
+  position: absolute;
+  right: 8px;
+  bottom: 4px;
+  font-size: 12px;
+  font-weight: 900;
+  background: #ffb020;
+  color: #fff;
+  border-radius: 8px;
+  padding: 1px 8px;
+  animation: cg-pulse 1s infinite;
+}
+.cb-wait {
+  position: absolute;
+  right: 8px;
+  bottom: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b6a55;
+}
+.cb-order {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b6a55;
+}
+.cb-order-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid #9ccf8c;
+  display: inline-grid;
+  place-items: center;
+  font-size: 12px;
+}
+.cb-order-dot.foe {
+  border-color: #f0a08c;
+}
+.cb-order-dot.now {
+  width: 28px;
+  height: 28px;
+  border-width: 3px;
+  border-color: #4aa8e0;
+}
+.cb-order-dot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.cb-help {
+  margin: 0;
+  text-align: center;
+  font-size: 11px;
+  color: #6b6a55;
+}
+@keyframes cb-in {
+  from {
+    transform: translateY(6px);
+    opacity: 0;
+  }
+}
