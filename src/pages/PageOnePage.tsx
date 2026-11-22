@@ -26,7 +26,6 @@ import {
   type POAction,
   type POEvent,
   CALL_WORD,
-  CALL_MS,
   MISS_MAX,
   type POPlayer,
   type POState,
@@ -34,7 +33,6 @@ import {
 import {
   createPORoom,
   hostStep,
-  hostTimeout,
   joinPORoom,
   leavePORoom,
   memberList,
@@ -299,11 +297,11 @@ function Table({
       {!st.winner && (
         <p className={`po-turn${myTurn ? ' mine' : ''}`}>
           {waitCall
-            ? '❗ のこり 1まい！ はやく いおう！'
+            ? '❗ のこり 1まい！ なんて いうのかな？'
             : myTurn
               ? '✨ あなたの ばん！ だせる カードを タップ。なければ 山から ひこう'
               : st.pending
-                ? `⏳ ${name(st.pending)}は のこり 1まい… いえるかな？`
+                ? `⏳ ${name(st.pending)}は のこり 1まい！`
                 : `⏳ ${name(current(st)?.id)}の ばん`}
         </p>
       )}
@@ -311,7 +309,6 @@ function Table({
       {waitCall && (
         <button key={st.seq} type="button" className="po-call" onClick={() => onAct({ type: 'call' })}>
           📣 {CALL_WORD}
-          <i className="po-call-bar" style={{ animationDuration: `${CALL_MS}ms` }} />
         </button>
       )}
       {myMiss > 0 && !st.winner && (
@@ -440,16 +437,8 @@ export function PageOnePage({ bugs, onGoCapture }: Props) {
     const p = current(st)
     if (!p?.cpu) return
     const act = cpuAction(st, cards, p.id, p.cpu)
-    if (!act) return // いいわすれ（じかんぎれを まつ）
+    if (!act) return
     const t = setTimeout(() => setSt((s) => (s ? applyAction(s, cards, p.id, act) : s)), st.pending ? 900 : 1100)
-    return () => clearTimeout(t)
-  }, [phase, st, cards])
-  // のこり 1まいで いわないまま じかんが すぎたら まけ
-  useEffect(() => {
-    if (phase !== 'cpu' || !st?.pending || st.winner) return
-    const pid = st.pending
-    const seq = st.seq
-    const t = setTimeout(() => setSt((s) => (s && s.seq === seq ? applyAction(s, cards, pid, { type: 'timeout' }) : s)), CALL_MS)
     return () => clearTimeout(t)
   }, [phase, st, cards])
 
@@ -463,7 +452,6 @@ export function PageOnePage({ bugs, onGoCapture }: Props) {
   const [gone, setGone] = useState(false)
   const unsub = useRef<(() => void) | null>(null)
   const seen = useRef(new Map<string, number>())
-  const pendingKey = useRef('')
   useEffect(() => () => unsub.current?.(), [])
 
   function watch(c: string, me: string) {
@@ -479,13 +467,6 @@ export function PageOnePage({ bugs, onGoCapture }: Props) {
       if (rm.status === 'playing') setPhase('net')
       if (rm.host === me) {
         hostStep(c, rm, seen.current)
-        // のこり 1まいの ひとが いわないまま じかんが すぎたら まけ（ホストが きめる）
-        const pst = rm.state
-        if (pst?.pending && !pst.winner && pendingKey.current !== `${pst.seq}`) {
-          pendingKey.current = `${pst.seq}`
-          const seq = pst.seq
-          window.setTimeout(() => hostTimeout(c, seq), CALL_MS + 500)
-        }
       }
     })
   }
@@ -650,7 +631,7 @@ export function PageOnePage({ bugs, onGoCapture }: Props) {
           <li>だせる カードが ない ときは 山から 1まい ひく。だせたら そのまま だす。だせなければ てふだに いれて つぎの ひとの ばん。</li>
           <li>ルールへんこうで「だせるまで ひく」にも できる。</li>
           <li>
-            のこり 1まいに なったら「📣 {CALL_WORD}」ボタンが でる。{CALL_MS / 1000}びょう いないに おさないと まけ！
+            のこり 1まいに なったら「📣 {CALL_WORD}」ボタンが でる。おしたら つぎの ひとの ばん。
           </li>
           <li>だせない カードを だそうと したり、だせる カードが あるのに 山から ひいたら「おてつき😵」。{MISS_MAX}かい おてつき したら まけ。</li>
           <li>カードを ながおし すると 大きく 見られる。</li>

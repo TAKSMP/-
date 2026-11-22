@@ -136,17 +136,6 @@ export function hostStep(code: string, room: PORoom, seen: Map<string, number>):
   if (changed) update(roomRef(code), sanitize({ state: st })).catch((e) => console.warn('ページワン：書きこみに しっぱい', e))
 }
 
-// ホストだけ：のこり 1まいの ひとが じかんぎれ
-export async function hostTimeout(code: string, seq: number): Promise<void> {
-  const snap = await get(roomRef(code))
-  if (!snap.exists()) return
-  const room = normalizePO(snap.val() as PORoom)
-  const st = room.state
-  if (!st || st.seq !== seq || !st.pending) return
-  const next = applyAction(st, room.cards ?? [], st.pending, { type: 'timeout' })
-  if (next !== st) await update(roomRef(code), sanitize({ state: next })).catch(() => {})
-}
-
 export async function leavePORoom(code: string, uid: string, isHost: boolean): Promise<void> {
   try {
     if (isHost) await remove(roomRef(code))

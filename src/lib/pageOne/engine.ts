@@ -65,7 +65,6 @@ export interface POState {
 
 export type POAction = { type: 'play'; card: number } | { type: 'draw' } | { type: 'call' } | { type: 'timeout' }
 export const CALL_WORD = 'ちょうむしワン！！'
-export const CALL_MS = 5000 // のこり 1まいに なってから いう までの じかん
 export const MISS_MAX = 3 // おてつき 3かいで まけ
 
 // -------------------------------------------------------------
@@ -313,8 +312,8 @@ export function removePlayer(input: POState, pid: string): POState {
 //  コンピューター
 // -------------------------------------------------------------
 export function cpuAction(st: POState, cards: PCard[], pid: string, level: CpuLevel = 'normal', rand = Math.random): POAction | null {
-  // のこり 1まい：「ちょうむしワン！！」（ときどき いいわすれる → null で なにも しない）
-  if (st.pending === pid) return rand() >= (level === 'easy' ? 0.25 : 0.1) ? { type: 'call' } : null
+  // のこり 1まい：「ちょうむしワン！！」
+  if (st.pending === pid) return { type: 'call' }
   const ok = playableOf(st, cards, pid)
   if (!ok.length) return { type: 'draw' }
   if (level === 'easy' || rand() < 0.15) return { type: 'play', card: ok[Math.floor(rand() * ok.length)] }
