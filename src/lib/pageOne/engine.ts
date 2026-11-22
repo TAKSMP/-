@@ -26,7 +26,21 @@ export interface POPlayer {
 }
 
 export interface POEvent {
-  t: 'start' | 'play' | 'draw' | 'keep' | 'pass' | 'pageone' | 'win' | 'reshuffle' | 'leave' | 'call' | 'early' | 'forgot'
+  t:
+    | 'start'
+    | 'play'
+    | 'draw'
+    | 'keep'
+    | 'pass'
+    | 'pageone'
+    | 'win'
+    | 'reshuffle'
+    | 'leave'
+    | 'call'
+    | 'forgot'
+    | 'miss' // おてつき（だせない カードを だそうとした）
+    | 'missDraw' // おてつき（だせる カードが あるのに ひいた）
+    | 'out3' // おてつき 3かいで まけ
   pid?: string
   card?: number
   n?: number
@@ -41,15 +55,18 @@ export interface POState {
   drawMode: DrawMode
   handSize: number
   winner: string | null
-  called?: string // この ばんに「ちょうむしワン！！」と いった ひと
-  out?: POPlayer[] // いいわすれて まけた ひと
+  pending?: string // のこり 1まいに なって「ちょうむしワン！！」を まっている ひと
+  miss?: Record<string, number> // おてつきの かず
+  out?: (POPlayer & { why: 'forgot' | 'miss' })[] // とちゅうで まけた ひと
   log: POEvent[] // さいごの 1てで おきた こと
   seq: number // てを すすめる たびに ふえる
   seed: number
 }
 
-export type POAction = { type: 'play'; card: number } | { type: 'draw' } | { type: 'call' }
+export type POAction = { type: 'play'; card: number } | { type: 'draw' } | { type: 'call' } | { type: 'timeout' }
 export const CALL_WORD = 'ちょうむしワン！！'
+export const CALL_MS = 5000 // のこり 1まいに なってから いう までの じかん
+export const MISS_MAX = 3 // おてつき 3かいで まけ
 
 // -------------------------------------------------------------
 function rng(seed: number) {
@@ -139,7 +156,8 @@ export function hydratePO(raw: POState): POState {
     drawMode: s.drawMode ?? 'one',
     handSize: s.handSize ?? HAND_DEFAULT,
     winner: s.winner ?? null,
-    called: s.called ?? undefined,
+    pending: s.pending ?? undefined,
+    miss: s.miss ?? {},
     out: s.out ?? [],
     log: s.log ?? [],
     seq: s.seq ?? 0,
@@ -167,13 +185,14 @@ function nextTurn(st: POState) {
 }
 
 // その ひとを ゲームから はずす（てふだは 山の したへ）
-function dropPlayer(st: POState, pid: string, log: POEvent[]) {
+function dropPlayer(st: POState, pid: string, log: POEvent[], why: 'forgot' | 'miss') {
   const idx = st.players.findIndex((p) => p.id === pid)
   if (idx < 0) return
   st.pile.push(...(st.hands[pid] ?? []))
   st.hands[pid] = []
   const [p] = st.players.splice(idx, 1)
-  st.out = [...(st.out ?? []), p]
+  st.out = [...(st.out ?? []), { ...p, why }]
+  if (st.pending === pid) st.pending = undefined
   if (idx < st.turn) st.turn -= 1
   if (st.turn >= st.players.length) st.turn = 0
   if (st.players.length === 1) {
@@ -187,21 +206,31 @@ function doPlay(st: POState, pid: string, c: number, log: POEvent[], drawn = fal
   st.discard.push(c)
   log.push({ t: 'play', pid, card: c, n: drawn ? 1 : undefined })
   const left = st.hands[pid].length
-  const said = st.called === pid
-  st.called = undefined
   if (left === 0) {
     st.winner = pid
     log.push({ t: 'win', pid })
     return
   }
-  // のこり 1まいに なる ときに「ちょうむしワン！！」と いって いなければ まけ
-  if (left === 1 && !drawn && !said) {
-    log.push({ t: 'forgot', pid })
-    dropPlayer(st, pid, log)
+  // のこり 1まい：「ちょうむしワン！！」を いうまで つぎの ひとに いかない
+  if (left === 1) {
+    st.pending = pid
+    log.push({ t: 'pageone', pid })
     return
   }
-  if (left === 1) log.push({ t: 'pageone', pid })
   nextTurn(st)
+}
+
+// おてつき：かずを ふやして、3かいめなら まけ（true を かえす）
+function addMiss(st: POState, pid: string, log: POEvent[], t: 'miss' | 'missDraw', card?: number): boolean {
+  const n = (st.miss?.[pid] ?? 0) + 1
+  st.miss = { ...(st.miss ?? {}), [pid]: n }
+  log.push({ t, pid, n, card })
+  if (n >= MISS_MAX) {
+    log.push({ t: 'out3', pid })
+    dropPlayer(st, pid, log, 'miss')
+    return true
+  }
+  return false
 }
 
 // 1て すすめる（できない ことを しようと したら そのまま かえす）
@@ -210,22 +239,28 @@ export function applyAction(input: POState, cards: PCard[], pid: string, act: PO
   const st = clone(input)
   const r = rng(st.seed)
   const log: POEvent[] = []
-  if (act.type === 'call') {
-    if (st.called === pid) return input
-    if ((st.hands[pid]?.length ?? 0) === 2) {
-      st.called = pid
+  if (st.pending) {
+    // のこり 1まいの ひとが「ちょうむしワン！！」を いうか、じかんぎれ まで まつ
+    if (st.pending !== pid) return input
+    if (act.type === 'call') {
+      st.pending = undefined
       log.push({ t: 'call', pid })
-    } else {
-      log.push({ t: 'early', pid })
-    }
+      nextTurn(st)
+    } else if (act.type === 'timeout') {
+      log.push({ t: 'forgot', pid })
+      dropPlayer(st, pid, log, 'forgot')
+    } else return input
+  } else if (act.type === 'call' || act.type === 'timeout') {
+    return input
   } else if (act.type === 'play') {
-    if (!st.hands[pid]?.includes(act.card) || !canPlay(cards, act.card, topOf(st))) return input
-    doPlay(st, pid, act.card, log)
+    if (!st.hands[pid]?.includes(act.card)) return input
+    if (!canPlay(cards, act.card, topOf(st))) addMiss(st, pid, log, 'miss', act.card)
+    else doPlay(st, pid, act.card, log)
   } else {
-    if (playableOf(st, cards, pid).length) return input // だせる カードが ある ときは ひけない
-    st.called = undefined
+    // いつでも ひける。でも だせる カードが あるのに ひいたら おてつき
+    const lost = playableOf(st, cards, pid).length > 0 && addMiss(st, pid, log, 'missDraw')
     let count = 0
-    for (;;) {
+    while (!lost) {
       const c = drawOne(st, pid, r, log)
       if (c === undefined) {
         if (count) log.push({ t: 'draw', pid, n: count })
@@ -265,7 +300,7 @@ export function removePlayer(input: POState, pid: string): POState {
   if (idx < st.turn) st.turn -= 1
   if (st.turn >= st.players.length) st.turn = 0
   st.log = [{ t: 'leave', pid }]
-  if (st.called === pid) st.called = undefined
+  if (st.pending === pid) st.pending = undefined
   if (st.players.length === 1) {
     st.winner = st.players[0].id
     st.log.push({ t: 'win', pid: st.winner })
@@ -277,11 +312,11 @@ export function removePlayer(input: POState, pid: string): POState {
 // -------------------------------------------------------------
 //  コンピューター
 // -------------------------------------------------------------
-export function cpuAction(st: POState, cards: PCard[], pid: string, level: CpuLevel = 'normal', rand = Math.random): POAction {
+export function cpuAction(st: POState, cards: PCard[], pid: string, level: CpuLevel = 'normal', rand = Math.random): POAction | null {
+  // のこり 1まい：「ちょうむしワン！！」（ときどき いいわすれる → null で なにも しない）
+  if (st.pending === pid) return rand() >= (level === 'easy' ? 0.25 : 0.1) ? { type: 'call' } : null
   const ok = playableOf(st, cards, pid)
   if (!ok.length) return { type: 'draw' }
-  // のこり 2まいで だせる ときは「ちょうむしワン！！」（ときどき いいわすれる）
-  if (st.hands[pid].length === 2 && st.called !== pid && rand() >= (level === 'easy' ? 0.25 : 0.1)) return { type: 'call' }
   if (level === 'easy' || rand() < 0.15) return { type: 'play', card: ok[Math.floor(rand() * ok.length)] }
   // だした あとで つづけて だしやすい カードを えらぶ
   const hand = st.hands[pid]

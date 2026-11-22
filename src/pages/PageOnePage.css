@@ -462,3 +462,35 @@
   box-shadow: none;
   font-size: 15px;
 }
+
+.po-call {
+  position: relative;
+  overflow: hidden;
+  animation: po-pulse 0.7s infinite;
+}
+.po-call-bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 6px;
+  width: 100%;
+  background: #ffe066;
+  transform-origin: left;
+  animation-name: po-bar;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+@keyframes po-bar {
+  to {
+    transform: scaleX(0);
+  }
+}
+.po-miss {
+  margin: 0;
+  text-align: center;
+  font-weight: 900;
+  color: #c0533f;
+}
+.po-other-miss {
+  font-size: 11px;
+}

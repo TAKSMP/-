@@ -125,7 +125,8 @@ export function hostStep(code: string, room: PORoom, seen: Map<string, number>):
   for (const [uid, a] of Object.entries(room.acts ?? {})) {
     if ((seen.get(uid) ?? 0) >= a.n) continue
     seen.set(uid, a.n)
-    const act: POAction = a.type === 'play' ? { type: 'play', card: a.card ?? -1 } : a.type === 'call' ? { type: 'call' } : { type: 'draw' }
+    const act: POAction | null = a.type === 'play' ? { type: 'play', card: a.card ?? -1 } : a.type === 'call' ? { type: 'call' } : a.type === 'draw' ? { type: 'draw' } : null
+    if (!act) continue
     const next = applyAction(st, room.cards ?? [], uid, act)
     if (next !== st) {
       st = next
@@ -133,6 +134,17 @@ export function hostStep(code: string, room: PORoom, seen: Map<string, number>):
     }
   }
   if (changed) update(roomRef(code), sanitize({ state: st })).catch((e) => console.warn('ページワン：書きこみに しっぱい', e))
+}
+
+// ホストだけ：のこり 1まいの ひとが じかんぎれ
+export async function hostTimeout(code: string, seq: number): Promise<void> {
+  const snap = await get(roomRef(code))
+  if (!snap.exists()) return
+  const room = normalizePO(snap.val() as PORoom)
+  const st = room.state
+  if (!st || st.seq !== seq || !st.pending) return
+  const next = applyAction(st, room.cards ?? [], st.pending, { type: 'timeout' })
+  if (next !== st) await update(roomRef(code), sanitize({ state: next })).catch(() => {})
 }
 
 export async function leavePORoom(code: string, uid: string, isHost: boolean): Promise<void> {
