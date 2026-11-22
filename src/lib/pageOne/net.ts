@@ -28,6 +28,7 @@ export interface PORoom {
   status: 'waiting' | 'playing'
   host: string
   drawMode: DrawMode
+  handSize?: number
   members: Record<string, POMember>
   cards?: PCard[]
   photos?: string[]
@@ -47,7 +48,7 @@ export function normalizePO(raw: PORoom): PORoom {
   return {
     ...raw,
     members: raw.members ?? {},
-    cards: raw.cards ?? [],
+    cards: (raw.cards ?? []).map((c) => ({ ...c, moves: c.moves ?? [] })),
     photos: raw.photos ?? [],
     acts: raw.acts ?? {},
     state: raw.state ? hydratePO(raw.state) : undefined,
@@ -63,7 +64,7 @@ export async function myUid(): Promise<string> {
   return (await ensureSignedIn()).uid
 }
 
-export async function createPORoom(name: string, drawMode: DrawMode): Promise<string> {
+export async function createPORoom(name: string, drawMode: DrawMode, handSize: number): Promise<string> {
   const user = await ensureSignedIn()
   const code = await pickFreeRoomCode(roomTaken)
   const room: PORoom = {
@@ -72,6 +73,7 @@ export async function createPORoom(name: string, drawMode: DrawMode): Promise<st
     status: 'waiting',
     host: user.uid,
     drawMode,
+    handSize,
     members: { [user.uid]: { name, at: Date.now(), build: BUILD_ID } },
   }
   await set(roomRef(code), sanitize(room))

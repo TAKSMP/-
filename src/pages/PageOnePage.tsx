@@ -10,14 +10,15 @@ import { loadStory } from '../lib/story'
 import { mainPhoto } from '../lib/storage'
 import { compressImage } from '../lib/image'
 import { sfx } from '../lib/sound'
-import { orderEmoji } from '../data/orders'
 import { availableCards, buildCard, TIERS } from '../lib/cardGame/cards'
 import {
   applyAction,
     cpuAction,
   createPageOne,
   current,
-  handSizeFor,
+  HAND_DEFAULT,
+  HAND_MAX,
+  HAND_MIN,
   MAX_PLAYERS,
   playableOf,
   topOf,
@@ -42,6 +43,7 @@ import {
 import { normalizeRoomCode, ROOM_CODE_MIN } from '../lib/roomWords'
 import { RoomWordCard, RoomWordInput } from '../components/RoomWord'
 import { CardBack } from '../components/CardView'
+import { PaperCard, PressCard, usePress, CardZoom } from '../components/PaperCard'
 import './CardGamePage.css'
 import './PageOnePage.css'
 
@@ -52,6 +54,7 @@ interface Props {
 
 const NAME_KEY = 'chomushi.netbattle.name'
 const MODE_KEY = 'chomushi.pageone.drawmode.v1'
+const HAND_KEY = 'chomushi.pageone.hand.v1'
 const ME = 'me'
 
 function loadStr(key: string, fb: string): string {
@@ -95,65 +98,33 @@ export function orderColor(order: string): string {
 // てもちの カードから ページワンの 山を つくる（たりなければ まだ もっていない レア度も つかう）
 function buildDeck(bugs: CaughtBug[], need: number): PCard[] {
   const save = loadStory()
-  const toP = (c: { key: string; bugId: string; name: string; order: string; hp: number; tier: string }): PCard => ({
-    key: c.key,
-    bugId: c.bugId,
-    name: c.name,
-    order: c.order,
-    hp: c.hp,
-    tier: c.tier,
-  })
-  const out = availableCards(bugs, save).map(toP)
+  const out: PCard[] = availableCards(bugs, save)
   if (out.length < need) {
     const have = new Set(out.map((c) => c.key))
     for (const b of bugs)
       for (const t of TIERS) {
         if (out.length >= need) break
-        if (!have.has(`${b.id}:${t}`)) out.push(toP(buildCard(b, save, t)))
+        if (!have.has(`${b.id}:${t}`)) out.push(buildCard(b, save, t))
       }
   }
   return out
 }
-const deckNeed = (players: number) => players * handSizeFor(players) + 20
+const deckNeed = (players: number, hand: number) => players * hand + 20
 
 // -------------------------------------------------------------
 //  カードの みため
 // -------------------------------------------------------------
-function POCard({
-  c,
-  photo,
-  size = 'hand',
-  ok,
-  dim,
-  onClick,
-}: {
-  c: PCard
-  photo?: string
-  size?: 'hand' | 'top'
-  ok?: boolean
-  dim?: boolean
-  onClick?: () => void
-}) {
+// 場の いちばん うえの カード（タップ／ながおしで 大きく）
+function TopCard({ c, photo }: { c: PCard; photo?: string }) {
+  const [open, setOpen] = useState(false)
+  const press = usePress(() => setOpen(true), () => setOpen(true))
   return (
-    <button
-      type="button"
-      className={`po-card ${size}${ok ? ' ok' : ''}${dim ? ' dim' : ''} t-${c.tier}`}
-      style={{ ['--oc' as string]: orderColor(c.order) }}
-      onClick={onClick}
-      disabled={!onClick}
-    >
-      <span className="po-card-order">
-        {orderEmoji(c.order)}
-        {c.order}
-      </span>
-      <span className="po-card-hp">
-        <small>❤️</small>
-        {c.hp}
-      </span>
-      <span className="po-card-photo">{photo ? <img src={photo} alt="" /> : orderEmoji(c.order)}</span>
-      <span className="po-card-name">{c.name}</span>
-      {c.tier !== 'N' && <span className={`po-card-tier t-${c.tier}`}>{c.tier}</span>}
-    </button>
+    <>
+      <div className="pc-press po-topcard" {...press}>
+        <PaperCard card={c} photo={photo} width={150} />
+      </div>
+      {open && <CardZoom card={c} photo={photo} onClose={() => setOpen(false)} />}
+    </>
   )
 }
 
@@ -240,6 +211,7 @@ function Table({
     cards[a].order === cards[b].order ? cards[a].hp - cards[b].hp : cards[a].order.localeCompare(cards[b].order),
   )
   const ok = myTurn ? playableOf(st, cards, me) : []
+  const handW = Math.floor(Math.min(420, window.innerWidth - 24) / 3) - 8
   const ranking = st.winner
     ? [...st.players].sort((a, b) => (st.hands[a.id]?.length ?? 0) - (st.hands[b.id]?.length ?? 0))
     : []
@@ -274,7 +246,7 @@ function Table({
           </button>
           <small>{st.drawMode === 'one' ? '1まい ひく' : 'だせるまで ひく'}</small>
         </div>
-        <div className="po-top">{topCard && <POCard c={topCard} photo={photoOf(topCard)} size="top" />}</div>
+        <div className="po-top">{topCard && <TopCard key={top} c={topCard} photo={photoOf(topCard)} />}</div>
       </div>
       {topCard && !st.winner && (
         <p className="po-hint">
@@ -302,17 +274,32 @@ function Table({
 
       <div className="po-hand" ref={handRef}>
         {hand.map((c) => (
-          <POCard
+          <PressCard
             key={c}
-            c={cards[c]}
+            card={cards[c]}
             photo={photoOf(cards[c])}
-            ok={ok.includes(c)}
-            dim={myTurn && !ok.includes(c)}
-            onClick={myTurn && ok.includes(c) ? () => onAct({ type: 'play', card: c }) : undefined}
+            width={handW}
+            className={`po-hcard${ok.includes(c) ? ' ok' : ''}${myTurn && !ok.includes(c) ? ' dim' : ''}`}
+            onTap={myTurn && ok.includes(c) ? () => onAct({ type: 'play', card: c }) : undefined}
+            zoomExtra={
+              myTurn && ok.includes(c)
+                ? (close) => (
+                    <button
+                      className="btn btn-big btn-primary"
+                      onClick={() => {
+                        close()
+                        onAct({ type: 'play', card: c })
+                      }}
+                    >
+                      この カードを だす
+                    </button>
+                  )
+                : undefined
+            }
           />
         ))}
       </div>
-      <p className="po-count">てふだ {hand.length}まい</p>
+      <p className="po-count">てふだ {hand.length}まい（カードを ながおし すると 大きく 見られるよ）</p>
 
       {st.winner && (
         <div className={`po-result ${st.winner === me ? 'win' : 'lose'}`}>
@@ -353,6 +340,10 @@ export function PageOnePage({ bugs, onGoCapture }: Props) {
   const [phase, setPhase] = useState<Phase>('menu')
   const [drawMode, setDrawMode] = useState<DrawMode>(() => (loadStr(MODE_KEY, 'one') === 'until' ? 'until' : 'one'))
   const [cpuCount, setCpuCount] = useState(2)
+  const [handSize, setHandSize] = useState(() => {
+    const n = Number(loadStr(HAND_KEY, String(HAND_DEFAULT)))
+    return n >= HAND_MIN && n <= HAND_MAX ? n : HAND_DEFAULT
+  })
   const [notice, setNotice] = useState<string | null>(null)
   const photoByBug = useMemo(() => {
     const m = new Map<string, string>()
@@ -381,9 +372,9 @@ export function PageOnePage({ bugs, onGoCapture }: Props) {
       { id: ME, name: 'あなた' },
       ...['てんとう', 'かぶと', 'とんぼ'].slice(0, cpuCount).map((n, i) => ({ id: `cpu${i}`, name: `CPU ${n}`, cpu: 'normal' as const })),
     ]
-    const deck = buildDeck(bugs, deckNeed(players.length))
+    const deck = buildDeck(bugs, deckNeed(players.length, handSize))
     setCards(deck)
-    setSt(createPageOne(deck.length, players, drawMode))
+    setSt(createPageOne(deck.length, players, drawMode, handSize))
     setGameNo((n) => n + 1)
     sfx.battleStart()
     setPhase('cpu')
@@ -428,7 +419,7 @@ export function PageOnePage({ bugs, onGoCapture }: Props) {
     setNotice(null)
     try {
       const me = await myUid()
-      const c = await createPORoom(name.trim(), drawMode)
+      const c = await createPORoom(name.trim(), drawMode, handSize)
       setUid(me)
       setCode(c)
       setPhase('netRoom')
@@ -463,12 +454,13 @@ export function PageOnePage({ bugs, onGoCapture }: Props) {
     if (members.length < 2) return setNotice('あと 1人 いじょう まってね。')
     setBusy(true)
     try {
-      const deck = buildDeck(bugs, deckNeed(members.length))
+      const hs = room.handSize ?? HAND_DEFAULT
+      const deck = buildDeck(bugs, deckNeed(members.length, hs))
       // しゃしんは 虫ごとに 1まい、ちいさく して いっしょに おくる
       const ids = [...new Set(deck.map((c) => c.bugId))]
       const photos = await Promise.all(ids.map((id) => compressImage(photoByBug.get(id) ?? '', 96, 5000).catch(() => '')))
       const withP = deck.map((c) => ({ ...c, p: ids.indexOf(c.bugId) }))
-      const state = createPageOne(withP.length, members, room.drawMode)
+      const state = createPageOne(withP.length, members, room.drawMode, hs)
       await startPORoom(code, withP, photos, state)
       sfx.battleStart()
     } catch (e) {
@@ -535,6 +527,26 @@ export function PageOnePage({ bugs, onGoCapture }: Props) {
   }
 
   const modePicker = (
+    <>
+    <div className="po-mode">
+      <span className="po-mode-title">はじめの てふだ</span>
+      <div className="po-mode-btns four">
+        {Array.from({ length: HAND_MAX - HAND_MIN + 1 }, (_, i) => HAND_MIN + i).map((n) => (
+          <button
+            key={n}
+            type="button"
+            className={handSize === n ? 'on' : ''}
+            onClick={() => {
+              setHandSize(n)
+              saveStr(HAND_KEY, String(n))
+              sfx.tap()
+            }}
+          >
+            {n}まい
+          </button>
+        ))}
+      </div>
+    </div>
     <div className="po-mode">
       <span className="po-mode-title">だせない ときの ルール</span>
       <div className="po-mode-btns">
@@ -548,6 +560,7 @@ export function PageOnePage({ bugs, onGoCapture }: Props) {
         </button>
       </div>
     </div>
+    </>
   )
 
   if (phase === 'rules') {
@@ -555,13 +568,14 @@ export function PageOnePage({ bugs, onGoCapture }: Props) {
       <div className="po-page po-rules">
         <h2 className="po-h2">📖 ページワンの あそびかた</h2>
         <ol>
-          <li>みんなに カードを 7まい（5人いじょうは 5まい）くばる。のこりは 山に する。</li>
+          <li>みんなに カードを 4まい くばる（さいしょの せっていで 7まいまで ふやせる）。のこりは 山に する。</li>
           <li>
             ばの いちばん うえの カードと <b>おなじ 目（もく）</b>、または <b>おなじ たいりょく（❤️）</b>の カードを 1まい だせる。
           </li>
           <li>だせる カードが ない ときは 山から 1まい ひく。だせたら そのまま だす。だせなければ てふだに いれて つぎの ひとの ばん。</li>
           <li>ルールへんこうで「だせるまで ひく」にも できる。</li>
           <li>のこり 1まいに なったら「ページワン！」。</li>
+          <li>カードを ながおし すると 大きく 見られる。</li>
           <li>さいしょに カードが 0まいに なった ひとの かち！</li>
         </ol>
         <button className="btn btn-ghost po-back" onClick={() => go('menu')}>
@@ -649,7 +663,11 @@ export function PageOnePage({ bugs, onGoCapture }: Props) {
             </li>
           ))}
         </ul>
-        {room && <p className="po-small">ルール：{room.drawMode === 'one' ? '1まい ひく' : 'だせるまで ひく'}</p>}
+        {room && (
+          <p className="po-small">
+            ルール：てふだ {room.handSize ?? HAND_DEFAULT}まい／{room.drawMode === 'one' ? '1まい ひく' : 'だせるまで ひく'}
+          </p>
+        )}
         {gone && <p className="story-notice">へやが なくなりました。</p>}
         {notice && <p className="story-notice">{notice}</p>}
         {isHost ? (

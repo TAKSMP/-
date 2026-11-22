@@ -116,6 +116,8 @@ export interface Card {
   speed: number
   basic: number // ふつうの こうげきの ダメージ
   moves: CardMove[]
+  rarity?: number // ★の かず（図鑑の めずらしさ）
+  habitat?: string
 }
 
 // -------------------------------------------------------------
@@ -554,6 +556,8 @@ export function buildCard(bug: CaughtBug, save: StorySave, tier: Tier): Card {
     speed: Math.min(20, baseSpeed(bug, st.speed, st.attack) + info.spd),
     basic: Math.min(30, r5(eng(40, attack) * FD * info.mul * 1.3, 15)),
     moves,
+    rarity: bug.rarity,
+    habitat: bug.habitat,
   }
 }
 

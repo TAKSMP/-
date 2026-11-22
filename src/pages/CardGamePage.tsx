@@ -37,7 +37,7 @@ import {
 } from '../lib/cardGame/net'
 import { normalizeRoomCode, ROOM_CODE_MIN } from '../lib/roomWords'
 import { RoomWordCard, RoomWordInput } from '../components/RoomWord'
-import { CardFace, CardMini } from '../components/CardView'
+import { PaperCard, usePress } from '../components/PaperCard'
 import { CardBattleStage } from '../components/CardBattleStage'
 import './CardGamePage.css'
 
@@ -76,6 +76,41 @@ type Phase = 'menu' | 'deck' | 'zukan' | 'rules' | 'cpuPick' | 'cpu' | 'netName'
 
 // つよそうな じゅんに ならべる（おまかせ デッキ よう）
 const power = (c: Card) => c.hp + c.basic * 1.5 + c.speed + c.moves.reduce((a, m) => a + (Number(m.big) || 15), 0) * 0.5
+
+// ちいさい 紙の カード（タップ／ながおし）
+function Mini({
+  card,
+  photo,
+  width,
+  onTap,
+  onLong,
+  sel,
+  dim,
+  lock,
+}: {
+  card: Card
+  photo?: string
+  width: number
+  onTap?: () => void
+  onLong: () => void
+  sel?: boolean
+  dim?: boolean
+  lock?: string
+}) {
+  const press = usePress(onLong, onTap ?? onLong)
+  return (
+    <div className={`pc-press cg-pmini${sel ? ' sel' : ''}${dim ? ' dim' : ''}${lock ? ' lock' : ''}`} {...press}>
+      <PaperCard card={card} photo={photo} width={width}>
+        {sel && <span className="cg-pmini-check">✔</span>}
+        {lock && (
+          <span className="cg-pmini-lock">
+            🔒<small>{lock}</small>
+          </span>
+        )}
+      </PaperCard>
+    </div>
+  )
+}
 
 export function CardGamePage({ bugs, onGoCapture }: Props) {
   const [save] = useState(() => loadStory())
@@ -228,7 +263,7 @@ export function CardGamePage({ bugs, onGoCapture }: Props) {
         <button className="modal-close" onClick={() => setView(null)} aria-label="とじる">
           ✕
         </button>
-        <CardFace card={view.card} photo={photoOf.get(view.card.bugId)} />
+        <PaperCard card={view.card} photo={photoOf.get(view.card.bugId)} width={Math.min(window.innerWidth - 48, 360)} />
         {view.locked ? (
           <p className="cg-modal-note">
             🔒 ストーリーモードで <b>レベル{TIER_INFO[view.card.tier].level}</b> に そだてると つかえるよ
@@ -314,6 +349,9 @@ export function CardGamePage({ bugs, onGoCapture }: Props) {
   }
 
   const deckProb = deckProblem(deck)
+  const pageW = Math.min(560, window.innerWidth) - 32
+  const gridW = Math.floor(pageW / 3) - 8
+  const slotW = Math.floor(pageW / 4) - 8
 
   if (phase === 'deck') {
     const list = cards.filter((c) => filter === 'all' || c.tier === filter)
@@ -327,7 +365,7 @@ export function CardGamePage({ bugs, onGoCapture }: Props) {
             return c ? (
               <div key={c.key} className="cg-slot">
                 <span className="cg-slot-no">{i < 2 ? `まえ ${i + 1}` : `ひかえ ${i - 1}`}</span>
-                <CardMini card={c} photo={photoOf.get(c.bugId)} onClick={() => setView({ card: c })} />
+                <Mini card={c} photo={photoOf.get(c.bugId)} width={slotW} onLong={() => setView({ card: c })} />
                 <span className="cg-slot-btns">
                   <button
                     type="button"
@@ -364,6 +402,8 @@ export function CardGamePage({ bugs, onGoCapture }: Props) {
             )
           })}
         </div>
+        {notice && <p className="story-notice">{notice}</p>}
+        <p className="cg-rule-small">カードを タップで いれる／はずす。ながおしで 大きく 見られるよ。</p>
         <p className={`cg-rule ${deckProb ? '' : 'ok'}`}>{deckProb ?? '✅ このデッキで たたかえるよ！'}</p>
         <p className="cg-rule-small">きまり：おなじ 虫は 1まい／R・SR・UR は あわせて 2まいまで／UR は 1まいまで</p>
         <div className="cg-row-btns">
@@ -381,18 +421,33 @@ export function CardGamePage({ bugs, onGoCapture }: Props) {
             </button>
           ))}
         </div>
-        <div className="cg-grid">
+        <div className="cg-pgrid">
           {list.map((c) => {
             const inDeck = deck.some((d) => d.key === c.key)
             return (
-              <CardMini
+              <Mini
                 key={c.key}
                 card={c}
                 photo={photoOf.get(c.bugId)}
-                selected={inDeck}
-                disabled={!inDeck && !!canAdd(deck, c)}
-                badge={inDeck ? '✔' : undefined}
-                onClick={() => setView({ card: c })}
+                width={gridW}
+                sel={inDeck}
+                dim={!inDeck && !!canAdd(deck, c)}
+                onLong={() => setView({ card: c })}
+                onTap={() => {
+                  if (inDeck) {
+                    sfx.tap()
+                    setDeck(deck.filter((d) => d.key !== c.key))
+                    return
+                  }
+                  const why = canAdd(deck, c)
+                  if (why) {
+                    setNotice(why)
+                    return
+                  }
+                  sfx.tap()
+                  setNotice(null)
+                  setDeck([...deck, c])
+                }}
               />
             )
           })}
@@ -409,7 +464,7 @@ export function CardGamePage({ bugs, onGoCapture }: Props) {
       <div className="cg-page">
         <h2 className="cg-h2">📚 カードずかん</h2>
         <p className="cg-lead">
-          あつめた カード <b>{cards.length}</b> / {all.length}まい。ストーリーモードで そだてると レアカードが ふえるよ。
+          あつめた カード <b>{cards.length}</b> / {all.length}まい。ストーリーモードで そだてると レアカードが ふえるよ。カードを タップすると 大きく 見られる。
         </p>
         <div className="cg-tabs">
           {(['all', ...TIERS] as const).map((t) => (
@@ -418,7 +473,7 @@ export function CardGamePage({ bugs, onGoCapture }: Props) {
             </button>
           ))}
         </div>
-        <div className="cg-grid">
+        <div className="cg-pgrid">
           {all
             .filter((x) => filter === 'all' || x.t === filter)
             .map(({ b, t }) => {
@@ -426,22 +481,21 @@ export function CardGamePage({ bugs, onGoCapture }: Props) {
               const got = have.has(key)
               const card = got ? cards.find((c) => c.key === key)! : null
               return got && card ? (
-                <CardMini key={key} card={card} photo={photoOf.get(b.id)} onClick={() => setView({ card })} />
+                <Mini key={key} card={card} photo={photoOf.get(b.id)} width={gridW} onLong={() => setView({ card })} />
               ) : (
-                <button
-                  key={key}
-                  type="button"
-                  className={`cg-mini locked t-${t}`}
-                  onClick={() => setView({ card: buildCard(b, save, t), locked: true })}
-                >
-                  <span className="cg-mini-photo">
-                    <img src={photoOf.get(b.id)} alt="" />
-                    <span className={`cg-tier t-${t}`}>{t}</span>
-                    <span className="cg-mini-lock">🔒</span>
-                  </span>
-                  <span className="cg-mini-name">{b.name}</span>
-                  <span className="cg-mini-stat">レベル{TIER_INFO[t].level}で ゲット</span>
-                </button>
+                (() => {
+                  const lc = buildCard(b, save, t)
+                  return (
+                    <Mini
+                      key={key}
+                      card={lc}
+                      photo={photoOf.get(b.id)}
+                      width={gridW}
+                      lock={`レベル${TIER_INFO[t].level}で ゲット`}
+                      onLong={() => setView({ card: lc, locked: true })}
+                    />
+                  )
+                })()
               )
             })}
         </div>
@@ -601,7 +655,7 @@ export function CardGamePage({ bugs, onGoCapture }: Props) {
         <div className="cg-menu-deck-cards">
           {Array.from({ length: DECK_SIZE }, (_, i) =>
             deck[i] ? (
-              <CardMini key={deck[i].key} card={deck[i]} photo={photoOf.get(deck[i].bugId)} />
+              <PaperCard key={deck[i].key} card={deck[i]} photo={photoOf.get(deck[i].bugId)} width={slotW} />
             ) : (
               <span key={i} className="cg-slot empty">
                 <span className="cg-slot-plus">＋</span>

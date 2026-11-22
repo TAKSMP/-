@@ -950,3 +950,57 @@
   white-space: nowrap;
   text-shadow: 0 0.07em 0 #5a3218, 0.06em 0 0 #5a3218, -0.06em 0 0 #5a3218, 0 -0.06em 0 #5a3218;
 }
+
+/* 紙の カード（ちいさい） */
+.cg-grid.paper,
+.cg-pgrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.cg-pmini {
+  position: relative;
+  transition: opacity 0.15s;
+}
+.cg-pmini.sel .pc-card {
+  box-shadow: 0 0 0 2.2mm #ff8a3d;
+}
+.cg-pmini.dim {
+  opacity: 0.4;
+}
+.cg-pmini.lock .pc-card {
+  filter: grayscale(1) brightness(0.75);
+}
+.cg-pmini-check {
+  position: absolute;
+  right: -4px;
+  top: -4px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #ff8a3d;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.cg-pmini-lock {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  pointer-events: none;
+}
+.cg-pmini-lock small {
+  font-size: 11px;
+  font-weight: 900;
+  color: #fff;
+  background: rgba(40, 40, 40, 0.85);
+  border-radius: 8px;
+  padding: 2px 6px;
+}

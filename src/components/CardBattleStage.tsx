@@ -23,7 +23,8 @@ import {
   type Snap,
 } from '../lib/cardGame/engine'
 import { sfx } from '../lib/sound'
-import { CardFace, MoveBox, TierBadge, UsesDots } from './CardView'
+import { MoveBox, TierBadge, UsesDots } from './CardView'
+import { PaperCard } from './PaperCard'
 
 interface Props {
   state: CState
@@ -363,7 +364,7 @@ export function CardBattleStage({ state, me, photos, myName, foeName, waiting, o
             <button className="modal-close" onClick={() => setInfo(null)} aria-label="とじる">
               ✕
             </button>
-            <CardFace card={info.card as Card} photo={photos[info.uid]} usesLeft={info.usesLeft} />
+            <PaperCard card={info.card as Card} photo={photos[info.uid]} usesLeft={info.usesLeft} width={Math.min(window.innerWidth - 48, 360)} />
             <p className="cg-modal-note">● は のこりの かいすう。うすい ● は つかった ぶん。</p>
           </div>
         </div>

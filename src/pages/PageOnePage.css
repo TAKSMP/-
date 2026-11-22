@@ -54,6 +54,21 @@
 .po-mode-btns.three {
   grid-template-columns: 1fr 1fr 1fr;
 }
+.po-mode-btns.four {
+  grid-template-columns: repeat(4, 1fr);
+}
+.po-hcard {
+  transition: transform 0.15s, opacity 0.15s;
+}
+.po-hcard.ok {
+  transform: translateY(-8px);
+}
+.po-hcard.ok .pc-card {
+  box-shadow: 0 0 0 1.6mm #ffd23f, 0 1mm 3mm rgba(0, 0, 0, 0.35);
+}
+.po-hcard.dim {
+  opacity: 0.5;
+}
 .po-mode-btns button {
   display: flex;
   flex-direction: column;

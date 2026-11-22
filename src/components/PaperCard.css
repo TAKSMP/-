@@ -1,0 +1,378 @@
+/* 紙の ちょうむしカード（印刷用 render2.py と おなじ デザイン・mm たんい） */
+.pc-wrap {
+  position: relative;
+  flex: none;
+}
+.pc-press {
+  display: inline-block;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.pc-press img {
+  pointer-events: none;
+}
+.pc-card,
+.pc-card * {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+.pc-card {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  width: 63mm;
+  height: 88mm;
+  border-radius: 3.2mm;
+  padding: 2.2mm;
+  background: var(--oc);
+  overflow: hidden;
+  color: #2b2420;
+  font-family: 'Hiragino Maru Gothic ProN', 'Hiragino Maru Gothic Pro', 'Zen Maru Gothic', 'M PLUS Rounded 1c', sans-serif;
+  text-align: left;
+  box-shadow: 0 1mm 2mm rgba(0, 0, 0, 0.25);
+}
+.pc-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 2mm;
+  background: #fffaf1;
+  display: flex;
+  flex-direction: column;
+  padding: 1.6mm 1.8mm 1.3mm !important;
+  position: relative;
+  overflow: hidden;
+}
+.pc-top {
+  display: flex;
+  align-items: center;
+  gap: 1.2mm;
+  min-height: 7.2mm;
+}
+.pc-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 900;
+  font-size: 4.6mm;
+  line-height: 1;
+  white-space: nowrap;
+  letter-spacing: -0.1mm;
+}
+.pc-name.two {
+  white-space: normal;
+  word-break: break-all;
+  line-height: 1.08;
+  font-size: 3.4mm;
+  padding: 0.4mm 0 !important;
+}
+.pc-lv {
+  display: inline-block;
+  font-size: 2.5mm;
+  font-weight: 900;
+  color: #fff;
+  background: #6d6257;
+  border-radius: 1.2mm;
+  padding: 0.45mm 1.1mm 0.35mm !important;
+  margin-left: 0.8mm !important;
+  line-height: 1;
+  vertical-align: 0.35mm;
+  white-space: nowrap;
+}
+.UR .pc-lv {
+  background: linear-gradient(90deg, #ff6b8b, #ffb347, #7be0a0, #6ec6ff, #a68bff);
+}
+.SR .pc-lv {
+  background: #c08d06;
+}
+.R .pc-lv {
+  background: #7d8894;
+}
+.pc-hp {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6mm;
+  background: #fff;
+  border: 0.45mm solid var(--oc);
+  border-radius: 4mm;
+  padding: 0.5mm 1.6mm 0.4mm !important;
+  line-height: 1;
+  white-space: nowrap;
+  flex: none;
+}
+.pc-hp small {
+  font-size: 2.1mm;
+  font-weight: 700;
+  color: var(--oc);
+}
+.pc-hp b {
+  font-size: 5.4mm;
+  font-weight: 900;
+}
+.pc-stars {
+  font-size: 2.3mm;
+  color: #e2a400;
+  letter-spacing: -0.2mm;
+  height: 2.8mm;
+  line-height: 2.8mm;
+  margin-top: -0.2mm !important;
+}
+.pc-photo {
+  height: 30mm;
+  flex: none;
+  border-radius: 2mm;
+  overflow: hidden;
+  position: relative;
+  border: 0.5mm solid var(--oc);
+  background: #eee;
+  margin-top: 0.5mm !important;
+}
+.pc-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.pc-tag {
+  position: absolute;
+  bottom: 1mm;
+  font-size: 2mm;
+  font-weight: 700;
+  background: #ffffff;
+  border-radius: 2mm;
+  padding: 0.45mm 1.4mm !important;
+  line-height: 1.1;
+  max-width: 55%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pc-tag.l {
+  left: 1mm;
+  color: var(--oc);
+}
+.pc-tag.r {
+  right: 1mm;
+}
+.pc-stats {
+  display: flex;
+  gap: 1mm;
+  margin: 1.1mm 0 0.9mm !important;
+}
+.pc-st {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6mm;
+  background: #fff;
+  border-radius: 1.6mm;
+  border: 0.3mm solid #e4d9c6;
+  height: 6mm;
+  font-size: 2.1mm;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+.pc-st b {
+  font-size: 3.6mm;
+  font-weight: 900;
+}
+.pc-moves {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8mm;
+  min-height: 0;
+}
+.pc-mv {
+  flex: 1;
+  display: flex;
+  gap: 1.1mm;
+  background: #fff;
+  border-radius: 1.8mm;
+  border: 0.3mm solid #e9dfcf;
+  padding: 0.7mm 1mm !important;
+  min-height: 0;
+  overflow: hidden;
+}
+.pc-mv.used {
+  opacity: 0.45;
+}
+.pc-ic {
+  width: 6.2mm;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3mm;
+  padding-top: 0.2mm !important;
+}
+.pc-ic i {
+  font-style: normal;
+  width: 6.2mm;
+  height: 6.2mm;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3.4mm;
+  background: var(--kc);
+}
+.pc-ic em {
+  font-style: normal;
+  font-size: 1.5mm;
+  font-weight: 700;
+  color: var(--kc);
+  white-space: nowrap;
+}
+.pc-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.pc-mh {
+  display: flex;
+  align-items: center;
+  gap: 1mm;
+}
+.pc-mn {
+  font-weight: 900;
+  font-size: 3mm;
+  line-height: 1.15;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+.pc-uses {
+  font-size: 2.2mm;
+  color: var(--kc);
+  letter-spacing: -0.15mm;
+  white-space: nowrap;
+}
+.pc-uses .off {
+  color: #ddd3c4;
+}
+.pc-tx {
+  font-size: 2.15mm;
+  line-height: 1.32;
+  font-weight: 500;
+  color: #3d342c;
+}
+.pc-big {
+  flex: none;
+  min-width: 7mm;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 5.2mm;
+  line-height: 1;
+  color: var(--kc);
+}
+.pc-big small {
+  font-size: 1.7mm;
+  font-weight: 700;
+  margin-top: 0.3mm !important;
+  white-space: nowrap;
+}
+.pc-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1.6mm;
+  color: #8b7f70;
+  margin-top: 0.8mm !important;
+  line-height: 1;
+}
+.pc-foot b {
+  font-weight: 900;
+  color: var(--oc);
+}
+.pc-code {
+  font-weight: 900;
+  margin-right: 1mm !important;
+}
+/* レアど */
+.pc-card.R {
+  background: linear-gradient(135deg, #8e99a6, #eef2f6 25%, #a9b4c0 50%, #f7f9fb 70%, #8e99a6);
+}
+.pc-card.SR {
+  background: linear-gradient(135deg, #b8860b, #ffe27a 22%, #c9930e 45%, #fff3b0 62%, #b07a08 82%, #ffe27a);
+}
+.pc-card.UR {
+  background: linear-gradient(135deg, #ff6b8b, #ffb347 18%, #ffe66d 34%, #7be0a0 50%, #6ec6ff 66%, #a68bff 82%, #ff6b8b);
+}
+.pc-card.R .pc-inner {
+  background: linear-gradient(180deg, #f3f6f9, #fdfdfe 45%, #eef2f6);
+}
+.pc-card.SR .pc-inner {
+  background: linear-gradient(180deg, #fff6cf, #fffbea 45%, #fff3c4);
+}
+.pc-card.UR .pc-inner {
+  background: linear-gradient(160deg, #fff0f4, #fff8e6 30%, #effbf3 60%, #eef5ff);
+}
+.pc-card.R .pc-photo,
+.pc-card.R .pc-hp {
+  border-color: #8e99a6;
+}
+.pc-card.SR .pc-photo,
+.pc-card.SR .pc-hp {
+  border-color: #d4a514;
+}
+.pc-card.UR .pc-photo,
+.pc-card.UR .pc-hp {
+  border-color: #a68bff;
+}
+.pc-badge {
+  position: absolute;
+  top: -0.2mm;
+  right: 17mm;
+  font-size: 1.9mm;
+  font-weight: 900;
+  color: #fff;
+  padding: 0.5mm 1.6mm 0.4mm !important;
+  border-radius: 0 0 1.4mm 1.4mm;
+  letter-spacing: 0.15mm;
+  white-space: nowrap;
+}
+.pc-badge.R {
+  background: #7d8894;
+}
+.pc-badge.SR {
+  background: #c08d06;
+}
+.pc-badge.UR {
+  background: linear-gradient(90deg, #ff6b8b, #ffb347, #7be0a0, #6ec6ff, #a68bff);
+}
+.pc-mv.ult {
+  background: linear-gradient(100deg, #fff4c4, #fffdf2 70%);
+  border: 0.45mm solid #e2a400;
+}
+.pc-mv.ult .pc-mn::before {
+  content: '👑';
+}
+/* 大きく 見る */
+.pc-zoom-in {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding-top: 40px;
+  max-height: 94vh;
+  overflow-y: auto;
+}
+.pc-zoom-in .modal-close {
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 2;
+}

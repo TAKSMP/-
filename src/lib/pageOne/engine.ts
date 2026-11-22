@@ -10,17 +10,12 @@
 //  カードは かず（cards の なんばんめか）で もつ。乱数は seed から つくる。
 // =============================================================
 import type { CpuLevel } from '../cardGame/cpu'
+import type { Card } from '../cardGame/cards'
 
 export type DrawMode = 'one' | 'until'
 
-// ページワンで つかう カード（カードバトルの カードの ひつような ところだけ）
-export interface PCard {
-  key: string
-  bugId: string
-  name: string
-  order: string
-  hp: number
-  tier: string
+// ページワンで つかう カード（カードバトルの カード そのもの）
+export interface PCard extends Card {
   p?: number // しゃしんの ばんごう（つうしん よう）
 }
 
@@ -44,6 +39,7 @@ export interface POState {
   discard: number[] // さいごが ばの いちばん うえ
   turn: number
   drawMode: DrawMode
+  handSize: number
   winner: string | null
   log: POEvent[] // さいごの 1てで おきた こと
   seq: number // てを すすめる たびに ふえる
@@ -77,7 +73,9 @@ function shuffle<T>(xs: T[], r: { next(): number }): T[] {
   return a
 }
 
-export const handSizeFor = (n: number): number => (n >= 5 ? 5 : 7)
+export const HAND_MIN = 4
+export const HAND_MAX = 7
+export const HAND_DEFAULT = 4
 export const MAX_PLAYERS = 6
 
 export function canPlay(cards: PCard[], c: number, top: number | undefined): boolean {
@@ -91,13 +89,19 @@ export const current = (st: POState): POPlayer | undefined => st.players[st.turn
 export const playableOf = (st: POState, cards: PCard[], pid: string): number[] =>
   (st.hands[pid] ?? []).filter((c) => canPlay(cards, c, topOf(st)))
 
-export function createPageOne(cardCount: number, players: POPlayer[], drawMode: DrawMode, seed = Date.now() & 0x7fffffff): POState {
+export function createPageOne(
+  cardCount: number,
+  players: POPlayer[],
+  drawMode: DrawMode,
+  handSize = HAND_DEFAULT,
+  seed = Date.now() & 0x7fffffff,
+): POState {
   const r = rng(seed)
   const deck = shuffle(
     Array.from({ length: cardCount }, (_, i) => i),
     r,
   )
-  const size = handSizeFor(players.length)
+  const size = Math.max(HAND_MIN, Math.min(HAND_MAX, handSize))
   const hands: Record<string, number[]> = {}
   for (const p of players) hands[p.id] = deck.splice(0, size)
   const first = deck.shift()
@@ -109,6 +113,7 @@ export function createPageOne(cardCount: number, players: POPlayer[], drawMode: 
     discard: first === undefined ? [] : [first],
     turn: start,
     drawMode,
+    handSize: size,
     winner: null,
     log: [{ t: 'start', pid: players[start]?.id, card: first }],
     seq: 1,
@@ -129,6 +134,7 @@ export function hydratePO(raw: POState): POState {
     discard: s.discard ?? [],
     turn: s.turn ?? 0,
     drawMode: s.drawMode ?? 'one',
+    handSize: s.handSize ?? HAND_DEFAULT,
     winner: s.winner ?? null,
     log: s.log ?? [],
     seq: s.seq ?? 0,
