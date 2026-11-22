@@ -102,8 +102,12 @@ export async function startPORoom(code: string, cards: PCard[], photos: string[]
   await update(roomRef(code), sanitize({ cards, photos, state, status: 'playing', acts: null }))
 }
 
+let lastN = 0
 export async function sendPOAct(code: string, uid: string, act: POAction): Promise<void> {
   const a: POAct = { n: Date.now(), type: act.type, ...(act.type === 'play' ? { card: act.card } : {}) }
+  // おなじ ミリびょうに 2かい おしても かさならない ように
+  if (a.n <= lastN) a.n = lastN + 1
+  lastN = a.n
   await set(child(roomRef(code), `acts/${uid}`), a).catch((e) => console.warn('ページワン：おくれませんでした', e))
 }
 
@@ -121,7 +125,7 @@ export function hostStep(code: string, room: PORoom, seen: Map<string, number>):
   for (const [uid, a] of Object.entries(room.acts ?? {})) {
     if ((seen.get(uid) ?? 0) >= a.n) continue
     seen.set(uid, a.n)
-    const act: POAction = a.type === 'play' ? { type: 'play', card: a.card ?? -1 } : { type: 'draw' }
+    const act: POAction = a.type === 'play' ? { type: 'play', card: a.card ?? -1 } : a.type === 'call' ? { type: 'call' } : { type: 'draw' }
     const next = applyAction(st, room.cards ?? [], uid, act)
     if (next !== st) {
       st = next

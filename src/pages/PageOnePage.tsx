@@ -24,7 +24,9 @@ import {
   topOf,
   type DrawMode,
   type PCard,
+  type POAction,
   type POEvent,
+  CALL_WORD,
   type POPlayer,
   type POState,
 } from '../lib/pageOne/engine'
@@ -142,14 +144,21 @@ function eventText(e: POEvent, name: (pid?: string) => string, cards: PCard[]): 
     case 'pass':
       return `${name(e.pid)}は だせなかった…`
     case 'pageone':
-      return `📣 ${name(e.pid)}「ページワン！」 のこり 1まい！`
+      return `${name(e.pid)}は のこり 1まい！`
     case 'win':
       return `🏆 ${name(e.pid)}の かち！`
     case 'reshuffle':
       return '山が なくなったので、ばの カードを まぜて 山に した'
     case 'leave':
       return `${name(e.pid)}が ぬけた`
+    case 'call':
+      return `📣 ${name(e.pid)}「${CALL_WORD}」`
+    case 'early':
+      return `${name(e.pid)}「${CALL_WORD}」… でも まだ はやいよ（のこり 2まいの ときに いおう）`
+    case 'forgot':
+      return `😱 ${name(e.pid)}は「${CALL_WORD}」を いいわすれた… まけ！`
   }
+  return ''
 }
 
 // -------------------------------------------------------------
@@ -168,25 +177,31 @@ function Table({
   cards: PCard[]
   photoOf: (c: PCard) => string | undefined
   me: string
-  onAct: (a: { type: 'play'; card: number } | { type: 'draw' }) => void
+  onAct: (a: POAction) => void
   onQuit: () => void
   onAgain?: () => void
 }) {
   const [lines, setLines] = useState<string[]>([])
   const [shout, setShout] = useState<string | null>(null)
   const seqRef = useRef(0)
-  const name = (pid?: string) => (pid === me ? 'あなた' : st.players.find((p) => p.id === pid)?.name ?? '？')
+  const name = (pid?: string) =>
+    pid === me ? 'あなた' : ([...st.players, ...(st.out ?? [])].find((p) => p.id === pid)?.name ?? '？')
 
   useEffect(() => {
     if (seqRef.current === st.seq) return
     seqRef.current = st.seq
     const add = st.log.map((e) => eventText(e, name, cards))
     setLines((l) => [...l, ...add].slice(-30))
-    const po = st.log.find((e) => e.t === 'pageone')
-    if (st.log.some((e) => e.t === 'win')) {
+    const call = st.log.find((e) => e.t === 'call')
+    const forgot = st.log.find((e) => e.t === 'forgot')
+    if (st.log.some((e) => e.t === 'win') && !forgot) {
       st.winner === me ? sfx.win() : sfx.lose()
-    } else if (po) {
-      setShout(`${name(po.pid)}\nページワン！`)
+    } else if (forgot) {
+      setShout(`${name(forgot.pid)}\nいいわすれ… まけ！`)
+      forgot.pid === me ? sfx.lose() : sfx.special('powerStrike')
+      setTimeout(() => setShout(null), 1800)
+    } else if (call) {
+      setShout(`${name(call.pid)}\n${CALL_WORD}`)
       sfx.special('powerStrike')
       setTimeout(() => setShout(null), 1300)
     } else if (st.log.some((e) => e.t === 'play')) sfx.hit()
@@ -215,6 +230,8 @@ function Table({
   const ranking = st.winner
     ? [...st.players].sort((a, b) => (st.hands[a.id]?.length ?? 0) - (st.hands[b.id]?.length ?? 0))
     : []
+  const iAmOut = (st.out ?? []).some((p) => p.id === me)
+  const said = st.called === me
 
   return (
     <div className="po-table">
@@ -272,6 +289,18 @@ function Table({
         </p>
       )}
 
+      {myTurn && (
+        <button
+          type="button"
+          className={`po-call${said ? ' done' : ''}`}
+          disabled={said}
+          onClick={() => onAct({ type: 'call' })}
+        >
+          {said ? `📣 いった！ さあ カードを だそう` : `📣 ${CALL_WORD}`}
+        </button>
+      )}
+      {iAmOut && !st.winner && <p className="po-turn">😢 いいわすれて まけ… みんなの ゲームを 見ていよう</p>}
+
       <div className="po-hand" ref={handRef}>
         {hand.map((c) => (
           <PressCard
@@ -308,6 +337,11 @@ function Table({
             {ranking.map((p) => (
               <li key={p.id}>
                 {p.id === me ? 'あなた' : p.name}：のこり {st.hands[p.id]?.length ?? 0}まい
+              </li>
+            ))}
+            {[...(st.out ?? [])].reverse().map((p) => (
+              <li key={p.id}>
+                {p.id === me ? 'あなた' : p.name}：いいわすれ
               </li>
             ))}
           </ol>
@@ -574,7 +608,9 @@ export function PageOnePage({ bugs, onGoCapture }: Props) {
           </li>
           <li>だせる カードが ない ときは 山から 1まい ひく。だせたら そのまま だす。だせなければ てふだに いれて つぎの ひとの ばん。</li>
           <li>ルールへんこうで「だせるまで ひく」にも できる。</li>
-          <li>のこり 1まいに なったら「ページワン！」。</li>
+          <li>
+            カードを だして のこり 1まいに なる ときは、だす まえに「📣 {CALL_WORD}」ボタンを おす。いいわすれると まけ！
+          </li>
           <li>カードを ながおし すると 大きく 見られる。</li>
           <li>さいしょに カードが 0まいに なった ひとの かち！</li>
         </ol>
@@ -713,7 +749,7 @@ export function PageOnePage({ bugs, onGoCapture }: Props) {
         <button className="game-card story" onClick={() => go('rules')}>
           <span className="game-emoji">📖</span>
           <span className="game-title">あそびかた</span>
-          <span className="game-desc">おなじ 目 か おなじ たいりょく なら だせる！</span>
+          <span className="game-desc">おなじ 目 か おなじ たいりょく なら だせる！ のこり1まいで「{CALL_WORD}」</span>
         </button>
       </div>
     </div>
