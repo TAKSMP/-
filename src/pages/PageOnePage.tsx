@@ -41,6 +41,8 @@ import {
 } from '../lib/pageOne/net'
 import { normalizeRoomCode, ROOM_CODE_MIN } from '../lib/roomWords'
 import { RoomWordCard, RoomWordInput } from '../components/RoomWord'
+import { CardBack } from '../components/CardView'
+import './CardGamePage.css'
 import './PageOnePage.css'
 
 interface Props {
@@ -253,7 +255,7 @@ function Table({
                 {p.cpu ? '🤖' : '👤'} {p.name}
               </span>
               <span className="po-other-cards">
-                <span className="po-back-mini" />×{st.hands[p.id]?.length ?? 0}
+                <CardBack width={18} />×{st.hands[p.id]?.length ?? 0}
               </span>
             </div>
           ))}
@@ -267,8 +269,8 @@ function Table({
             disabled={!myTurn || ok.length > 0}
             onClick={() => onAct({ type: 'draw' })}
           >
-            <span>山</span>
-            <b>{st.pile.length}</b>
+            <CardBack width={92} />
+            <b className="po-pile-count">{st.pile.length}まい</b>
           </button>
           <small>{st.drawMode === 'one' ? '1まい ひく' : 'だせるまで ひく'}</small>
         </div>

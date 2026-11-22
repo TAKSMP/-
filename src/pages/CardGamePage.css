@@ -902,3 +902,51 @@
     transform: rotate(0) scale(1);
   }
 }
+
+/* ---------- カードの うら（紙と おなじ。1em = 1mm） ---------- */
+.cg-back {
+  position: relative;
+  display: inline-block;
+  width: 63em;
+  height: 88em;
+  padding: 2.6em;
+  border-radius: 3.4em;
+  background: repeating-linear-gradient(8deg, #83492a 0em, #8f532f 1.1em, #7c4426 2em, #93582f 3.2em, #83492a 4.4em);
+  box-shadow: 0 0.6em 1.2em rgba(0, 0, 0, 0.3);
+  flex: none;
+  vertical-align: middle;
+}
+.cg-back-in {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 3em;
+  border: 0.7em solid #fff0c7;
+  background-color: #c7e7c3;
+  background-position: center top;
+  background-size: cover;
+  overflow: hidden;
+}
+.cg-back-plank {
+  position: absolute;
+  left: 4em;
+  right: 4em;
+  top: 65.8%;
+  height: 8.6em;
+  border-radius: 2.4em;
+  border: 0.55em solid #fff0c7;
+  background: repeating-linear-gradient(2deg, #9b5c32 0em, #a8673a 1em, #93552e 1.9em, #a3633a 2.8em);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0.5em 0 #553c25;
+}
+.cg-back-plank b {
+  font-weight: 900;
+  font-size: 5em;
+  color: #fff7dc;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+  text-shadow: 0 0.07em 0 #5a3218, 0.06em 0 0 #5a3218, -0.06em 0 0 #5a3218, 0 -0.06em 0 #5a3218;
+}

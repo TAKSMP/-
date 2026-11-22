@@ -288,31 +288,30 @@
   color: #6b6a55;
 }
 .po-back {
-  width: 86px;
-  height: 120px;
-  border-radius: 12px;
-  border: 4px solid #fff;
-  background: repeating-linear-gradient(45deg, #4a8c3f 0 8px, #6fae7a 8px 16px);
-  color: #fff;
+  position: relative;
+  padding: 0;
+  border: none;
+  background: none;
   font: inherit;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.25);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  border-radius: 6px;
 }
-.po-back span {
-  font-size: 16px;
+.po-pile-count {
+  position: absolute;
+  right: -8px;
+  top: -8px;
+  background: #2f3a24;
+  color: #fff;
+  border-radius: 12px;
+  padding: 1px 8px;
+  font-size: 13px;
   font-weight: 900;
-}
-.po-back b {
-  font-size: 26px;
 }
 .po-back.can {
   animation: po-pulse 0.9s infinite;
-  box-shadow: 0 0 0 4px #ffd23f, 0 3px 6px rgba(0, 0, 0, 0.25);
   cursor: pointer;
+}
+.po-back.can .cg-back {
+  box-shadow: 0 0 0 4px #ffd23f, 0 3px 6px rgba(0, 0, 0, 0.25);
 }
 .po-hint {
   margin: 0;

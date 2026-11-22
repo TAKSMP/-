@@ -3,9 +3,11 @@
 //  ・CardFace … カード 1まい ぜんぶ（わざの せつめい つき）
 //  ・CardMini … デッキえらびの ちいさい カード
 // =============================================================
+import type React from 'react'
 import type { Card, CardMove } from '../lib/cardGame/cards'
 import { TIER_INFO } from '../lib/cardGame/cards'
 import { orderEmoji } from '../data/orders'
+import cardBackArt from '../assets/card-back.jpg'
 
 const KIND_LABEL: Record<CardMove['kind'], string> = { attack: 'こうげき', status: 'じょうたい', heal: 'かいふく', power: 'パワー' }
 
@@ -118,5 +120,21 @@ export function CardMini({
         ❤️{card.hp} 💨{card.speed}
       </span>
     </button>
+  )
+}
+
+// カードの うら（紙の カードバトルと おなじ デザイン）。width は px（1em = 紙の 1mm）
+export function CardBack({ width = 86, children }: { width?: number; children?: React.ReactNode }) {
+  return (
+    <span className="cg-back" style={{ fontSize: `${width / 63}px` }}>
+      <span className="cg-back-in" style={{ backgroundImage: `url(${cardBackArt})` }}>
+        {width >= 40 && (
+          <span className="cg-back-plank">
+            <b>カードバトル</b>
+          </span>
+        )}
+      </span>
+      {children}
+    </span>
   )
 }
