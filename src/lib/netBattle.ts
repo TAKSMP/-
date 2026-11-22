@@ -227,6 +227,7 @@ export async function joinRoom(code: string, name: string, team: Team): Promise<
   const kind = (state as { kind?: string }).kind
   if (kind === 'gift' || kind === 'trade')
     throw new Error('それは 虫を おくる へやです。「ともだちに おくる」から はいってね。')
+  if (kind === 'pageone') throw new Error('それは ページワンの へやです。「カードゲーム」の「ページワン」から はいってね。')
   if (kind === 'card')
     throw new Error('それは カードゲームの へやです。「カードゲーム」の「つうしんで あそぶ」から はいってね。')
   if (kind === 'race')

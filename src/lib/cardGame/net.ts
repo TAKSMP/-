@@ -78,6 +78,7 @@ export async function joinCardRoom(code: string, name: string, deck: Card[], pho
   if (!snap.exists()) throw new Error('その あいことばの へやが 見つかりません。つづりを たしかめてね。')
   const room = snap.val() as { kind?: string } & Omit<Partial<CardRoom>, 'kind'>
   if (room.kind === 'gift' || room.kind === 'trade') throw new Error('それは 虫を おくる へやです。「ともだちに おくる」から はいってね。')
+  if (room.kind === 'pageone') throw new Error('それは ページワンの へやです。「ページワン」から はいってね。')
   if (room.kind === 'race') throw new Error('それは レースの へやです。「レース」から はいってね。')
   if (room.kind !== 'card') throw new Error('それは つうしんバトルの へやです。「バトル」の「つうしんバトル」から はいってね。')
   if (room.host?.uid === user.uid) throw new Error('それは じぶんが つくった へやだよ。ともだちの あいことばを いれてね。')

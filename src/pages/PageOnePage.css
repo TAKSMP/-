@@ -1,0 +1,425 @@
+/* =========================================================
+   ちょうむしページワン
+   ========================================================= */
+.po-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.po-h2 {
+  margin: 4px 0 0;
+  font-size: 21px;
+  text-align: center;
+}
+.po-lead,
+.po-small {
+  margin: 0;
+  text-align: center;
+  font-size: 14px;
+}
+.po-small {
+  font-size: 12px;
+  color: #6b6a55;
+}
+.po-back,
+.po-quit {
+  align-self: center;
+}
+.po-notice {
+  background: #fff3cd;
+  border-radius: 12px;
+  padding: 8px 12px;
+  text-align: center;
+  font-weight: 700;
+}
+.po-mode {
+  background: #fff;
+  border-radius: var(--radius);
+  padding: 10px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.po-mode-title {
+  font-weight: 900;
+  font-size: 14px;
+  text-align: center;
+}
+.po-mode-btns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.po-mode-btns.three {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+.po-mode-btns button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  border: 3px solid #e6dfc4;
+  border-radius: 14px;
+  background: #fffdf3;
+  padding: 8px 4px;
+  font: inherit;
+  font-weight: 900;
+  font-size: 14px;
+  color: inherit;
+}
+.po-mode-btns button small {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b6a55;
+}
+.po-mode-btns button.on {
+  border-color: var(--green);
+  background: #eefae6;
+}
+.po-members {
+  list-style: none;
+  margin: 0;
+  padding: 10px;
+  background: #fff;
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-weight: 700;
+}
+.po-rules {
+  background: #fff;
+  border-radius: var(--radius);
+  padding: 14px;
+  line-height: 1.7;
+}
+.po-rules ol {
+  margin: 0;
+  padding-left: 1.3em;
+}
+
+/* ---------- カード ---------- */
+.po-card {
+  --oc: #6fae7a;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 76px;
+  padding: 3px;
+  border: none;
+  border-radius: 10px;
+  background: var(--oc);
+  font: inherit;
+  color: inherit;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s, opacity 0.15s;
+  flex: none;
+}
+.po-card:disabled {
+  cursor: default;
+}
+.po-card.ok {
+  transform: translateY(-8px);
+  box-shadow: 0 0 0 3px #ffd23f, 0 4px 8px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+.po-card.dim {
+  opacity: 0.5;
+}
+.po-card-order {
+  color: #fff;
+  font-size: 9px;
+  font-weight: 900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+  padding: 0 2px 1px;
+}
+.po-card-hp {
+  position: absolute;
+  right: 4px;
+  top: 15px;
+  z-index: 1;
+  background: #fff;
+  border-radius: 9px;
+  padding: 0 5px;
+  font-size: 15px;
+  font-weight: 900;
+  color: #d8453a;
+  line-height: 1.3;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+.po-card-hp small {
+  font-size: 9px;
+}
+.po-card-photo {
+  aspect-ratio: 1;
+  border-radius: 7px;
+  overflow: hidden;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+}
+.po-card-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.po-card-name {
+  background: #fffdf3;
+  border-radius: 5px;
+  margin-top: 2px;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.3;
+  padding: 1px 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.po-card-tier {
+  position: absolute;
+  left: 5px;
+  bottom: 22px;
+  font-size: 9px;
+  font-weight: 900;
+  color: #fff;
+  border-radius: 6px;
+  padding: 0 4px;
+  background: linear-gradient(135deg, #8d99a6, #cfd8e0 50%, #7d8894);
+}
+.po-card-tier.t-SR {
+  background: linear-gradient(135deg, #c4901a, #ffe27a 50%, #b07a10);
+  color: #5a3d00;
+}
+.po-card-tier.t-UR {
+  background: linear-gradient(90deg, #ff5a7a, #ffb347, #ffe14d, #6bd66b, #4ab0ff, #a77bff);
+}
+.po-card.top {
+  width: 132px;
+  padding: 5px;
+  border-radius: 14px;
+}
+.po-card.top .po-card-order {
+  font-size: 13px;
+}
+.po-card.top .po-card-hp {
+  top: 24px;
+  right: 7px;
+  font-size: 24px;
+}
+.po-card.top .po-card-hp small {
+  font-size: 13px;
+}
+.po-card.top .po-card-name {
+  font-size: 14px;
+}
+.po-card.top .po-card-tier {
+  bottom: 30px;
+  left: 8px;
+  font-size: 12px;
+}
+
+/* ---------- テーブル ---------- */
+.po-table {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.po-others {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+.po-other {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: #fff;
+  border: 3px solid transparent;
+  border-radius: 12px;
+  padding: 5px 10px;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.08);
+  min-width: 90px;
+}
+.po-other.turn {
+  border-color: #ffb020;
+}
+.po-other-name {
+  font-size: 12px;
+  font-weight: 900;
+}
+.po-other-cards {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: 900;
+  font-size: 16px;
+}
+.po-back-mini {
+  display: inline-block;
+  width: 14px;
+  height: 19px;
+  border-radius: 3px;
+  background: repeating-linear-gradient(45deg, #4a8c3f 0 3px, #6fae7a 3px 6px);
+  border: 1px solid #fff;
+}
+.po-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 18px;
+}
+.po-pile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.po-pile small {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b6a55;
+}
+.po-back {
+  width: 86px;
+  height: 120px;
+  border-radius: 12px;
+  border: 4px solid #fff;
+  background: repeating-linear-gradient(45deg, #4a8c3f 0 8px, #6fae7a 8px 16px);
+  color: #fff;
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.25);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+.po-back span {
+  font-size: 16px;
+  font-weight: 900;
+}
+.po-back b {
+  font-size: 26px;
+}
+.po-back.can {
+  animation: po-pulse 0.9s infinite;
+  box-shadow: 0 0 0 4px #ffd23f, 0 3px 6px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+.po-hint {
+  margin: 0;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+}
+.po-log {
+  height: 82px;
+  overflow-y: auto;
+  background: #fffdf3;
+  border: 3px solid #e6dfc4;
+  border-radius: 12px;
+  padding: 4px 10px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.po-log p {
+  margin: 0;
+  opacity: 0.55;
+}
+.po-log p.now {
+  opacity: 1;
+  font-weight: 900;
+}
+.po-turn {
+  margin: 0;
+  text-align: center;
+  font-weight: 900;
+  background: #f1efe2;
+  border-radius: 12px;
+  padding: 6px;
+}
+.po-turn.mine {
+  background: #fff3b0;
+}
+.po-hand {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  padding-top: 10px;
+}
+.po-count {
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b6a55;
+}
+.po-result {
+  text-align: center;
+  background: #fff;
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: var(--shadow);
+}
+.po-result b {
+  font-size: 26px;
+}
+.po-result.win b {
+  color: #d88a00;
+}
+.po-result ol {
+  text-align: left;
+  display: inline-block;
+  margin: 8px 0;
+}
+.po-result-btns {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+.po-shout {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  white-space: pre-line;
+  text-align: center;
+  font-size: 40px;
+  font-weight: 900;
+  color: #ff5a3d;
+  text-shadow: 0 0 6px #fff, 0 0 12px #fff, 0 3px 0 #fff;
+  pointer-events: none;
+  z-index: 50;
+  animation: po-shout 1.3s forwards;
+}
+@keyframes po-pulse {
+  50% {
+    transform: scale(1.05);
+  }
+}
+@keyframes po-shout {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  20% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  80% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}

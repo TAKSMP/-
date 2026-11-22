@@ -78,7 +78,7 @@ export const LOCK_TREE: { label: string; groups: LockGroup[] }[] = [
           { key: 'battleOld', label: 'まえのばん' },
         ],
       },
-      { label: 'カードゲーム', leaves: [{ key: 'cardGame', label: 'カードゲーム' }] },
+      { label: 'カードゲーム', leaves: [{ key: 'cardGame', label: 'カードバトル' }, { key: 'pageOne', label: 'ページワン' }] },
       { label: 'レース', leaves: [{ key: 'race', label: 'こうえんレース' }, { key: 'raceOld', label: 'まえのばん' }] },
       { label: 'ショップ', leaves: [{ key: 'shop', label: 'ちょうむしショップ' }] },
     ],

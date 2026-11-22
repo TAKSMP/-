@@ -584,7 +584,7 @@ export function CardGamePage({ bugs, onGoCapture }: Props) {
     return (
       <div className="cg-page net-battle-menu">
         <h2 className="cg-h2">あいてを まっています…</h2>
-        <RoomWordCard code={code} note="この ことばを あいてに つたえてね。あいても「カードゲーム」の「つうしん」から はいるよ。" />
+        <RoomWordCard code={code} note="この ことばを あいてに つたえてね。あいても「カードゲーム」→「カードバトル」の「つうしん」から はいるよ。" />
         {gone && <p className="story-notice">へやが なくなりました。</p>}
         <button className="btn btn-ghost cg-back" onClick={leaveNet}>
           ← やめる

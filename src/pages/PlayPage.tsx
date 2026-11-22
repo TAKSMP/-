@@ -12,6 +12,7 @@ import { RacePage } from './RacePage'
 import { RacePageOld } from './RacePageOld'
 import { NetBattlePage } from './NetBattlePage'
 import { CardGamePage } from './CardGamePage'
+import { PageOnePage } from './PageOnePage'
 import { sfx } from '../lib/sound'
 import { guardLock } from '../lib/childLock'
 
@@ -25,7 +26,7 @@ interface Props {
 // 画面（Game）→ チャイルドロックの 項目キー（メニューは null）
 const LOCK_KEY: Partial<Record<string, string>> = {
   quiz: 'quiz', battleQuiz: 'battleQuiz', kentei: 'kentei', shop: 'shop', story: 'story', dojo: 'dojo', dojoAdult: 'dojoAdult', dojoChouchou: 'dojoChouchou',
-  battle: 'battle', battleOld: 'battleOld', net: 'net', race: 'race', raceOld: 'raceOld', cardGame: 'cardGame',
+  battle: 'battle', battleOld: 'battleOld', net: 'net', race: 'race', raceOld: 'raceOld', cardGame: 'cardGame', pageOne: 'pageOne',
 }
 
 // ゲーム → クイズ／ストーリー（ストーリーモード／わざ道場）／バトル／レース。
@@ -48,7 +49,9 @@ type Game =
   | 'race'
   | 'raceOld'
   | 'shop'
+  | 'cardMenu'
   | 'cardGame'
+  | 'pageOne'
 
 // 「ゲーム」ページ。クイズ・ストーリー・バトル・レースを えらべる。
 export function PlayPage({ bugs, onGoCapture, onActiveChange, resetSignal }: Props) {
@@ -265,13 +268,43 @@ export function PlayPage({ bugs, onGoCapture, onActiveChange, resetSignal }: Pro
     )
   }
 
-  // ちょうむしカードゲーム（紙の カードゲームと おなじ ルール）
-  if (game === 'cardGame') {
+  // カードゲームの メニュー（カードバトル／ページワン）
+  if (game === 'cardMenu') {
     return frame(
       null,
       'ゲーム',
-      header('🃏 ちょうむしカードゲーム', 'デッキ 4まいで たいせん！'),
+      header('🃏 カードゲーム', 'どの ゲームで あそぶ？'),
+      <div className="game-menu">
+        <button className="game-card battle" onClick={() => go('cardGame')}>
+          <span className="game-emoji">⚔️</span>
+          <span className="game-title">ちょうむしカードバトル</span>
+          <span className="game-desc">デッキ 4まいで たいせん！ コンピューターや ともだちと</span>
+        </button>
+        <button className="game-card quiz" onClick={() => go('pageOne')}>
+          <span className="game-emoji">🃏</span>
+          <span className="game-title">ちょうむしページワン</span>
+          <span className="game-desc">おなじ 目 か おなじ たいりょく なら だせる！ みんなで あそべる</span>
+        </button>
+      </div>,
+    )
+  }
+
+  // ちょうむしカードバトル（紙の カードゲームと おなじ ルール）
+  if (game === 'cardGame') {
+    return frame(
+      'cardMenu',
+      'カードゲーム',
+      header('⚔️ ちょうむしカードバトル', 'デッキ 4まいで たいせん！'),
       <CardGamePage bugs={bugs} onGoCapture={onGoCapture} />,
+    )
+  }
+
+  if (game === 'pageOne') {
+    return frame(
+      'cardMenu',
+      'カードゲーム',
+      header('🃏 ちょうむしページワン', 'おなじ 目 か おなじ たいりょく なら だせる！'),
+      <PageOnePage bugs={bugs} onGoCapture={onGoCapture} />,
     )
   }
 
@@ -317,10 +350,10 @@ export function PlayPage({ bugs, onGoCapture, onActiveChange, resetSignal }: Pro
           <span className="game-title">バトル</span>
           <span className="game-desc">さいだい 4たい4／つうしんバトル</span>
         </button>
-        <button className="game-card battle" onClick={() => go('cardGame')}>
+        <button className="game-card battle" onClick={() => go('cardMenu')}>
           <span className="game-emoji">🃏</span>
           <span className="game-title">カードゲーム</span>
-          <span className="game-desc">図鑑の 虫が カードに！ コンピューターや ともだちと たいせん</span>
+          <span className="game-desc">カードバトル と ページワン。図鑑の 虫が カードに！</span>
         </button>
         <button className="game-card race" onClick={() => go('race')}>
           <span className="game-emoji">🏁</span>
