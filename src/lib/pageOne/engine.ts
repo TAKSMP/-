@@ -57,6 +57,7 @@ export interface POState {
   drawMode: DrawMode
   handSize: number
   winner: string | null
+  drawn?: { pid: string; card: number } // ひいた カードが そのまま だせる（ボタンで だす）
   pending?: string // のこり 1まいに なって「ちょうむしワン！！」を まっている ひと
   miss?: Record<string, number> // おてつきの かず
   out?: (POPlayer & { why: 'forgot' | 'miss' })[] // とちゅうで まけた ひと
@@ -158,6 +159,7 @@ export function hydratePO(raw: POState): POState {
     handSize: s.handSize ?? HAND_DEFAULT,
     winner: s.winner ?? null,
     pending: s.pending ?? undefined,
+    drawn: s.drawn ?? undefined,
     miss: s.miss ?? {},
     out: s.out ?? [],
     log: s.log ?? [],
@@ -240,7 +242,12 @@ export function applyAction(input: POState, cards: PCard[], pid: string, act: PO
   const st = clone(input)
   const r = rng(st.seed)
   const log: POEvent[] = []
-  if (st.pending) {
+  if (st.drawn) {
+    // ひいた カードが だせる：その カードを だす ことだけ できる
+    if (st.drawn.pid !== pid || act.type !== 'play' || act.card !== st.drawn.card) return input
+    st.drawn = undefined
+    doPlay(st, pid, act.card, log, true)
+  } else if (st.pending) {
     // のこり 1まいの ひとが「ちょうむしワン！！」を いうか、じかんぎれ まで まつ
     if (st.pending !== pid) return input
     if (act.type === 'call') {
@@ -272,8 +279,8 @@ export function applyAction(input: POState, cards: PCard[], pid: string, act: PO
       }
       count++
       if (canPlay(cards, c, topOf(st))) {
-        log.push({ t: 'draw', pid, n: count })
-        doPlay(st, pid, c, log, true)
+        log.push({ t: 'draw', pid, n: count, card: c })
+        st.drawn = { pid, card: c } // てふだに いれて「このまま だせる！」
         break
       }
       if (st.drawMode === 'one') {
@@ -317,6 +324,7 @@ export function removePlayer(input: POState, pid: string): POState {
 export function cpuAction(st: POState, cards: PCard[], pid: string, level: CpuLevel = 'normal', rand = Math.random): POAction | null {
   // のこり 1まい：「ちょうむしワン！！」
   if (st.pending === pid) return { type: 'call' }
+  if (st.drawn?.pid === pid) return { type: 'play', card: st.drawn.card }
   const ok = playableOf(st, cards, pid)
   if (!ok.length) return { type: 'draw' }
   if (level === 'easy' || rand() < 0.15) return { type: 'play', card: ok[Math.floor(rand() * ok.length)] }

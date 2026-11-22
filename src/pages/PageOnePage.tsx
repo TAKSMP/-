@@ -144,7 +144,7 @@ export function missReason(e: POEvent, cards: PCard[]): string {
   return `だせる カード（${ok?.name ?? ''}${why ? '：' + why : ''}）が あるのに 山から ひいたよ`
 }
 
-function eventText(e: POEvent, name: (pid?: string) => string, cards: PCard[]): string {
+export function eventText(e: POEvent, name: (pid?: string) => string, cards: PCard[]): string {
   const c = e.card !== undefined ? cards[e.card] : undefined
   switch (e.t) {
     case 'start':
@@ -198,7 +198,6 @@ function Table({
   onQuit: () => void
   onAgain?: () => void
 }) {
-  const [lines, setLines] = useState<string[]>([])
   const [shout, setShout] = useState<string | null>(null)
   const [missMsg, setMissMsg] = useState<string | null>(null)
   const seqRef = useRef(0)
@@ -208,10 +207,8 @@ function Table({
   useEffect(() => {
     if (seqRef.current === st.seq) return
     seqRef.current = st.seq
-    const add = st.log.map((e) => eventText(e, name, cards))
     // じぶんが つぎに うごいたら おてつきの せつめいを けす
     if (st.log.some((e) => e.pid === me && e.t !== 'miss' && e.t !== 'missDraw')) setMissMsg(null)
-    setLines((l) => [...l, ...add].slice(-30))
     const call = st.log.find((e) => e.t === 'call')
     const forgot = st.log.find((e) => e.t === 'forgot')
     const miss = st.log.find((e) => e.t === 'miss' || e.t === 'missDraw')
@@ -245,17 +242,14 @@ function Table({
   useEffect(() => {
     if (myTurnNow) handRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   }, [myTurnNow, st.seq])
-  const logRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    logRef.current?.scrollTo({ top: logRef.current.scrollHeight })
-  }, [lines])
 
   const top = topOf(st)
   const topCard = top !== undefined ? cards[top] : undefined
   const myTurn = !st.winner && current(st)?.id === me
-  const hand = [...(st.hands[me] ?? [])].sort((a, b) =>
-    cards[a].order === cards[b].order ? cards[a].hp - cards[b].hp : cards[a].order.localeCompare(cards[b].order),
-  )
+  // あたらしい カードが いちばん ひだりうえ
+  const hand = [...(st.hands[me] ?? [])].reverse()
+  const drawnMine = st.drawn?.pid === me ? st.drawn.card : undefined
+  const newCard = st.log.some((e) => e.t === 'draw' && e.pid === me) ? (st.hands[me] ?? [])[(st.hands[me] ?? []).length - 1] : undefined
   const handW = Math.floor(Math.min(420, window.innerWidth - 24) / 3) - 8
   const ranking = st.winner
     ? [...st.players].sort((a, b) => (st.hands[a.id]?.length ?? 0) - (st.hands[b.id]?.length ?? 0))
@@ -287,7 +281,7 @@ function Table({
           <button
             type="button"
             className="po-back"
-            disabled={!myTurn || waitCall}
+            disabled={!myTurn || waitCall || drawnMine !== undefined}
             onClick={() => onAct({ type: 'draw' })}
           >
             <CardBack width={92} />
@@ -303,18 +297,13 @@ function Table({
         </p>
       )}
 
-      <div className="po-log" ref={logRef}>
-        {lines.map((l, i) => (
-          <p key={i} className={i === lines.length - 1 ? 'now' : ''}>
-            {l}
-          </p>
-        ))}
-      </div>
 
       {!st.winner && (
         <p className={`po-turn${myTurn ? ' mine' : ''}`}>
           {waitCall
             ? '❗ のこり 1まい！ なんて いうのかな？'
+            : drawnMine !== undefined
+              ? '✨ ひいた カードが そのまま だせるよ！'
             : myTurn
               ? '✨ あなたの ばん！ だせる カードを タップ。なければ 山から ひこう'
               : st.pending
@@ -323,6 +312,11 @@ function Table({
         </p>
       )}
 
+      {drawnMine !== undefined && (
+        <button type="button" className="po-call po-playnow" onClick={() => onAct({ type: 'play', card: drawnMine })}>
+          ▶ このまま だせる！
+        </button>
+      )}
       {waitCall && (
         <button key={st.seq} type="button" className="po-call" onClick={() => onAct({ type: 'call' })}>
           📣 {CALL_WORD}
@@ -349,10 +343,10 @@ function Table({
             card={cards[c]}
             photo={photoOf(cards[c])}
             width={handW}
-            className="po-hcard"
-            onTap={myTurn && !waitCall ? () => onAct({ type: 'play', card: c }) : undefined}
+            className={`po-hcard${c === drawnMine ? ' glow' : ''}${c === newCard ? ' new' : ''}`}
+            onTap={myTurn && !waitCall && (drawnMine === undefined || c === drawnMine) ? () => onAct({ type: 'play', card: c }) : undefined}
             zoomExtra={
-              myTurn && !waitCall
+              myTurn && !waitCall && (drawnMine === undefined || c === drawnMine)
                 ? (close) => (
                     <button
                       className="btn btn-big btn-primary"
