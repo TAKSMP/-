@@ -387,6 +387,7 @@ class Ctx {
         this.ev({ t: `${dieFace(d)} ${N(f)}は しびれて うごけない！ ⚡`, d, a: f.uid, fx: 'status' })
         return
       }
+      this.ev({ t: `${dieFace(d)} しびれて いるけど うごけた！`, d, a: f.uid, fx: 'info' })
     }
     let move = a.move
     let idx = a.moveIdx
@@ -474,6 +475,7 @@ class Ctx {
         this.ev({ t: `${dieFace(d)} しっぱい…`, d, a: f.uid, fx: 'miss' })
         return
       }
+      this.ev({ t: `${dieFace(d)} せいこう！`, d, a: f.uid, fx: 'info' })
     }
     const foes: CF[] =
       m.target === 'allFoes' ? activeOf(this.st, other(f.side)) : foeSide ? [this.foeTarget(f, want)].filter(alive) : []
@@ -575,6 +577,7 @@ class Ctx {
         if (m.rest) f.resting = 1
         return
       }
+      this.ev({ t: `${dieFace(d)} あたった！`, d, a: f.uid, fx: 'info' })
     }
     let hits = 1
     if (m.hits) {
@@ -590,6 +593,7 @@ class Ctx {
       const d = this.dice()
       crit = d === 6
       if (crit) this.ev({ t: `${dieFace(d)} きゅうしょに あたった！`, d, a: f.uid, fx: 'big' })
+      else this.ev({ t: `${dieFace(d)} きゅうしょには あたらなかった`, d, a: f.uid, fx: 'info' })
     }
     let total = 0
     for (const t of targets) {
@@ -715,6 +719,7 @@ class Ctx {
   applyChips(f: CF, m: CardMove, foes: CF[], friends: CF[]) {
     if (!m.chips?.length) return
     let rolled = 0
+    let shownOk = false
     for (const c of m.chips) {
       if (c.need > 1) {
         rolled = rolled || this.dice()
@@ -722,6 +727,8 @@ class Ctx {
           this.ev({ t: `${dieFace(rolled)} チップは つかなかった`, d: rolled, fx: 'miss' })
           continue
         }
+        if (!shownOk) this.ev({ t: `${dieFace(rolled)} チップが つく！`, d: rolled, fx: 'info' })
+        shownOk = true
       }
       const who: CF[] =
         c.who === 'self' ? [f]
