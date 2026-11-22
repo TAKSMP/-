@@ -494,3 +494,21 @@
 .po-other-miss {
   font-size: 11px;
 }
+
+.po-missmsg {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: #fff0ec;
+  border: 3px solid #f2a08c;
+  border-radius: 14px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: #7a2e1c;
+}
+.po-missmsg b {
+  font-size: 16px;
+  color: #c0533f;
+}

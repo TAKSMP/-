@@ -130,6 +130,20 @@ function TopCard({ c, photo }: { c: PCard; photo?: string }) {
   )
 }
 
+// おてつきの わけ
+export function missReason(e: POEvent, cards: PCard[]): string {
+  const top = e.top !== undefined ? cards[e.top] : undefined
+  const tops = top ? `ばの カードは ${top.order}・❤️${top.hp}` : ''
+  if (e.t === 'miss') {
+    const c = e.card !== undefined ? cards[e.card] : undefined
+    if (!c) return 'その カードは だせないよ'
+    return `${c.name}は ${c.order}・❤️${c.hp}。${tops}。目も たいりょくも ちがうから だせないよ`
+  }
+  const ok = e.ok !== undefined ? cards[e.ok] : undefined
+  const why = ok && top ? (ok.order === top.order ? `おなじ ${ok.order}` : `おなじ ❤️${ok.hp}`) : ''
+  return `だせる カード（${ok?.name ?? ''}${why ? '：' + why : ''}）が あるのに 山から ひいたよ`
+}
+
 function eventText(e: POEvent, name: (pid?: string) => string, cards: PCard[]): string {
   const c = e.card !== undefined ? cards[e.card] : undefined
   switch (e.t) {
@@ -156,9 +170,8 @@ function eventText(e: POEvent, name: (pid?: string) => string, cards: PCard[]): 
     case 'forgot':
       return `😱 ${name(e.pid)}は「${CALL_WORD}」を いいわすれた… まけ！`
     case 'miss':
-      return `😵 ${name(e.pid)}は おてつき！ ${c?.name ?? ''}（${c?.order} ❤️${c?.hp}）は だせないよ（${e.n}/${MISS_MAX}）`
     case 'missDraw':
-      return `😵 ${name(e.pid)}は おてつき！ だせる カードが あるのに ひいた（${e.n}/${MISS_MAX}）`
+      return `😵 ${name(e.pid)}は おてつき（${e.n}/${MISS_MAX}）：${missReason(e, cards)}`
     case 'out3':
       return `😢 ${name(e.pid)}は おてつき ${MISS_MAX}かいで まけ…`
   }
@@ -187,6 +200,7 @@ function Table({
 }) {
   const [lines, setLines] = useState<string[]>([])
   const [shout, setShout] = useState<string | null>(null)
+  const [missMsg, setMissMsg] = useState<string | null>(null)
   const seqRef = useRef(0)
   const name = (pid?: string) =>
     pid === me ? 'あなた' : ([...st.players, ...(st.out ?? [])].find((p) => p.id === pid)?.name ?? '？')
@@ -195,6 +209,8 @@ function Table({
     if (seqRef.current === st.seq) return
     seqRef.current = st.seq
     const add = st.log.map((e) => eventText(e, name, cards))
+    // じぶんが つぎに うごいたら おてつきの せつめいを けす
+    if (st.log.some((e) => e.pid === me && e.t !== 'miss' && e.t !== 'missDraw')) setMissMsg(null)
     setLines((l) => [...l, ...add].slice(-30))
     const call = st.log.find((e) => e.t === 'call')
     const forgot = st.log.find((e) => e.t === 'forgot')
@@ -207,6 +223,7 @@ function Table({
       out3.pid === me ? sfx.lose() : sfx.dodge()
       setTimeout(() => setShout(null), 1800)
     } else if (miss) {
+      if (miss.pid === me) setMissMsg(missReason(miss, cards))
       setShout(`おてつき😵\n${miss.n}/${MISS_MAX}`)
       sfx.dodge()
       setTimeout(() => setShout(null), 1200)
@@ -310,6 +327,12 @@ function Table({
         <button key={st.seq} type="button" className="po-call" onClick={() => onAct({ type: 'call' })}>
           📣 {CALL_WORD}
         </button>
+      )}
+      {missMsg && (
+        <div className="po-missmsg" onClick={() => setMissMsg(null)}>
+          <b>😵 おてつき！</b>
+          <span>{missMsg}</span>
+        </div>
       )}
       {myMiss > 0 && !st.winner && (
         <p className="po-miss">
@@ -438,7 +461,7 @@ export function PageOnePage({ bugs, onGoCapture }: Props) {
     if (!p?.cpu) return
     const act = cpuAction(st, cards, p.id, p.cpu)
     if (!act) return
-    const t = setTimeout(() => setSt((s) => (s ? applyAction(s, cards, p.id, act) : s)), st.pending ? 900 : 1100)
+    const t = setTimeout(() => setSt((s) => (s ? applyAction(s, cards, p.id, act) : s)), st.pending ? 1600 : 2400)
     return () => clearTimeout(t)
   }, [phase, st, cards])
 

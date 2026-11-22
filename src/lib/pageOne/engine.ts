@@ -44,6 +44,8 @@ export interface POEvent {
   pid?: string
   card?: number
   n?: number
+  top?: number // おてつきの とき：ばの カード
+  ok?: number // おてつきの とき：だせた カード（ひいた とき）
 }
 
 export interface POState {
@@ -220,10 +222,10 @@ function doPlay(st: POState, pid: string, c: number, log: POEvent[], drawn = fal
 }
 
 // おてつき：かずを ふやして、3かいめなら まけ（true を かえす）
-function addMiss(st: POState, pid: string, log: POEvent[], t: 'miss' | 'missDraw', card?: number): boolean {
+function addMiss(st: POState, pid: string, log: POEvent[], t: 'miss' | 'missDraw', card?: number, ok?: number): boolean {
   const n = (st.miss?.[pid] ?? 0) + 1
   st.miss = { ...(st.miss ?? {}), [pid]: n }
-  log.push({ t, pid, n, card })
+  log.push({ t, pid, n, card, ok, top: topOf(st) })
   if (n >= MISS_MAX) {
     log.push({ t: 'out3', pid })
     dropPlayer(st, pid, log, 'miss')
@@ -257,7 +259,8 @@ export function applyAction(input: POState, cards: PCard[], pid: string, act: PO
     else doPlay(st, pid, act.card, log)
   } else {
     // いつでも ひける。でも だせる カードが あるのに ひいたら おてつき
-    const lost = playableOf(st, cards, pid).length > 0 && addMiss(st, pid, log, 'missDraw')
+    const can = playableOf(st, cards, pid)
+    const lost = can.length > 0 && addMiss(st, pid, log, 'missDraw', undefined, can[0])
     let count = 0
     while (!lost) {
       const c = drawOne(st, pid, r, log)
