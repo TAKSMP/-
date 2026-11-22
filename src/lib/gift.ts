@@ -95,6 +95,8 @@ async function openRoom(code: string, want: GiftKind): Promise<GiftRoom> {
     throw new Error(
       room.kind === 'race'
         ? 'それは レースの へやだよ。'
+        : room.kind === 'card'
+        ? 'それは カードゲームの へやだよ。'
         : 'それは つうしんバトルの へやだよ。',
     )
   }

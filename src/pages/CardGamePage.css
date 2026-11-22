@@ -1,0 +1,904 @@
+/* =========================================================
+   ちょうむしカードゲーム
+   ========================================================= */
+.cg-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.cg-h2 {
+  margin: 4px 0 0;
+  font-size: 22px;
+  text-align: center;
+}
+.cg-lead {
+  margin: 0;
+  text-align: center;
+  font-size: 15px;
+  line-height: 1.6;
+}
+.cg-back {
+  align-self: center;
+}
+.cg-notice {
+  background: #fff3cd;
+  border-radius: 12px;
+  padding: 8px 12px;
+  text-align: center;
+  font-weight: 700;
+}
+
+/* ---------- レア度 ---------- */
+.cg-tier {
+  display: inline-grid;
+  place-items: center;
+  min-width: 26px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 900;
+  color: #fff;
+  background: #6fae7a;
+  letter-spacing: 0.02em;
+  flex: none;
+}
+.cg-tier.t-R {
+  background: linear-gradient(135deg, #8d99a6, #cfd8e0 50%, #7d8894);
+}
+.cg-tier.t-SR {
+  background: linear-gradient(135deg, #c4901a, #ffe27a 50%, #b07a10);
+  color: #5a3d00;
+}
+.cg-tier.t-UR {
+  background: linear-gradient(90deg, #ff5a7a, #ffb347, #ffe14d, #6bd66b, #4ab0ff, #a77bff);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+}
+
+/* ---------- カード 1まい ---------- */
+.cg-card {
+  --frame: #6fae7a;
+  width: min(100%, 330px);
+  margin: 0 auto;
+  border-radius: 16px;
+  padding: 7px;
+  background: var(--frame);
+  box-shadow: var(--shadow);
+}
+.cg-card.t-R {
+  --frame: linear-gradient(135deg, #8d99a6, #e3e9ee 40%, #9aa5b0 60%, #d6dde3);
+}
+.cg-card.t-SR {
+  --frame: linear-gradient(135deg, #c4901a, #ffe9a0 40%, #d9a520 60%, #fff0b3);
+}
+.cg-card.t-UR {
+  --frame: linear-gradient(135deg, #ff5a7a, #ffb347, #ffe14d, #6bd66b, #4ab0ff, #a77bff, #ff5a7a);
+}
+.cg-card-in {
+  background: #fffdf3;
+  border-radius: 11px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cg-card-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cg-card-name {
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1.15;
+  flex: 1;
+  min-width: 0;
+}
+.cg-card-name.long {
+  font-size: 15px;
+}
+.cg-card-lv {
+  font-size: 11px;
+  font-weight: 900;
+  color: #fff;
+  background: #3a3a3a;
+  border-radius: 8px;
+  padding: 2px 6px;
+  flex: none;
+}
+.cg-card-hp {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  font-size: 24px;
+  font-weight: 900;
+  color: #d8453a;
+  white-space: nowrap;
+  flex: none;
+}
+.cg-card-hp small {
+  font-size: 10px;
+  color: #8a5a50;
+}
+.cg-card-photo {
+  position: relative;
+  height: 130px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #e8f4ea;
+  display: grid;
+  place-items: center;
+}
+.cg-card-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.cg-card-nophoto {
+  font-size: 54px;
+}
+.cg-card-order {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.cg-card-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.cg-card-stats span {
+  background: #f1efe2;
+  border-radius: 10px;
+  padding: 3px 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+.cg-card-stats b {
+  font-size: 18px;
+}
+.cg-card-moves {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.cg-card-foot {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  font-weight: 700;
+  color: #7c8a6a;
+}
+
+/* ---------- わざ ---------- */
+.cg-move {
+  --k: #e2513b;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: #fff;
+  border: 2px solid #ece6d2;
+  border-radius: 12px;
+  padding: 5px 7px;
+  text-align: left;
+  width: 100%;
+}
+.cg-move.k-status {
+  --k: #8e5bd6;
+}
+.cg-move.k-heal {
+  --k: #3aa65a;
+}
+.cg-move.k-power {
+  --k: #3a8ed6;
+}
+.cg-move.ult {
+  border-color: #f0c64a;
+  background: #fffaf0;
+}
+.cg-move.used {
+  opacity: 0.45;
+}
+.cg-move-ic {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: none;
+  width: 38px;
+}
+.cg-move-ic b {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--k);
+  font-size: 18px;
+}
+.cg-move-ic small {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--k);
+  white-space: nowrap;
+}
+.cg-move-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.cg-move-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cg-move-name {
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+.cg-move-text {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #4a4a3a;
+}
+.cg-move-big {
+  flex: none;
+  min-width: 44px;
+  text-align: center;
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--k);
+  line-height: 1;
+}
+.cg-move-big.small {
+  font-size: 15px;
+}
+.cg-move-big small {
+  display: block;
+  font-size: 12px;
+}
+.cg-dots {
+  display: inline-flex;
+  gap: 3px;
+  flex: none;
+}
+.cg-dots i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--k, #8e5bd6);
+}
+.cg-dots i.off {
+  background: #ddd;
+}
+.cg-dots.inf {
+  font-size: 13px;
+  font-weight: 900;
+  color: #999;
+}
+
+/* ---------- ちいさい カード ---------- */
+.cg-mini {
+  --frame: #6fae7a;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  padding: 4px 4px 5px;
+  border: none;
+  border-radius: 12px;
+  background: var(--frame);
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  min-width: 0;
+}
+.cg-mini.t-R {
+  --frame: linear-gradient(135deg, #8d99a6, #e3e9ee 50%, #9aa5b0);
+}
+.cg-mini.t-SR {
+  --frame: linear-gradient(135deg, #c4901a, #ffe9a0 50%, #d9a520);
+}
+.cg-mini.t-UR {
+  --frame: linear-gradient(135deg, #ff5a7a, #ffb347, #ffe14d, #6bd66b, #4ab0ff, #a77bff);
+}
+.cg-mini.sel {
+  outline: 4px solid #ff8a3d;
+}
+.cg-mini.dis {
+  opacity: 0.45;
+}
+.cg-mini.locked .cg-mini-photo img {
+  filter: grayscale(1) brightness(0.55);
+}
+.cg-mini-photo {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 9px;
+  overflow: hidden;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+}
+.cg-mini-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.cg-mini-photo .cg-tier {
+  position: absolute;
+  left: 3px;
+  top: 3px;
+}
+.cg-mini-badge {
+  position: absolute;
+  right: 3px;
+  top: 3px;
+  background: #ff8a3d;
+  color: #fff;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 900;
+}
+.cg-mini-lock {
+  position: absolute;
+  font-size: 26px;
+}
+.cg-mini-name {
+  background: #fffdf3;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.2;
+  padding: 2px 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cg-mini-stat {
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.cg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 8px;
+}
+
+/* ---------- デッキ ---------- */
+.cg-deck,
+.cg-menu-deck-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.cg-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.cg-slot.empty {
+  border: 3px dashed #c9c3a8;
+  border-radius: 12px;
+  min-height: 120px;
+  align-items: center;
+  justify-content: center;
+}
+.cg-slot-no {
+  font-size: 11px;
+  font-weight: 900;
+  text-align: center;
+  color: #6b6a55;
+}
+.cg-slot-plus {
+  font-size: 28px;
+  color: #c9c3a8;
+}
+.cg-slot-btns {
+  display: flex;
+  justify-content: space-between;
+}
+.cg-slot-btns button {
+  border: none;
+  background: #fff;
+  border-radius: 8px;
+  padding: 3px 7px;
+  font-size: 12px;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.1);
+}
+.cg-slot-btns button:disabled {
+  opacity: 0.3;
+}
+.cg-rule {
+  margin: 0;
+  text-align: center;
+  font-weight: 900;
+  color: #c0533f;
+}
+.cg-rule.ok {
+  color: #3f7a30;
+}
+.cg-rule-small {
+  margin: -6px 0 0;
+  text-align: center;
+  font-size: 11px;
+  color: #6b6a55;
+}
+.cg-row-btns {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+.cg-tabs {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.cg-tabs button {
+  border: none;
+  border-radius: 14px;
+  padding: 5px 12px;
+  font: inherit;
+  font-weight: 900;
+  background: #fff;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.1);
+}
+.cg-tabs button.on {
+  background: var(--green);
+  color: #fff;
+}
+.cg-menu-deck {
+  background: #fff;
+  border-radius: var(--radius);
+  padding: 10px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+}
+.cg-menu-deck-title {
+  font-weight: 900;
+}
+.cg-menu-deck-edit {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--green-deep);
+}
+.cg-menu-deck .cg-slot.empty {
+  min-height: 100px;
+}
+
+/* ---------- モーダル ---------- */
+.cg-modal {
+  position: relative;
+  width: min(94vw, 360px);
+  max-height: 92vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 40px;
+}
+.cg-modal .modal-close {
+  position: absolute;
+  right: 4px;
+  top: 0;
+  z-index: 2;
+}
+.cg-modal-note {
+  margin: 0;
+  text-align: center;
+  background: #fff;
+  border-radius: 12px;
+  padding: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* ---------- たたかい ---------- */
+.cg-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cg-names {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 900;
+  font-size: 14px;
+}
+.cg-round {
+  background: #2f3a24;
+  color: #fff;
+  border-radius: 10px;
+  padding: 2px 10px;
+  font-size: 12px;
+}
+.cg-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.cg-row.foe .cg-panel {
+  background: #fff3f0;
+}
+.cg-panel {
+  position: relative;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px;
+  border: 3px solid transparent;
+  border-radius: 14px;
+  background: #f0fbea;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  min-width: 0;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.08);
+  transition: transform 0.15s;
+}
+.cg-panel.out {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+.cg-panel.hidden .cg-panel-photo img {
+  opacity: 0.25;
+}
+.cg-panel.actor {
+  border-color: #ffb020;
+  transform: translateY(-3px);
+}
+.cg-panel.cur {
+  border-color: #4aa8e0;
+}
+.cg-panel.pick {
+  border-color: #ff5a3d;
+  animation: cg-pulse 0.8s infinite;
+  cursor: pointer;
+}
+.cg-panel.fx-hit,
+.cg-panel.fx-faint {
+  animation: cg-shake 0.35s;
+}
+.cg-panel.fx-heal {
+  box-shadow: 0 0 0 4px #7fdc8f;
+}
+.cg-panel.fx-status,
+.cg-panel.fx-debuff {
+  box-shadow: 0 0 0 4px #c69cf0;
+}
+.cg-panel.fx-buff {
+  box-shadow: 0 0 0 4px #ffd23f;
+}
+.cg-panel-photo {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  overflow: visible;
+  flex: none;
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+}
+.cg-panel-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+}
+.cg-panel-aim {
+  position: absolute;
+  font-size: 30px;
+}
+.cg-pop {
+  position: absolute;
+  top: -8px;
+  right: -10px;
+  font-size: 20px;
+  font-weight: 900;
+  color: #e2513b;
+  text-shadow: 0 0 3px #fff, 0 0 3px #fff;
+  animation: cg-pop 0.9s forwards;
+}
+.cg-pop.heal {
+  color: #2f9a4a;
+}
+.cg-panel-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.cg-panel-name {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cg-panel-name .cg-tier {
+  min-width: 22px;
+  height: 15px;
+  font-size: 9px;
+}
+.cg-hp {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.cg-hp-bar {
+  flex: 1;
+  height: 9px;
+  border-radius: 5px;
+  background: #e3ddc8;
+  overflow: hidden;
+}
+.cg-hp-bar i {
+  display: block;
+  height: 100%;
+  background: #4cc35d;
+  transition: width 0.4s;
+}
+.cg-hp-bar i.mid {
+  background: #f2b632;
+}
+.cg-hp-bar i.low {
+  background: #e2513b;
+}
+.cg-hp b {
+  font-size: 14px;
+  white-space: nowrap;
+}
+.cg-hp small {
+  font-size: 9px;
+  color: #888;
+}
+.cg-panel-chips {
+  font-size: 12px;
+  min-height: 16px;
+  line-height: 1.2;
+  word-break: break-all;
+}
+.cg-bench {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b6a55;
+}
+.cg-bench-dot {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  padding: 0;
+  overflow: hidden;
+  background: #eee;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.cg-bench-dot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.cg-bench-dot.out img {
+  filter: grayscale(1) brightness(0.6);
+}
+.cg-bench-dot i {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-style: normal;
+  font-weight: 900;
+}
+.cg-log {
+  position: relative;
+  height: 128px;
+  overflow-y: auto;
+  background: #fffdf3;
+  border: 3px solid #e6dfc4;
+  border-radius: 14px;
+  padding: 6px 10px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.cg-log p {
+  margin: 0;
+  opacity: 0.55;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.cg-log p.now {
+  opacity: 1;
+  font-weight: 900;
+}
+.cg-log p.fx-big {
+  justify-content: center;
+  color: #b0570f;
+}
+.cg-die {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  background: #fff;
+  border: 2px solid #2f3a24;
+  font-weight: 900;
+  font-size: 13px;
+  flex: none;
+}
+.cg-log p.now .cg-die {
+  animation: cg-roll 0.5s;
+}
+.cg-skip {
+  position: sticky;
+  bottom: 0;
+  float: right;
+  font-size: 11px;
+  background: #2f3a24;
+  color: #fff;
+  border-radius: 8px;
+  padding: 1px 8px;
+}
+.cg-command {
+  background: #fff;
+  border-radius: var(--radius);
+  padding: 10px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cg-command.wait,
+.cg-command.target {
+  text-align: center;
+  align-items: center;
+}
+.cg-command p {
+  margin: 0;
+}
+.cg-command-title {
+  font-weight: 700;
+  text-align: center;
+}
+.cg-command-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.cg-cmd {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.cg-cmd:active .cg-move {
+  transform: scale(0.98);
+}
+.cg-cmd:disabled {
+  cursor: default;
+}
+.cg-cmd:disabled .cg-move {
+  opacity: 0.4;
+}
+.cg-cmd .cg-move {
+  border-color: var(--k);
+}
+.cg-undo,
+.cg-quit {
+  align-self: center;
+  font-size: 13px;
+}
+.cg-result {
+  text-align: center;
+  background: #fff;
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cg-result b {
+  font-size: 30px;
+}
+.cg-result.win b {
+  color: #d88a00;
+}
+.cg-result-btns {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+.cg-rules {
+  background: #fff;
+  border-radius: var(--radius);
+  padding: 14px;
+  line-height: 1.7;
+  font-size: 15px;
+}
+.cg-rules h3 {
+  margin: 8px 0 0;
+}
+.cg-rules ol,
+.cg-rules ul {
+  margin: 0;
+  padding-left: 1.3em;
+}
+
+@keyframes cg-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+}
+@keyframes cg-pulse {
+  50% {
+    transform: scale(1.03);
+  }
+}
+@keyframes cg-pop {
+  0% {
+    transform: translateY(6px) scale(0.6);
+    opacity: 0;
+  }
+  30% {
+    transform: translateY(-4px) scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-12px) scale(1);
+    opacity: 1;
+  }
+}
+@keyframes cg-roll {
+  0% {
+    transform: rotate(-180deg) scale(0.4);
+  }
+  100% {
+    transform: rotate(0) scale(1);
+  }
+}
