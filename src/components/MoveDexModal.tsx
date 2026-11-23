@@ -14,7 +14,80 @@ import {
   type MoveGroup,
 } from '../lib/moveDex'
 import { sfx } from '../lib/sound'
-import { moveSummary } from '../lib/moveLibrary'
+import { BASIC_ATTACK, moveSummary } from '../lib/moveLibrary'
+import type { SpecialMoveV2 } from '../types'
+
+// わざの くわしい せつめい（わざリストと おなじ ないよう）
+export function MoveDetail({ move }: { move: SpecialMoveV2 }) {
+  const lib = DEX.find((x) => x.move.id === move.id)?.move
+  return (
+    <div className="movedex-detail">
+      <p className="movedex-desc">{move.desc}</p>
+      <dl className="movedex-spec">
+        <div>
+          <dt>タイプ</dt>
+          <dd>{move.id === BASIC_ATTACK.id ? 'ふつうの こうげき' : lib ? patternLabel(lib) : moveSummary(move)}</dd>
+        </div>
+        <div>
+          <dt>ねらい</dt>
+          <dd>
+            {move.target === 'allFoes'
+              ? 'あいて ぜんいん'
+              : move.target === 'allOthers'
+                ? 'じぶん いがい ぜんいん'
+                : move.target === 'self'
+                  ? 'じぶん'
+                  : move.target === 'ally'
+                    ? 'みかた'
+                    : move.target === 'fallenAlly'
+                      ? 'たおれた みかた'
+                      : 'あいて 1ぴき'}
+          </dd>
+        </div>
+        <div>
+          <dt>{move.revive ? 'せいこう' : 'めいちゅう'}</dt>
+          <dd>
+            {move.revive
+              ? `${Math.round(move.revive.chance * 100)}％`
+              : move.accuracy == null
+                ? 'かならず あたる'
+                : `${move.accuracy}％`}
+          </dd>
+        </div>
+        <div>
+          <dt>つかえる</dt>
+          <dd>{move.id === BASIC_ATTACK.id ? 'なんかいでも' : `${move.uses}かい`}</dd>
+        </div>
+      </dl>
+    </div>
+  )
+}
+
+// バトル中に わざを ながおし した ときの ポップアップ
+export function MoveInfoModal({ move, left, onClose }: { move: SpecialMoveV2; left?: number; onClose: () => void }) {
+  const d = DEX.find((x) => x.move.id === move.id)
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal movedex moveinfo" onClick={(e) => e.stopPropagation()}>
+        <button className="modal-close" onClick={onClose} aria-label="とじる">
+          ✕
+        </button>
+        <p className="moveinfo-emoji">{move.emoji ?? (move.id === BASIC_ATTACK.id ? '⚔️' : '✨')}</p>
+        <h2 className="modal-name">{move.name}</h2>
+        <p className="movedex-count">
+          {d && <span>No.{d.no}　</span>}
+          {move.ultimate && `👑 ${ULTIMATE_KIND_LABEL[move.ultimate]}・`}
+          {move.fixedDamage ? `${move.fixedDamage}ダメージ` : moveSummary(move)}
+          {left !== undefined && move.id !== BASIC_ATTACK.id && <b>　のこり {left}かい</b>}
+        </p>
+        <MoveDetail move={move} />
+        <button className="btn btn-big" onClick={onClose}>
+          とじる
+        </button>
+      </div>
+    </div>
+  )
+}
 
 export function MoveDexModal({ onClose }: { onClose: () => void }) {
   const [group, setGroup] = useState<MoveGroup>('attack')
@@ -80,47 +153,7 @@ export function MoveDexModal({ onClose }: { onClose: () => void }) {
                   )}
                   {found && <span className="movedex-arrow">{isOpen ? '▲' : '▼'}</span>}
                 </button>
-                {found && isOpen && (
-                  <div className="movedex-detail">
-                    <p className="movedex-desc">{d.move.desc}</p>
-                    <dl className="movedex-spec">
-                      <div>
-                        <dt>タイプ</dt>
-                        <dd>{patternLabel(d.move)}</dd>
-                      </div>
-                      <div>
-                        <dt>ねらい</dt>
-                        <dd>
-                          {d.move.target === 'allFoes'
-                            ? 'あいて ぜんいん'
-                            : d.move.target === 'allOthers'
-                              ? 'じぶん いがい ぜんいん'
-                              : d.move.target === 'self'
-                                ? 'じぶん'
-                                : d.move.target === 'ally'
-                                  ? 'みかた'
-                                  : d.move.target === 'fallenAlly'
-                                    ? 'たおれた みかた'
-                                    : 'あいて 1ぴき'}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>{d.move.revive ? 'せいこう' : 'めいちゅう'}</dt>
-                        <dd>
-                          {d.move.revive
-                            ? `${Math.round(d.move.revive.chance * 100)}％`
-                            : d.move.accuracy == null
-                              ? 'かならず あたる'
-                              : `${d.move.accuracy}％`}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>つかえる</dt>
-                        <dd>{d.move.uses}かい</dd>
-                      </div>
-                    </dl>
-                  </div>
-                )}
+                {found && isOpen && <MoveDetail move={d.move} />}
               </li>
             )
           })}

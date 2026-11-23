@@ -8301,3 +8301,66 @@ body.race-full .points-pop {
 .game-card.kentei-level.mix {
   background: linear-gradient(160deg, #fde6f3 0%, #fff4d6 45%, #dcf1fb 100%);
 }
+
+/* 1ぴきずつ うごく バトル：のこりの じゅんばん */
+.stage-order {
+  position: absolute;
+  top: 44px;
+  right: 12px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.85);
+  font-weight: 900;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+.stage-order-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid #9ccf8c;
+  display: inline-block;
+}
+.stage-order-dot.foe {
+  border-color: #f0a08c;
+}
+.stage-order-dot.now {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #4aa8e0;
+}
+.stage-order-dot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.stage-btn.off {
+  opacity: 0.45;
+}
+.stage-btn {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.stage-hint {
+  margin: 4px 0 0;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.7;
+}
+.moveinfo {
+  text-align: center;
+}
+.moveinfo-emoji {
+  margin: 0;
+  font-size: 44px;
+  line-height: 1.1;
+}
+.moveinfo .movedex-detail {
+  text-align: left;
+}

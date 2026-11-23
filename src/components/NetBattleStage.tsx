@@ -25,7 +25,7 @@ import {
   type RoomState,
   type Team,
 } from '../lib/netBattle'
-import { CopyPicker, cueFor, FighterSlot, moveBlockedReason, playCueSound } from './BattleStage'
+import { CopyPicker, cueFor, FighterSlot, moveBlockedReason, MoveButton, playCueSound } from './BattleStage'
 import { BASIC_ATTACK, moveSummary } from '../lib/moveLibrary'
 import { ParkScene } from './ParkScene'
 import { Confetti } from './Confetti'
@@ -414,23 +414,23 @@ export function NetBattleStage({ code, role, onQuit }: Props) {
               {cur.moves.map((m, i) => {
                 const blocked = moveBlockedReason(m, cur, shown)
                 return (
-                  <button
+                  <MoveButton
                     key={m.id + i}
+                    m={m}
+                    left={cur.usesLeft[i]}
                     className={'stage-btn sp' + (m.ultimate ? ' ult' : '')}
                     disabled={cur.usesLeft[i] <= 0 || !!blocked}
-                    onClick={() => chooseMove(cur, i, m)}
-                  >
-                    <span>
-                      {m.emoji ?? '✨'} {m.name}
-                    </span>
-                    <small>{blocked ?? `${moveLabel(m)}／のこり${cur.usesLeft[i]}`}</small>
-                  </button>
+                    sub={blocked ?? `${moveLabel(m)}／のこり${cur.usesLeft[i]}`}
+                    onChoose={() => chooseMove(cur, i, m)}
+                  />
                 )
               })}
-              <button className="stage-btn atk" onClick={() => chooseMove(cur, -1, BASIC_ATTACK)}>
-                <span>⚔️ こうげき</span>
-                <small>なんかいでも つかえる</small>
-              </button>
+              <MoveButton
+                m={{ ...BASIC_ATTACK, emoji: '⚔️' }}
+                className="stage-btn atk"
+                sub="なんかいでも つかえる"
+                onChoose={() => chooseMove(cur, -1, BASIC_ATTACK)}
+              />
             </div>
             {undecided.length >= 2 && (
               <button className="stage-auto" onClick={autoRest}>

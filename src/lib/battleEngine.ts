@@ -104,6 +104,9 @@ export interface Field {
   steps: TurnStep[] // log と おなじ ながさ。1行ごとの スナップショット
   over: boolean
   winner: Side | null
+  // 1ぴきずつ うごく バトル（すばやい じゅん）で つかう
+  queue?: string[] // この ターンで まだ うごいていない 虫
+  firstNext?: string[] // つぎの ターン いちばん さきに うごく 虫（⚡ さきに うごく わざ）
 }
 
 // UIから わたす「このターン こうする」という めいれい
@@ -1158,11 +1161,8 @@ function executeMove(
 // -------------------------------------------------------------
 //  1ターンぶんを かいけつする（UIから よぶのは これ）
 // -------------------------------------------------------------
-export function resolveTurn(
-  field: Field,
-  commands: Command[],
-  rng: Rng = Math.random,
-): Field {
+// ターンを はじめる ための コピー（ログを 1行ずつ steps に のこす）
+function prepareField(field: Field, resetTurn: boolean): Field {
   const f: Field = {
     ...field,
     fighters: field.fighters.map((x) => ({
@@ -1171,145 +1171,217 @@ export function resolveTurn(
       statuses: x.statuses.map((s) => ({ ...s })),
       moves: [...x.moves], // わざコピーで いれかわる ことが ある ので、うつして おく
       usesLeft: [...x.usesLeft],
-      damageTakenThisTurn: 0,
-      actedIndex: -1,
+      ...(resetTurn ? { damageTakenThisTurn: 0, actedIndex: -1 } : {}),
     })),
     pending: field.pending.map((p) => ({ ...p })),
+    queue: [...(field.queue ?? [])],
+    firstNext: [...(field.firstNext ?? [])],
     log: [],
     steps: [],
   }
-
   // ログの push に わりこんで、1行ごとの すがたを steps に のこす。
   // （こうしておくと、せんとうの しょりは これまでと まったく おなじまま、
   //   UI側が「1行ずつ 見せる」ことが できる）
   const log = f.log
-  const basePush = Array.prototype.push.bind(log) as (
-    ...items: string[]
-  ) => number
+  const basePush = Array.prototype.push.bind(log) as (...items: string[]) => number
   log.push = (...lines: string[]): number => {
     const n = basePush(...lines)
     for (const line of lines) f.steps.push({ line, fighters: snapshotFighters(f) })
     return n
   }
+  return f
+}
 
+interface Entry {
+  fighter: Fighter
+  move: SpecialMoveV2
+  moveIndex: number
+  targetUid: string | null
+  copyIndex?: number
+  priority: number
+  speed: number
+  tie: number
+}
+
+function entryOf(f: Field, c: Command, rng: Rng): Entry | null {
+  const actor = f.fighters.find((x) => x.uid === c.actorUid)
+  if (!actor || actor.fainted) return null
+  // ためている とちゅう / うごけない ときは、その しょりを ゆうせん
+  const move = actor.charging?.move ?? (c.moveIndex >= 0 ? actor.moves[c.moveIndex] : BASIC_ATTACK)
+  if (!move) return null
+  return {
+    fighter: actor,
+    move,
+    moveIndex: actor.charging ? -2 : c.moveIndex,
+    targetUid: actor.charging?.targetUid ?? c.targetUid ?? null,
+    copyIndex: c.copyIndex,
+    priority: move.priority ?? 0,
+    speed: effStat(actor, 'speed'),
+    tie: rng(),
+  }
+}
+
+// 1ぴきぶんの こうどう（late = あいてが さきに うごいた）
+function runEntry(f: Field, e: Entry, late: boolean, log: string[], rng: Rng): void {
+  const actor = e.fighter
+  // うごけない（大わざの あと）
+  if (actor.recharge > 0) {
+    actor.recharge--
+    log.push(`😵 ${actor.name}は うごけない！`)
+    return
+  }
+  // ねむり
+  const sleeping = statusOf(actor, 'sleep')
+  if (sleeping) {
+    if (sleeping.forever || sleeping.turnsLeft > 0) {
+      sleeping.turnsLeft--
+      log.push(`💤 ${actor.name}は ぐっすり ねむっている…`)
+      return
+    }
+    log.push(`☀️ ${actor.name}は めを さました！`)
+    actor.statuses = actor.statuses.filter((s) => s.key !== 'sleep')
+  }
+  // まひ
+  if (hasStatus(actor, 'paralysis') && rng() < PARALYSIS_FAIL_CHANCE) {
+    log.push(`⚡ ${actor.name}は しびれて うごけない！`)
+    return
+  }
+  // ためわざの かいほう
+  if (actor.charging) {
+    const charged = actor.charging
+    actor.charging = null
+    log.push(`✨ ${actor.name}の「${charged.move.name}」！`)
+    executeMove(f, actor, { ...charged.move, chargeTurns: 0 }, charged.targetUid, late, log, rng)
+    checkOver(f)
+    return
+  }
+  // わざを うばわれていたら「こうげき」に なる（なんでものいげん）
+  if (e.moveIndex >= 0 && actor.sealed) {
+    log.push(`🔒 ${actor.name}は わざを うばわれている！`)
+    log.push(`${actor.name}の こうげき！`)
+    const foe = aliveOf(f, actor.side === 'me' ? 'foe' : 'me')
+    const tgt = foe.find((x) => x.uid === e.targetUid) ?? foe[0]
+    if (tgt) executeMove(f, actor, BASIC_ATTACK, tgt.uid, false, log, rng)
+    checkOver(f)
+    return
+  }
+  // わざの のこり回数
+  if (e.moveIndex >= 0) {
+    if (actor.usesLeft[e.moveIndex] <= 0) {
+      log.push(`…「${e.move.name}」は もう つかえない！`)
+      return
+    }
+    actor.usesLeft[e.moveIndex]--
+    log.push(`✨ ${actor.name}の「${e.move.name}」！`)
+  } else {
+    log.push(`${actor.name}の こうげき！`)
+  }
+  executeMove(f, actor, e.move, e.targetUid, late, log, rng, e.copyIndex)
+  checkOver(f)
+}
+
+export function resolveTurn(field: Field, commands: Command[], rng: Rng = Math.random): Field {
+  const f = prepareField(field, true)
+  const log = f.log
   // --- こうどうじゅん を きめる ---
-  interface Entry {
-    fighter: Fighter
-    move: SpecialMoveV2
-    moveIndex: number
-    targetUid: string | null
-    copyIndex?: number
-    priority: number
-    speed: number
-    tie: number
-  }
-  const entries: Entry[] = []
-  for (const c of commands) {
-    const actor = f.fighters.find((x) => x.uid === c.actorUid)
-    if (!actor || actor.fainted) continue
-    // ためている とちゅう / うごけない ときは、その しょりを ゆうせん
-    const move =
-      actor.charging?.move ??
-      (c.moveIndex >= 0 ? actor.moves[c.moveIndex] : BASIC_ATTACK)
-    if (!move) continue
-    entries.push({
-      fighter: actor,
-      move,
-      moveIndex: actor.charging ? -2 : c.moveIndex,
-      targetUid: actor.charging?.targetUid ?? c.targetUid ?? null,
-      copyIndex: c.copyIndex,
-      priority: move.priority ?? 0,
-      speed: effStat(actor, 'speed'),
-      tie: rng(),
-    })
-  }
-  entries.sort(
-    (a, b) => b.priority - a.priority || b.speed - a.speed || a.tie - b.tie,
-  )
-
+  const entries = commands.map((c) => entryOf(f, c, rng)).filter((e): e is Entry => !!e)
+  entries.sort((a, b) => b.priority - a.priority || b.speed - a.speed || a.tie - b.tie)
   // --- じゅんばんに こうどう ---
   let order = 0
   for (const e of entries) {
     const actor = e.fighter
     if (actor.fainted || f.over) continue
     actor.actedIndex = order++
-
-    // うごけない（大わざの あと）
-    if (actor.recharge > 0) {
-      actor.recharge--
-      log.push(`😵 ${actor.name}は うごけない！`)
-      continue
-    }
-
-    // ねむり
-    const sleeping = statusOf(actor, 'sleep')
-    if (sleeping) {
-      if (sleeping.forever || sleeping.turnsLeft > 0) {
-        sleeping.turnsLeft--
-        log.push(`💤 ${actor.name}は ぐっすり ねむっている…`)
-        continue
-      }
-      log.push(`☀️ ${actor.name}は めを さました！`)
-      actor.statuses = actor.statuses.filter((s) => s.key !== 'sleep')
-    }
-
-    // まひ
-    if (hasStatus(actor, 'paralysis') && rng() < PARALYSIS_FAIL_CHANCE) {
-      log.push(`⚡ ${actor.name}は しびれて うごけない！`)
-      continue
-    }
-
-    // ためわざの かいほう
-    if (actor.charging) {
-      const charged = actor.charging
-      actor.charging = null
-      log.push(`✨ ${actor.name}の「${charged.move.name}」！`)
-      const late = entries.some(
-        (o) => o.fighter.side !== actor.side && o.fighter.actedIndex >= 0 && o.fighter.actedIndex < actor.actedIndex,
-      )
-      executeMove(f, actor, { ...charged.move, chargeTurns: 0 }, charged.targetUid, late, log, rng)
-      checkOver(f)
-      continue
-    }
-
-    // わざを うばわれていたら「こうげき」に なる（なんでものいげん）
-    if (e.moveIndex >= 0 && actor.sealed) {
-      log.push(`🔒 ${actor.name}は わざを うばわれている！`)
-      log.push(`${actor.name}の こうげき！`)
-      const foe = aliveOf(f, actor.side === 'me' ? 'foe' : 'me')
-      const tgt = foe.find((x) => x.uid === e.targetUid) ?? foe[0]
-      if (tgt) executeMove(f, actor, BASIC_ATTACK, tgt.uid, false, log, rng)
-      checkOver(f)
-      if (f.over) break
-      continue
-    }
-
-    // わざの のこり回数
-    if (e.moveIndex >= 0) {
-      if (actor.usesLeft[e.moveIndex] <= 0) {
-        log.push(`…「${e.move.name}」は もう つかえない！`)
-        continue
-      }
-      actor.usesLeft[e.moveIndex]--
-      log.push(`✨ ${actor.name}の「${e.move.name}」！`)
-    } else {
-      log.push(`${actor.name}の こうげき！`)
-    }
-
     const late = entries.some(
-      (o) =>
-        o.fighter.side !== actor.side &&
-        o.fighter.actedIndex >= 0 &&
-        o.fighter.actedIndex < actor.actedIndex,
+      (o) => o.fighter.side !== actor.side && o.fighter.actedIndex >= 0 && o.fighter.actedIndex < actor.actedIndex,
     )
-    executeMove(f, actor, e.move, e.targetUid, late, log, rng, e.copyIndex)
-    checkOver(f)
+    runEntry(f, e, late, log, rng)
     if (f.over) break
   }
-
   if (!f.over) endOfTurn(f, log, rng)
   checkOver(f)
   f.turnCount++
+  return f
+}
+
+// =============================================================
+//  1ぴきずつ うごく バトル（カードバトルと おなじ すすめかた）
+// -------------------------------------------------------------
+//  ・ターンの はじめに すばやい じゅんに ならべる（queue）
+//  ・いまの 虫（currentActor）の わざを きめて stepActor を よぶ → その 虫だけ うごく
+//  ・⚡さきに うごく わざは「つぎの ターン いちばん さきに うごく」に なる
+// =============================================================
+function makeQueue(f: Field, rng: Rng): void {
+  const first = new Set(f.firstNext ?? [])
+  const list = f.fighters
+    .filter((x) => !x.fainted)
+    .map((x) => ({ x, sp: effStat(x, 'speed'), tie: rng() }))
+  list.sort((a, b) => Number(first.has(b.x.uid)) - Number(first.has(a.x.uid)) || b.sp - a.sp || a.tie - b.tie)
+  f.queue = list.map((e) => e.x.uid)
+  f.firstNext = []
+  for (const x of f.fighters) {
+    x.damageTakenThisTurn = 0
+    x.actedIndex = -1
+  }
+}
+
+// さいしょの ターンの じゅんばんを きめる
+export function beginTurns(field: Field, rng: Rng = Math.random): Field {
+  const f: Field = { ...field, fighters: field.fighters.map((x) => ({ ...x })) }
+  makeQueue(f, rng)
+  return f
+}
+
+export function currentActor(f: Field): Fighter | undefined {
+  if (f.over) return undefined
+  for (const u of f.queue ?? []) {
+    const x = f.fighters.find((y) => y.uid === u)
+    if (x && !x.fainted) return x
+  }
+  return undefined
+}
+
+// いまの 虫は わざを えらぶか（ためている・うごけない・まだ ねむっている ときは えらばない）
+export function actorNeedsChoice(x: Fighter): boolean {
+  if (x.charging || x.recharge > 0) return false
+  const sl = statusOf(x, 'sleep')
+  if (sl && (sl.forever || sl.turnsLeft > 0)) return false
+  return true
+}
+
+export function stepActor(field: Field, cmd: Command | null, rng: Rng = Math.random): Field {
+  const f = prepareField(field, false)
+  const log = f.log
+  if (f.over) return f
+  while ((f.queue ?? []).length) {
+    const x = f.fighters.find((y) => y.uid === f.queue![0])
+    if (x && !x.fainted) break
+    f.queue!.shift()
+  }
+  const uid = f.queue!.shift()
+  const actor = uid ? f.fighters.find((y) => y.uid === uid) : undefined
+  if (actor) {
+    const acted = f.fighters.filter((y) => y.actedIndex >= 0).length
+    actor.actedIndex = acted
+    const late = f.fighters.some((o) => o.side !== actor.side && o.actedIndex >= 0 && o.actedIndex < actor.actedIndex)
+    const e = entryOf(f, cmd && cmd.actorUid === actor.uid ? cmd : { actorUid: actor.uid, moveIndex: -1, targetUid: null }, rng)
+    const wasCharging = !!actor.charging
+    if (e) {
+      runEntry(f, e, late, log, rng)
+      // ⚡ さきに うごく わざ：つぎの ターン いちばん さきに
+      if (!wasCharging && e.moveIndex >= 0 && (e.move.priority ?? 0) > 0 && !actor.fainted && !f.firstNext!.includes(actor.uid)) {
+        f.firstNext!.push(actor.uid)
+        log.push(`⚡ ${actor.name}は つぎの ターン いちばん さきに うごく！`)
+      }
+    }
+  }
+  // のこりが いなければ ターンの おわり
+  if (!f.over && !currentActor(f)) {
+    endOfTurn(f, log, rng)
+    checkOver(f)
+    f.turnCount++
+    if (!f.over) makeQueue(f, rng)
+  }
   return f
 }
 
