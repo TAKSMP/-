@@ -8296,3 +8296,8 @@ body.race-full .points-pop {
   box-shadow: 0 6px 18px rgba(60, 40, 20, 0.15);
 }
 .design-forest .forest-topbar .forest-return-home, .forest-topbar-back { font-size: 14px; line-height: 1.2; padding: 8px 15px; }
+
+/* 昆虫検定：初級・中級MIX */
+.game-card.kentei-level.mix {
+  background: linear-gradient(160deg, #fde6f3 0%, #fff4d6 45%, #dcf1fb 100%);
+}

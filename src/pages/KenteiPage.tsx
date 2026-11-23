@@ -14,11 +14,21 @@ import {
 
 // 昆虫検定：初級・中級の問題集から 10もん。ぜんぶを まんべんなく、まちがえた もんだいほど よく 出す
 // （えらびかたは lib/kenteiDeck.ts）。
-// せいかいすると 虫ポイント（初級 1もん 1P、中級 1もん 3P）。ぜんもん せいかいで ルーレット。
+// せいかいすると 虫ポイント（初級 1もん 1P、中級 1もん 3P、MIX 1もん 5P）。ぜんもん せいかいで ルーレット。
+// MIX は 初級と 中級から 5もんずつ えらんで、ランダムな じゅんばんで 出す。
 const QUESTION_COUNT = 10
 
+type Mode = KenteiLevel | 'mix'
+// 出す もんだい（どの 級の もんだいか も もつ）
+type PlayQ = KenteiQuestion & { lv: KenteiLevel }
+
+const LEVEL_LABEL: Record<KenteiLevel, string> = {
+  beginner: '{初級|しょきゅう}',
+  intermediate: '{中級|ちゅうきゅう}',
+}
+
 const LEVELS: {
-  id: KenteiLevel
+  id: Mode
   label: string // ふりがな つき
   emoji: string
   desc: string
@@ -38,7 +48,24 @@ const LEVELS: {
     desc: 'もっと くわしい {問題|もんだい}に ちょうせん！',
     pointsPer: 3,
   },
+  {
+    id: 'mix',
+    label: '{初級|しょきゅう}・{中級|ちゅうきゅう}MIX',
+    emoji: '🌈',
+    desc: '{初級|しょきゅう}と {中級|ちゅうきゅう}が はんぶんずつ、ランダムに {出|で}るよ！',
+    pointsPer: 5,
+  },
 ]
+
+// 2つの 列を まぜて ランダムな じゅんばんに する
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
 
 function sectionOf(level: KenteiLevel, no: number): string {
   const s = KENTEI_SECTIONS[level].find((x) => no <= x.last)
@@ -57,17 +84,17 @@ function rankOf(score: number, total: number): { emoji: string; title: string } 
 type Phase = 'select' | 'playing' | 'done'
 
 interface Answered {
-  question: KenteiQuestion
+  question: PlayQ
   picked: number
 }
 
 export function KenteiPage() {
   const [phase, setPhase] = useState<Phase>('select')
-  const [level, setLevel] = useState<KenteiLevel>('beginner')
-  const [questions, setQuestions] = useState<KenteiQuestion[]>([])
-  // この 回の ばんごう（こたえの きろくに つかう）と、まえに まちがえて もういちど 出す もんだい
-  const [round, setRound] = useState(0)
-  const [review, setReview] = useState<Set<number>>(new Set())
+  const [level, setLevel] = useState<Mode>('beginner')
+  const [questions, setQuestions] = useState<PlayQ[]>([])
+  // 級ごとの この 回の ばんごう（こたえの きろくに つかう）と、まえに まちがえて もういちど 出す もんだい（"級:ばんごう"）
+  const [rounds, setRounds] = useState<Record<KenteiLevel, number>>({ beginner: 0, intermediate: 0 })
+  const [review, setReview] = useState<Set<string>>(new Set())
   const [index, setIndex] = useState(0)
   const [picked, setPicked] = useState<number | null>(null)
   const [history, setHistory] = useState<Answered[]>([])
@@ -96,13 +123,29 @@ export function KenteiPage() {
   const perfect = phase === 'done' && questions.length > 0 && score === questions.length
   const finalPoints = roulette ? Math.round(earned * roulette.mult) : earned
 
-  function start(lv: KenteiLevel) {
+  function start(lv: Mode) {
     sfx.tap()
     setLevel(lv)
-    const d = drawQuestions(lv, KENTEI[lv], QUESTION_COUNT)
-    setQuestions(d.questions)
-    setRound(d.round)
-    setReview(d.review)
+    // MIX は 初級・中級から 5もんずつ（5:5）。どちらも いつもの えらびかた（にがてを よく 出す）で えらぶ
+    const parts: { lv: KenteiLevel; count: number }[] =
+      lv === 'mix'
+        ? [
+            { lv: 'beginner', count: QUESTION_COUNT / 2 },
+            { lv: 'intermediate', count: QUESTION_COUNT / 2 },
+          ]
+        : [{ lv, count: QUESTION_COUNT }]
+    const nextRounds = { ...rounds }
+    const nextReview = new Set<string>()
+    let qs: PlayQ[] = []
+    for (const part of parts) {
+      const d = drawQuestions(part.lv, KENTEI[part.lv], part.count)
+      nextRounds[part.lv] = d.round
+      d.review.forEach((no) => nextReview.add(`${part.lv}:${no}`))
+      qs = qs.concat(d.questions.map((q) => ({ ...q, lv: part.lv })))
+    }
+    setQuestions(lv === 'mix' ? shuffle(qs) : qs)
+    setRounds(nextRounds)
+    setReview(nextReview)
     setIndex(0)
     setPicked(null)
     setHistory([])
@@ -123,7 +166,7 @@ export function KenteiPage() {
     setPicked(i)
     setHistory((h) => [...h, { question: current, picked: i }])
     // こたえる たびに きろく（にがてな もんだいを また 出す ため）
-    saveAnswer(level, current.no, i === current.answer, round)
+    saveAnswer(current.lv, current.no, i === current.answer, rounds[current.lv])
     if (i === current.answer) {
       setStreak((s) => s + 1)
       sfx.discover()
@@ -184,7 +227,11 @@ export function KenteiPage() {
           ) : (
             <>
               <Ruby text={levelInfo.label} />
-              ・ぜんぶで{KENTEI[level].length}もんから 10もん
+              ・ぜんぶで
+              {level === 'mix'
+                ? KENTEI.beginner.length + KENTEI.intermediate.length
+                : KENTEI[level].length}
+              もんから 10もん
             </>
           )}
         </p>
@@ -206,7 +253,13 @@ export function KenteiPage() {
               <span className="game-desc">
                 <Ruby text={lv.desc} />
               </span>
-              <LevelProgress level={lv.id} />
+              {lv.id === 'mix' ? (
+                <span className="kentei-level-count">
+                  <span>🐞 5もん ＋ 🦋 5もん</span>
+                </span>
+              ) : (
+                <LevelProgress level={lv.id} />
+              )}
               <span className="kentei-level-pt">せいかい 1もん {lv.pointsPer}P</span>
             </button>
           ))}
@@ -228,13 +281,15 @@ export function KenteiPage() {
 
           <div className="quiz-card kentei-card">
             <div className="kentei-tags">
-              <span className={'kentei-tag lv ' + level}>
-                <Ruby text={levelInfo.label} />
+              <span className={'kentei-tag lv ' + current.lv}>
+                <Ruby text={LEVEL_LABEL[current.lv]} />
               </span>
               <span className="kentei-tag">
-                <Ruby text={sectionOf(level, current.no)} />
+                <Ruby text={sectionOf(current.lv, current.no)} />
               </span>
-              {review.has(current.no) && <span className="kentei-tag again">🔁 もういちど</span>}
+              {review.has(`${current.lv}:${current.no}`) && (
+                <span className="kentei-tag again">🔁 もういちど</span>
+              )}
               <span className="kentei-no">
                 <Ruby text="{問題|もんだい}" />
                 {String(current.no).padStart(3, '0')}
