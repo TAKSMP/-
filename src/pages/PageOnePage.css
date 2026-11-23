@@ -543,3 +543,10 @@
   background: linear-gradient(180deg, #5cc46a, #3a9e4a);
   box-shadow: 0 4px 0 #2a7a38;
 }
+
+.po-said {
+  margin: 0;
+  text-align: center;
+  font-weight: 900;
+  color: #3f7a30;
+}

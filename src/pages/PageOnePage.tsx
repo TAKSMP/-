@@ -134,6 +134,9 @@ function TopCard({ c, photo }: { c: PCard; photo?: string }) {
 export function missReason(e: POEvent, cards: PCard[]): string {
   const top = e.top !== undefined ? cards[e.top] : undefined
   const tops = top ? `ばの カードは ${top.order}・❤️${top.hp}` : ''
+  if (e.t === 'forgotOne') {
+    return `「${CALL_WORD}」を いわずに さいごの 1まいを だしたよ。山から 1まい ひく`
+  }
   if (e.t === 'miss') {
     const c = e.card !== undefined ? cards[e.card] : undefined
     if (!c) return 'その カードは だせないよ'
@@ -170,6 +173,7 @@ export function eventText(e: POEvent, name: (pid?: string) => string, cards: PCa
     case 'forgot':
       return `😱 ${name(e.pid)}は「${CALL_WORD}」を いいわすれた… まけ！`
     case 'miss':
+    case 'forgotOne':
     case 'missDraw':
       return `😵 ${name(e.pid)}は おてつき（${e.n}/${MISS_MAX}）：${missReason(e, cards)}`
     case 'out3':
@@ -211,7 +215,7 @@ function Table({
     if (st.log.some((e) => e.pid === me && e.t !== 'miss' && e.t !== 'missDraw')) setMissMsg(null)
     const call = st.log.find((e) => e.t === 'call')
     const forgot = st.log.find((e) => e.t === 'forgot')
-    const miss = st.log.find((e) => e.t === 'miss' || e.t === 'missDraw')
+    const miss = st.log.find((e) => e.t === 'miss' || e.t === 'missDraw' || e.t === 'forgotOne')
     const out3 = st.log.find((e) => e.t === 'out3')
     if (st.log.some((e) => e.t === 'win') && !forgot && !out3) {
       st.winner === me ? sfx.win() : sfx.lose()
@@ -255,7 +259,10 @@ function Table({
     ? [...st.players].sort((a, b) => (st.hands[a.id]?.length ?? 0) - (st.hands[b.id]?.length ?? 0))
     : []
   const iAmOut = (st.out ?? []).some((p) => p.id === me)
-  const waitCall = st.pending === me
+  // のこり 1まいで まだ いっていない ときだけ ボタンを だす（ばんに かんけいなく）
+  const canCall = !st.winner && (st.hands[me]?.length ?? 0) === 1 && !(st.called ?? []).includes(me)
+  const saidCall = (st.hands[me]?.length ?? 0) === 1 && (st.called ?? []).includes(me)
+  const waitCall = false
   const myMiss = st.miss?.[me] ?? 0
 
   return (
@@ -271,6 +278,7 @@ function Table({
               <span className="po-other-cards">
                 <CardBack width={18} />×{st.hands[p.id]?.length ?? 0}
               </span>
+              {(st.called ?? []).includes(p.id) && <span className="po-other-miss">📣 いった！</span>}
               {(st.miss?.[p.id] ?? 0) > 0 && <span className="po-other-miss">{'😵'.repeat(st.miss?.[p.id] ?? 0)}</span>}
             </div>
           ))}
@@ -300,15 +308,11 @@ function Table({
 
       {!st.winner && (
         <p className={`po-turn${myTurn ? ' mine' : ''}`}>
-          {waitCall
-            ? '❗ のこり 1まい！ なんて いうのかな？'
-            : drawnMine !== undefined
+          {drawnMine !== undefined
               ? '✨ ひいた カードが そのまま だせるよ！'
             : myTurn
               ? '✨ あなたの ばん！ だせる カードを タップ。なければ 山から ひこう'
-              : st.pending
-                ? `⏳ ${name(st.pending)}は のこり 1まい！`
-                : `⏳ ${name(current(st)?.id)}の ばん`}
+              : `⏳ ${name(current(st)?.id)}の ばん`}
         </p>
       )}
 
@@ -317,11 +321,12 @@ function Table({
           ▶ このまま だせる！
         </button>
       )}
-      {waitCall && (
-        <button key={st.seq} type="button" className="po-call" onClick={() => onAct({ type: 'call' })}>
+      {canCall && (
+        <button type="button" className="po-call" onClick={() => onAct({ type: 'call' })}>
           📣 {CALL_WORD}
         </button>
       )}
+      {saidCall && <p className="po-said">📣 {CALL_WORD} いった！</p>}
       {missMsg && (
         <div className="po-missmsg" onClick={() => setMissMsg(null)}>
           <b>😵 おてつき！</b>
@@ -455,7 +460,7 @@ export function PageOnePage({ bugs, onGoCapture }: Props) {
     if (!p?.cpu) return
     const act = cpuAction(st, cards, p.id, p.cpu)
     if (!act) return
-    const t = setTimeout(() => setSt((s) => (s ? applyAction(s, cards, p.id, act) : s)), st.pending ? 1600 : 2400)
+    const t = setTimeout(() => setSt((s) => (s ? applyAction(s, cards, p.id, act) : s)), act.type === 'call' ? 1200 : 2400)
     return () => clearTimeout(t)
   }, [phase, st, cards])
 
@@ -648,7 +653,7 @@ export function PageOnePage({ bugs, onGoCapture }: Props) {
           <li>だせる カードが ない ときは 山から 1まい ひく。だせたら そのまま だす。だせなければ てふだに いれて つぎの ひとの ばん。</li>
           <li>ルールへんこうで「だせるまで ひく」にも できる。</li>
           <li>
-            のこり 1まいに なったら「📣 {CALL_WORD}」ボタンが でる。おしたら つぎの ひとの ばん。
+            のこり 1まいに なったら「📣 {CALL_WORD}」ボタンを おす。いわずに さいごの 1まいを だすと おてつきで、山から 1まい ひく（また いいわすれたら また おてつき）。
           </li>
           <li>だせない カードを だそうと したり、だせる カードが あるのに 山から ひいたら「おてつき😵」。{MISS_MAX}かい おてつき したら まけ。</li>
           <li>カードを ながおし すると 大きく 見られる。</li>
