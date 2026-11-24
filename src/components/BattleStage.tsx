@@ -2,25 +2,21 @@
 //  せんとう画面（ふつうのバトルと ストーリーモードで 共通）
 // -------------------------------------------------------------
 //  ・ファイターを わたすと、その1せんとうを さいごまで 面倒みる
-//  ・すばやい じゅんに 1ぴきずつ ばんが くる（カードバトルと おなじ）。
-//    じぶんの 虫の ばんに わざを えらぶ → その 虫だけ うごく → つぎの 虫
 //  ・わざボタンを ながおし すると、その わざの せつめいが でる
 //  ・ログは 1行ずつ タップで すすむ。テキストと HPゲージ・音・
 //    うごきが かならず そろう（エンジンが 1行ごとの すがたを かえす）
 //  ・おわったら onFinish で かちまけを かえす
 //  あたらしい せんとうを はじめる ときは key を かえて つくり直すこと。
 // =============================================================
+import { countHiki } from '../lib/format'
 import { useEffect, useRef, useState } from 'react'
 import type { SpecialMoveV2 } from '../types'
 import type { StatKey } from '../types'
 import {
-  actorNeedsChoice,
-  beginTurns,
   chooseCpuCommand,
   createField,
-  currentActor,
   RANK_DISPLAY_ORDER,
-  stepActor,
+  resolveTurn,
   statBadgeLabel,
   statusEmoji,
   statusLabel,
@@ -325,6 +321,14 @@ export function CopyPicker({
   )
 }
 
+// まだ めいれいを きめていない、じぶんの虫
+function nextActor(f: Field, cmds: Command[]): Fighter | undefined {
+  const decided = new Set(cmds.map((c) => c.actorUid))
+  return f.fighters.find(
+    (x) => x.side === 'me' && !x.fainted && !decided.has(x.uid),
+  )
+}
+
 // -------------------------------------------------------------
 //  本体
 // -------------------------------------------------------------
@@ -352,7 +356,8 @@ export function BattleStage({
   onQuit,
   onFinish,
 }: Props) {
-  const [field, setField] = useState<Field>(() => beginTurns(createField(fighters)))
+  const [field, setField] = useState<Field>(() => createField(fighters))
+  const [cmds, setCmds] = useState<Command[]>([])
   const [pendingMove, setPendingMove] = useState<{
     actorUid: string
     moveIndex: number
@@ -376,6 +381,7 @@ export function BattleStage({
   const [rankPop, setRankPop] = useState<{ uid: string; up: boolean } | null>(null)
 
   const fieldRef = useRef<Field>(field)
+  const cmdsRef = useRef<Command[]>([])
   const runningRef = useRef(false)
   const playbackRef = useRef<{ steps: TurnStep[]; index: number } | null>(null)
   const logRef = useRef<HTMLDivElement>(null)
@@ -404,6 +410,25 @@ export function BattleStage({
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight
   }, [visibleLog.length])
 
+  // ── ためている／うごけない虫は、えらばせずに じどうで すすめる
+  useEffect(() => {
+    if (busy || pendingMove || field.over) return
+    const cur = nextActor(field, cmds)
+    if (cur && (cur.charging || cur.recharge > 0)) {
+      pushCmd({ actorUid: cur.uid, moveIndex: -1, targetUid: null })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [field, cmds, busy, pendingMove])
+
+  // ── ぜんいんの めいれいが そろったら 1ターン すすめる
+  useEffect(() => {
+    if (busy || field.over) return
+    if (nextActor(field, cmds)) return
+    const t = setTimeout(() => runTurn(), 260)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [field, cmds, busy])
+
   // ── しょうぶが ついたら（さいせいが おわってから）よびだし元へ かえす
   useEffect(() => {
     if (!field.over || busy || finishedRef.current) return
@@ -423,31 +448,11 @@ export function BattleStage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [field.over, field.winner, busy])
 
-  // ── いまの 虫を 1かい うごかす（cmd が null なら じどう）
-  function pushCmd(c: Command | null) {
-    if (runningRef.current) return
-    const cur = fieldRef.current
-    if (cur.over) return
-    runningRef.current = true
-    setBusy(true)
-    const next = stepActor(cur, c)
-    fieldRef.current = next
-    setField(next)
-    if (next.steps.length === 0) {
-      endPlayback()
-      return
-    }
-    showStep(next.steps, 0)
-  }
-
-  // ── あいて・じどうの 虫を すすめる（「つぎへ」）
-  function advanceActor() {
-    const cur = fieldRef.current
-    const a = currentActor(cur)
-    if (!a) return
-    sfx.tap()
-    if (a.side === 'foe' && actorNeedsChoice(a)) pushCmd(chooseCpuCommand(cur, a))
-    else pushCmd(null)
+  // ── めいれいを 1つ ためる
+  function pushCmd(c: Command) {
+    const next = [...cmdsRef.current, c]
+    cmdsRef.current = next
+    setCmds(next)
   }
 
   function needTarget(move: SpecialMoveV2, actor: Fighter): boolean {
@@ -500,12 +505,42 @@ export function BattleStage({
     pushCmd({ actorUid: pc.actorUid, moveIndex: pc.moveIndex, targetUid: pc.targetUid, copyIndex })
   }
 
-  // ── おまかせ：いまの じぶんの 虫の わざを CPUが きめる
+  // ── のこりは おまかせ：まだ きめていない じぶんの虫の めいれいを CPUが きめる
   function autoRest() {
     sfx.tap()
     const f = fieldRef.current
-    const a = currentActor(f)
-    if (a) pushCmd(chooseCpuCommand(f, a))
+    const decided = new Set(cmdsRef.current.map((c) => c.actorUid))
+    const auto = f.fighters
+      .filter((x) => x.side === 'me' && !x.fainted && !decided.has(x.uid))
+      .map((x) => chooseCpuCommand(f, x))
+    const next = [...cmdsRef.current, ...auto]
+    cmdsRef.current = next
+    setCmds(next)
+  }
+
+  // ── 1ターンぶんを けいさんして、さいせいを はじめる
+  function runTurn() {
+    if (runningRef.current) return
+    const cur = fieldRef.current
+    if (cur.over) return
+    runningRef.current = true
+    setBusy(true)
+
+    const cpu = cur.fighters
+      .filter((x) => x.side === 'foe' && !x.fainted)
+      .map((x) => chooseCpuCommand(cur, x))
+    const next = resolveTurn(cur, [...cmdsRef.current, ...cpu])
+
+    fieldRef.current = next
+    setField(next)
+    cmdsRef.current = []
+    setCmds([])
+
+    if (next.steps.length === 0) {
+      endPlayback()
+      return
+    }
+    showStep(next.steps, 0)
   }
 
   // 1行ぶんを 見せる：テキスト・音・うごき・HPゲージを ぜんぶ そろえる
@@ -550,16 +585,17 @@ export function BattleStage({
   // -----------------------------------------------------------
   //  みため
   // -----------------------------------------------------------
-  const actorNow = !field.over && !busy ? currentActor(field) : undefined
-  const cur = actorNow && actorNow.side === 'me' && actorNeedsChoice(actorNow) ? actorNow : undefined
-  const order = !field.over && !playback ? (field.queue ?? []).filter((u) => field.fighters.some((x) => x.uid === u && !x.fainted)) : []
+  const cur = !field.over ? nextActor(field, cmds) : undefined
+  const undecidedCount = field.fighters.filter(
+    (x) => x.side === 'me' && !x.fainted && !cmds.some((c) => c.actorUid === x.uid),
+  ).length
   // さいせい中は そのときの スナップショット、ふだんは いまの ばめん
   const shownFighters = playback
     ? playback.steps[playback.index].fighters
     : field.fighters
   const foeFighters = shownFighters.filter((x) => x.side === 'foe')
   const myFighters = shownFighters.filter((x) => x.side === 'me')
-  const shownTurn = field.turnCount
+  const shownTurn = playback ? field.turnCount - 1 : field.turnCount
 
   function isTappable(f: Fighter): boolean {
     if (!pendingMove || busy || f.fainted) return false
@@ -600,19 +636,6 @@ export function BattleStage({
       </button>
       <MoveListButton />
       <span className="stage-turn">ターン {shownTurn}</span>
-      {order.length > 0 && (
-        <div className="stage-order">
-          じゅんばん
-          {order.map((u) => {
-            const x = field.fighters.find((y) => y.uid === u)!
-            return (
-              <span key={u} className={`stage-order-dot ${x.side}${u === actorNow?.uid ? ' now' : ''}`}>
-                <img src={x.photo} alt="" />
-              </span>
-            )
-          })}
-        </div>
-      )}
 
       <div className="stage-scene stage2">
         <div className={`stage2-side foe n${foeFighters.length}`}>{foeFighters.map(slotOf)}</div>
@@ -694,22 +717,11 @@ export function BattleStage({
               />
             </div>
             <p className="stage-hint">わざを ながおし すると せつめいが 見られるよ</p>
-            {myFighters.filter((x) => !x.fainted).length >= 2 && (
+            {undecidedCount >= 2 && (
               <button className="stage-auto" onClick={autoRest}>
-                🤖 この 虫は おまかせ
+                🤖 のこりは おまかせ（{countHiki(undecidedCount)}）
               </button>
             )}
-          </>
-        ) : actorNow ? (
-          <>
-            <p className="stage-prompt">
-              {actorNow.side === 'foe' ? '👾 あいての ' : '🐛 '}
-              <b>{actorNow.name}</b> の ばん
-            </p>
-            <button className="stage-next" onClick={advanceActor}>
-              つぎへ
-              <span className="stage-next-arrow">▼</span>
-            </button>
           </>
         ) : (
           <div className="stage-actions">
