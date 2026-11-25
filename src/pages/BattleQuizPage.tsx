@@ -8,6 +8,7 @@
 //  ・もんだいは src/data/battleQuiz.ts（100もん）。1かい 10もん。
 //    まだ せいかい して いない もんだいから さきに でる。
 // =============================================================
+import { stickToBottom, useStickToBottom } from '../lib/useStickToBottom'
 import { useMemo, useRef, useState } from 'react'
 import type { CaughtBug, SpecialMoveV2 } from '../types'
 import type { Fighter, TurnStep } from '../lib/battleEngine'
@@ -151,10 +152,9 @@ export function BattleQuizPage({ bugs }: Props) {
   const round = rounds[index]
 
   function scrollLog() {
-    setTimeout(() => {
-      if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight
-    }, 0)
+    stickToBottom(logRef.current)
   }
+  useStickToBottom(logRef, log.length)
 
   // もんだいの ばめんを ひょうじ
   function showQuestion(r: Round) {

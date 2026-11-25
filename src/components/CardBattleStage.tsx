@@ -24,6 +24,7 @@ import {
   type Snap,
 } from '../lib/cardGame/engine'
 import { sfx } from '../lib/sound'
+import { useStickToBottom } from '../lib/useStickToBottom'
 import { MoveBox } from './CardView'
 import { CardZoom, PaperCard, usePress } from './PaperCard'
 
@@ -219,6 +220,10 @@ export function CardBattleStage({ state, me, photos, myName, foeName, onCommand,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ev?.id])
 
+  // メッセージが すすんだら、メッセージ欄が かならず 見える ように
+  const msgRef = useRef<HTMLDivElement>(null)
+  useStickToBottom(msgRef, ev?.id)
+
   const snapMap = useMemo(() => {
     const m = new Map<string, Snap>()
     for (const s of ev?.snap ?? []) m.set(s.u, s)
@@ -355,7 +360,7 @@ export function CardBattleStage({ state, me, photos, myName, foeName, onCommand,
       {bench(foe)}
       {row(foe)}
 
-      <div className={`cb-msg${canTap ? ' tap' : ''}`} onClick={next}>
+      <div className={`cb-msg${canTap ? ' tap' : ''}`} onClick={next} ref={msgRef}>
         <div className="cb-msg-top">
           <span className="cg-round">ラウンド {state.round}</span>
           {order.length > 0 && (

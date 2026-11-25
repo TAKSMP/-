@@ -32,6 +32,7 @@ import { ParkScene } from './ParkScene'
 import { sfx } from '../lib/sound'
 import { MoveListButton } from './MoveListButton'
 import { markMovesSeen } from '../lib/moveDex'
+import { useStickToBottom } from '../lib/useStickToBottom'
 import { MoveInfoModal } from './MoveDexModal'
 import { usePress } from './PaperCard'
 
@@ -405,10 +406,8 @@ export function BattleStage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ログを いちばん下へ
-  useEffect(() => {
-    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight
-  }, [visibleLog.length])
+  // ログを いちばん下へ（あたらしい 行が いつも 見える ように）
+  useStickToBottom(logRef, visibleLog.length)
 
   // ── ためている／うごけない虫は、えらばせずに じどうで すすめる
   useEffect(() => {

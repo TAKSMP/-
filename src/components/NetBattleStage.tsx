@@ -7,6 +7,7 @@
 //  ・じぶんの がわの 生きている虫 ぜんいんぶん、じゅんばんに わざを えらび、
 //    そろったら 1かいだけ Firebase に 送る。
 // =============================================================
+import { useStickToBottom } from '../lib/useStickToBottom'
 import { countHiki } from '../lib/format'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { SpecialMoveV2 } from '../types'
@@ -185,6 +186,11 @@ export function NetBattleStage({ code, role, onQuit }: Props) {
     }
   }, [role, room, code])
 
+  // ログを いちばん下へ（あたらしい 行が いつも 見える ように）
+  const logRef = useRef<HTMLDivElement>(null)
+  const logCount = playback ? playback.index : (room?.field?.log ?? []).length
+  useStickToBottom(logRef, `${playback ? 'p' : 'l'}${logCount}`)
+
   if (!room || !room.guest || !room.field) return null
   const liteField: LiteField = room.field
   const hostTeam: Team = room.host.team
@@ -352,6 +358,7 @@ export function NetBattleStage({ code, role, onQuit }: Props) {
         )}
         <div
           className={'stage-log net-battle-log' + (playback ? ' tappable' : '')}
+          ref={logRef}
           onClick={playback ? advanceStep : undefined}
         >
           {playback ? (
